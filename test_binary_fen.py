@@ -42,7 +42,6 @@ class BinaryFenTestCase(unittest.TestCase):
             read_bb = chess.binary_fen._read_bitboard(iter(data))
             self.assertEqual(bb, read_bb)
 
-    @unittest.skip("debugging")
     def test_leb128_roundtrip(self):
         test_values = [
             0,

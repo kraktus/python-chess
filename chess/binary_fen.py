@@ -40,8 +40,10 @@ class BinaryFen:
         board.halfmove_clock = halfmove_clock
         # TODO TEST THAT
         board.fullmove_number = plies//2 + 1
-        # from fullmove_number
-        board.turn = plies % 2 == 0
+        # from fullmove_number, it is important to write it that way
+        # because default turn can have been already set to black inside `_unpack_piece`
+        if plies % 2 == 1:
+            board.turn = chess.BLACK
 
         if isinstance(board, chess.variant.ThreeCheckBoard):
             lo, hi = _read_nibbles(reader)
@@ -85,10 +87,9 @@ def _unpack_piece(board: chess.Board, sq: chess.Square, nibble: int):
     elif nibble == 11:
         board.set_piece_at(sq, chess.Piece(chess.KING, chess.BLACK))
     elif nibble == 12:
+        # in scalachess rank starts at 1, python-chess 0
         color = chess.WHITE if chess.square_rank(sq) < 4 else chess.BLACK
-        print("en passant pawn sq:", sq, "name", chess.SQUARE_NAMES[sq])
         board.ep_square = sq - 8 if color else sq + 8
-        print("ep square set to:", board.ep_square, "name", chess.SQUARE_NAMES[board.ep_square])
         board.set_piece_at(sq, chess.Piece(chess.PAWN, color))
     elif nibble == 13:
         board.castling_rights |= chess.BB_SQUARES[sq]
@@ -126,7 +127,6 @@ def _read_leb128(reader: Iterator[int]) -> int:
     shift = 0
     while True:
         byte = next0(reader)
-        print("read byte:", byte)
         result |= (byte & 127) << shift
         if (byte & 128) == 0:
             break
