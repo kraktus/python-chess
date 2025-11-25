@@ -1,188 +1,135 @@
 import chess
-import struct
+
 from typing import Tuple, Optional, List, Union
-
-
-class BinaryFenError(Exception):
-    """Custom exception for BinaryFen errors."""
-    pass
+from itertools import zip_longest
 
 
 class BinaryFen:
     """
-    A class to serialize and deserialize chess positions (including variants)
-    to and from a compact binary format.
-
-    Supports all variants handled in the Scala implementation:
-    Standard, Chess960, FromPosition, KingOfTheHill, ThreeCheck, Antichess,
-    Atomic, Horde, RacingKings, Crazyhouse.
+    TODO
     """
 
-    VARIANT_MAP = {
-        chess.Board: 0,
-        chess.Chess960: 2,
-        chess.FromPosition: 3,
-        chess.KingOfTheHill: 4,
-        chess.ThreeCheck: 5,
-        chess.Antichess: 6,
-        chess.Atomic: 7,
-        chess.Horde: 8,
-        chess.RacingKings: 9,
-        chess.Crazyhouse: 1,
-    }
-
-    @classmethod
-    def write(cls, board: chess.Board) -> bytes:
-        """
-        Serializes a chess.Board (or variant subclass) to binary FEN.
-
-        Args:
-            board (chess.Board): The board to serialize.
-
-        Returns:
-            bytes: The serialized binary FEN.
-        """
-        builder = bytearray()
-
-        # Serialize variant
-        variant_id = cls.VARIANT_MAP.get(type(board), 0)
-        builder.append(variant_id)
-
-        # Serialize board position
-        builder.extend(cls._serialize_board(board))
-
-        # Serialize variant-specific data
-        if isinstance(board, chess.Crazyhouse):
-            builder.extend(cls._serialize_crazyhouse(board))
-        elif isinstance(board, chess.ThreeCheck):
-            builder.extend(cls._serialize_threecheck(board))
-
-        return bytes(builder)
-
-    @classmethod
-    def read(cls, data: bytes) -> chess.Board:
-        """
-        Deserializes binary FEN to a chess.Board (or appropriate variant subclass).
-
-        Args:
-            data (bytes): The binary FEN data.
-
-        Returns:
-            chess.Board: The deserialized board.
-        """
-        reader = memoryview(data)
-
-        # Deserialize variant
-        variant_id = reader[0]
-        variant_class = cls._get_variant_class(variant_id)
-
-        # Deserialize board position
-        board = cls._deserialize_board(reader[1:], variant_class)
-
-        # Deserialize variant-specific data
-        if variant_class == chess.Crazyhouse:
-            cls._deserialize_crazyhouse(reader[1:], board)
-        elif variant_class == chess.ThreeCheck:
-            cls._deserialize_threecheck(reader[1:], board)
-
-        return board
-
     @staticmethod
-    def _serialize_board(board: chess.Board) -> bytes:
+    def read(data: bytes) -> chess.Board:
         """
-        Serializes the board position to binary.
-
-        Args:
-            board (chess.Board): The board to serialize.
-
-        Returns:
-            bytes: The serialized board position.
+        TODO
         """
-        # Example: Serialize board FEN and turn
-        return struct.pack("64s?", board.board_fen().encode(), board.turn)
+        inner = bytesarray(data)
+        reader = iter(inner)
+        occupied = _read_bitboard(reader)
 
-    @staticmethod
-    def _deserialize_board(data: memoryview, variant_class: type) -> chess.Board:
-        """
-        Deserializes the board position from binary.
+        nibble_squares: List[(chess.Square, int)] = []
+        iter_occupied = chess.scan_forward(occupied)
+        for (sq1, sq2) in zip_longest(iter_occupied, iter_occupied):
+            lo, hi = _read_nibbles(reader)
+            nibble_squares.append((sq1, lo))
+            if sq2 is not None:
+                nibble_squares.append((sq2, hi))
 
-        Args:
-            data (memoryview): The binary data.
-            variant_class (type): The class of the variant.
+        halfmove_clock = _read_leb128(reader)
+        fullmove_number = _read_leb128(reader)
 
-        Returns:
-            chess.Board: The deserialized board.
-        """
-        board_fen, turn = struct.unpack("64s?", data[:65])
-        board = variant_class(board_fen.decode())
-        board.turn = turn
-        return board
+        board = 
+        
 
-    @staticmethod
-    def _serialize_crazyhouse(board: chess.Crazyhouse) -> bytes:
-        """
-        Serializes Crazyhouse-specific data.
+    def unpack_piece(board: chess.Board, sq: chess.Square, nibble: int):
+        if nibble == 0:
+            board.set_piece_at(sq, chess.Piece(chess.PAWN, chess.WHITE))
+        elif nibble == 1:
+            board.set_piece_at(sq, chess.Piece(chess.PAWN, chess.BLACK))
+        elif nibble == 2:
+            board.set_piece_at(sq, chess.Piece(chess.KNIGHT, chess.WHITE))
+        elif nibble == 3:
+            board.set_piece_at(sq, chess.Piece(chess.KNIGHT, chess.BLACK))
+        elif nibble == 4:
+            board.set_piece_at(sq, chess.Piece(chess.BISHOP, chess.WHITE))
+        elif nibble == 5:
+            board.set_piece_at(sq, chess.Piece(chess.BISHOP, chess.BLACK))
+        elif nibble == 6:
+            board.set_piece_at(sq, chess.Piece(chess.ROOK, chess.WHITE))
+        elif nibble == 7:
+            board.set_piece_at(sq, chess.Piece(chess.ROOK, chess.BLACK))
+        elif nibble == 8:
+            board.set_piece_at(sq, chess.Piece(chess.QUEEN, chess.WHITE))
+        elif nibble == 9:
+            board.set_piece_at(sq, chess.Piece(chess.QUEEN, chess.BLACK))
+        elif nibble == 10:
+            board.set_piece_at(sq, chess.Piece(chess.KING, chess.WHITE))
+        elif nibble == 11:
+            board.set_piece_at(sq, chess.Piece(chess.KING, chess.BLACK))
+        elif nibble == 12:
+            board.ep_square = sq ^ 8
+            board.set_piece_at(sq, chess.Piece(chess.PAWN, chess.WHITE if sq.rank <= 4 else chess.BLACK))
+        elif nibble == 13:
+            board.castling_rights |= chess.BB_SQUARES[sq]
+            board.set_piece_at(sq, chess.Piece(chess.ROOK, chess.WHITE))
+        elif nibble == 14:
+            board.castling_rights |= chess.BB_SQUARES[sq]
+            board.set_piece_at(sq, chess.Piece(chess.ROOK, chess.BLACK))
+        elif nibble == 15:
+            board.turn = chess.BLACK
+            board.set_piece_at(sq, chess.Piece(chess.KING, chess.BLACK))  
 
-        Args:
-            board (chess.Crazyhouse): The Crazyhouse board.
+    def _read_bitboard(reader: Iterator[int]) -> chess.Bitboard:
+        bb = chess.BB_EMPTY
+        for _ in range(8):
+            bb = (bb << 8) | (next(reader) & 0xFF)
+        return bb
 
-        Returns:
-            bytes: The serialized Crazyhouse data.
-        """
-        pockets = board.pockets
-        return struct.pack("16B", *pockets.white, *pockets.black)
+    def _read_nibbles(reader: Iterator[int]) -> (int, int):
+        byte = next(reader)
+        return byte & 0x0F, (byte >> 4) & 0x0F
 
-    @staticmethod
-    def _deserialize_crazyhouse(data: memoryview, board: chess.Crazyhouse) -> None:
-        """
-        Deserializes Crazyhouse-specific data.
+    def _read_leb128(reader: Iterator[int]) -> int:
+        result = 0
+        shift = 0
+        while True:
+            byte = next(reader)
+            result |= (byte & 127) << shift
+            if (byte & 128) == 0:
+                break
+            shift += 7
+        return result & 0x7fff_ffff
 
-        Args:
-            data (memoryview): The binary data.
-            board (chess.Crazyhouse): The Crazyhouse board to update.
-        """
-        pockets = struct.unpack("16B", data[:16])
-        board.pockets.white = pockets[:8]
-        board.pockets.black = pockets[8:]
+    def _read_variant(reader: Iterator[int]) -> chess.Board:
+        byte = next(reader)
+      #   reader.next match
+      # case 0 => Standard
+      # case 1 => Crazyhouse
+      # case 2 => Chess960
+      # case 3 => FromPosition
+      # case 4 => KingOfTheHill
+      # case 5 => ThreeCheck
+      # case 6 => Antichess
+      # case 7 => Atomic
+      # case 8 => Horde
+      # case 9 => RacingKings
+      # case _ => Standard
+        if byte == 0:
+            return chess.Board()
+        elif byte == 1:
+            return chess.VariantCrazyhouse()
+        elif byte == 2:
+            return chess.VariantChess960()
+        elif byte == 3:
+            return chess.VariantFromPosition()
+        elif byte == 4:
+            return chess.VariantKingOfTheHill()
+        elif byte == 5:
+            return chess.VariantThreeCheck()
+        elif byte == 6:
+            return chess.VariantAntichess()
+        elif byte == 7:
+            return chess.VariantAtomic()
+        elif byte == 8:
+            return chess.VariantHorde()
+        elif byte == 9:
+            return chess.VariantRacingKings()
+        else:
+            return chess.VariantStandard()
 
-    @staticmethod
-    def _serialize_threecheck(board: chess.ThreeCheck) -> bytes:
-        """
-        Serializes ThreeCheck-specific data.
 
-        Args:
-            board (chess.ThreeCheck): The ThreeCheck board.
 
-        Returns:
-            bytes: The serialized ThreeCheck data.
-        """
-        return struct.pack("2B", board.checks_white, board.checks_black)
 
-    @staticmethod
-    def _deserialize_threecheck(data: memoryview, board: chess.ThreeCheck) -> None:
-        """
-        Deserializes ThreeCheck-specific data.
 
-        Args:
-            data (memoryview): The binary data.
-            board (chess.ThreeCheck): The ThreeCheck board to update.
-        """
-        checks_white, checks_black = struct.unpack("2B", data[:2])
-        board.checks_white = checks_white
-        board.checks_black = checks_black
 
-    @classmethod
-    def _get_variant_class(cls, variant_id: int) -> type:
-        """
-        Maps a variant ID to the corresponding chess.Board subclass.
-
-        Args:
-            variant_id (int): The variant ID.
-
-        Returns:
-            type: The chess.Board subclass.
-        """
-        for variant_class, vid in cls.VARIANT_MAP.items():
-            if vid == variant_id:
-                return variant_class
-        raise BinaryFenError(f"Unknown variant ID: {variant_id}")
