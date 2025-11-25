@@ -31,14 +31,12 @@ class BinaryFen:
 
         halfmove_clock = _read_leb128(reader)
         plies = _read_leb128(reader)
-        print("plies:", plies)
 
         variant = next0(reader)
         board = _read_variant(variant)
         for sq, nibble in nibble_squares:
             _unpack_piece(board, sq, nibble)
         board.halfmove_clock = halfmove_clock
-        # TODO TEST THAT
         board.fullmove_number = plies//2 + 1
         # from fullmove_number, it is important to write it that way
         # because default turn can have been already set to black inside `_unpack_piece`
@@ -95,6 +93,7 @@ def _unpack_piece(board: chess.Board, sq: chess.Square, nibble: int):
         board.castling_rights |= chess.BB_SQUARES[sq]
         board.set_piece_at(sq, chess.Piece(chess.ROOK, chess.WHITE))
     elif nibble == 14:
+        print("Setting black castling right for square", sq)
         board.castling_rights |= chess.BB_SQUARES[sq]
         board.set_piece_at(sq, chess.Piece(chess.ROOK, chess.BLACK))
     elif nibble == 15:
@@ -147,8 +146,6 @@ def _write_leb128(data: bytearray, value: int) -> None:
 def _read_variant(byte: int) -> chess.Board:
     if byte == 1:
         return chess.variant.CrazyhouseBoard.empty()
-    elif byte == 2:
-        return chess.Board.empty(chess960=True)
     elif byte == 4:
         return chess.variant.KingOfTheHillBoard.empty()
     elif byte == 5:
@@ -161,8 +158,8 @@ def _read_variant(byte: int) -> chess.Board:
         return chess.variant.HordeBoard.empty()
     elif byte == 9:
         return chess.variant.RacingKingsBoard.empty()
-    else: # 0 (std), 3 (from position) or fallback
-        return chess.Board.empty()
+    else: # 0 (std), 2 (chess960) 3 (from position) or fallback
+        return chess.Board.empty(chess960=True)
 
 
 # TODO, add this as method to ZH pocket?

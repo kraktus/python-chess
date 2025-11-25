@@ -61,15 +61,7 @@ class BinaryFenTestCase(unittest.TestCase):
             self.assertEqual(value, read_value)
 
 
-    # assertPersistence(
-    #   Standard,
-    #   FullFen("rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1"),
-    #   "ffff00001000efff2d844ad200000000111111113e955fe3"
-    # )
-    # assertPersistence(Standard, FullFen("5k2/6p1/8/1Pp5/6P1/8/8/3K4 w - c6 0 1"), "20400006400000080ac0b1")
-    # assertPersistence(Standard, FullFen("4k3/8/8/8/3pP3/8/6N1/7K b - e3 0 1"), "10000000180040802ac10f")
-
-    def test_read_binary_fen(self):
+    def test_read_binary_fen_std(self):
         test_cases = [
             ("0000000000000000", "8/8/8/8/8/8/8/8 w - - 0 1"),
             ("00000000000000000001", "8/8/8/8/8/8/8/8 b - - 0 1"),
@@ -77,13 +69,35 @@ class BinaryFenTestCase(unittest.TestCase):
             ("ffff00001000efff2d844ad200000000111111113e955fe3", "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1"),
             ("20400006400000080ac0b1", "5k2/6p1/8/1Pp5/6P1/8/8/3K4 w - c6 0 1"),
             ("10000000180040802ac10f", "4k3/8/8/8/3pP3/8/6N1/7K b - e3 0 1"),
+            # this is encoded with `standard` variant but with chess960 castling
+            # should this be accepted? for now basing on scalachess behavior
+            ("8901080000810091ad0d10e1f70007", "r2r3k/p7/3p4/8/8/P6P/8/R3K2R b KQq - 0 4"),
+            ("00000002180000308a1c0f030103", "8/8/8/1k6/3Pp3/8/8/4KQ2 b - d3 3 1")
         ]
         for binary_fen, expected_fen in test_cases:
             with self.subTest(binary_fen=binary_fen, expected_fen=expected_fen):
                 compressed = bytes.fromhex(binary_fen)
-                print(compressed)
                 board = chess.binary_fen.BinaryFen.decode(compressed)
                 self.assertEqual(expected_fen, board.fen())
+
+
+    def test_read_binary_fen_960(self):
+        test_cases = [("704f1ee8e81e4f70d60a44000002020813191113511571be000402", "4rrk1/pbbp2p1/1ppnp3/3n1pqp/3N1PQP/1PPNP3/PBBP2P1/4RRK1 w Ff - 0 3")]
+        for binary_fen, expected_fen in test_cases:
+            with self.subTest(binary_fen=binary_fen, expected_fen=expected_fen):
+                compressed = bytes.fromhex(binary_fen)
+                board = chess.binary_fen.BinaryFen.decode(compressed)
+                self.assertEqual(expected_fen, board.fen())
+                self.assertTrue(board.chess960)
+
+    def test_read_binary_fen_variants(self):
+        test_cases = [("704f1ee8e81e4f70d60a44000002020813191113511571be000402", "4rrk1/pbbp2p1/1ppnp3/3n1pqp/3N1PQP/1PPNP3/PBBP2P1/4RRK1 w Ff - 0 3")]
+        for binary_fen, expected_fen in test_cases:
+            with self.subTest(binary_fen=binary_fen, expected_fen=expected_fen):
+                compressed = bytes.fromhex(binary_fen)
+                board = chess.binary_fen.BinaryFen.decode(compressed)
+                self.assertEqual(expected_fen, board.fen())
+                self.assertTrue(board.chess960)
 
 
 if __name__ == "__main__":
