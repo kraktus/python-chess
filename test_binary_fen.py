@@ -62,11 +62,22 @@ class BinaryFenTestCase(unittest.TestCase):
             self.assertEqual(value, read_value)
 
 
+    # assertPersistence(
+    #   Standard,
+    #   FullFen("rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1"),
+    #   "ffff00001000efff2d844ad200000000111111113e955fe3"
+    # )
+    # assertPersistence(Standard, FullFen("5k2/6p1/8/1Pp5/6P1/8/8/3K4 w - c6 0 1"), "20400006400000080ac0b1")
+    # assertPersistence(Standard, FullFen("4k3/8/8/8/3pP3/8/6N1/7K b - e3 0 1"), "10000000180040802ac10f")
+
     def test_read_binary_fen(self):
         test_cases = [
             ("0000000000000000", "8/8/8/8/8/8/8/8 w - - 0 1"),
             ("00000000000000000001", "8/8/8/8/8/8/8/8 b - - 0 1"),
             ("000000000000000064df06", "8/8/8/8/8/8/8/8 b - - 100 432"),
+            ("ffff00001000efff2d844ad200000000111111113e955fe3", "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1"),
+            ("20400006400000080ac0b1", "5k2/6p1/8/1Pp5/6P1/8/8/3K4 w - c6 0 1"),
+            ("10000000180040802ac10f", "4k3/8/8/8/3pP3/8/6N1/7K b - e3 0 1"),
         ]
         for binary_fen, expected_fen in test_cases:
             with self.subTest(binary_fen=binary_fen, expected_fen=expected_fen):

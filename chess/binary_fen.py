@@ -31,6 +31,7 @@ class BinaryFen:
 
         halfmove_clock = _read_leb128(reader)
         plies = _read_leb128(reader)
+        print("plies:", plies)
 
         variant = next0(reader)
         board = _read_variant(variant)
@@ -84,8 +85,11 @@ def _unpack_piece(board: chess.Board, sq: chess.Square, nibble: int):
     elif nibble == 11:
         board.set_piece_at(sq, chess.Piece(chess.KING, chess.BLACK))
     elif nibble == 12:
-        board.ep_square = sq ^ 8
-        board.set_piece_at(sq, chess.Piece(chess.PAWN, chess.WHITE if chess.square_rank(sq) <= 4 else chess.BLACK))
+        color = chess.WHITE if chess.square_rank(sq) < 4 else chess.BLACK
+        print("en passant pawn sq:", sq, "name", chess.SQUARE_NAMES[sq])
+        board.ep_square = sq - 8 if color else sq + 8
+        print("ep square set to:", board.ep_square, "name", chess.SQUARE_NAMES[board.ep_square])
+        board.set_piece_at(sq, chess.Piece(chess.PAWN, color))
     elif nibble == 13:
         board.castling_rights |= chess.BB_SQUARES[sq]
         board.set_piece_at(sq, chess.Piece(chess.ROOK, chess.WHITE))
