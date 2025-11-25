@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import chess
 import chess.variant
 
@@ -11,12 +13,12 @@ class BinaryFen:
     """
 
     @staticmethod
-    def read(data: bytes) -> chess.Board:
+    def decode(data: bytes) -> chess.Board:
         """
         TODO
         """
-        inner = bytearray(data)
-        reader = iter(inner)
+        #inner = bytearray(data)
+        reader = iter(data)
         occupied = _read_bitboard(reader)
 
         nibble_squares: List[Tuple[chess.Square, int]] = []
@@ -30,7 +32,7 @@ class BinaryFen:
         halfmove_clock = _read_leb128(reader)
         plies = _read_leb128(reader)
 
-        variant = next(reader)
+        variant = next0(reader)
         board = _read_variant(variant)
         for sq, nibble in nibble_squares:
             _unpack_piece(board, sq, nibble)
@@ -95,14 +97,21 @@ def _unpack_piece(board: chess.Board, sq: chess.Square, nibble: int):
         board.set_piece_at(sq, chess.Piece(chess.KING, chess.BLACK)) 
 
 
+def next0(reader: Iterator[int]) -> int:
+    return next(reader, 0)
+
 def _read_bitboard(reader: Iterator[int]) -> chess.Bitboard:
     bb = chess.BB_EMPTY
     for _ in range(8):
-        bb = (bb << 8) | (next(reader) & 0xFF)
+        bb = (bb << 8) | (next0(reader) & 0xFF)
     return bb
 
+def _write_bitboard(data: bytearray, bb: chess.Bitboard) -> None:
+    for shift in range(56, -1, -8):
+        data.append((bb >> shift) & 0xFF)
+
 def _read_nibbles(reader: Iterator[int]) -> Tuple[int, int]:
-    byte = next(reader)
+    byte = next0(reader)
     return byte & 0x0F, (byte >> 4) & 0x0F
 
 def _write_nibbles(data: bytearray, lo: int, hi: int) -> None:
@@ -112,7 +121,8 @@ def _read_leb128(reader: Iterator[int]) -> int:
     result = 0
     shift = 0
     while True:
-        byte = next(reader)
+        byte = next0(reader)
+        print("read byte:", byte)
         result |= (byte & 127) << shift
         if (byte & 128) == 0:
             break
