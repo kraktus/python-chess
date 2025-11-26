@@ -53,8 +53,10 @@ class BinaryFen:
             wb, bb = _read_nibbles(reader)
             wr, br = _read_nibbles(reader)
             wq, bq = _read_nibbles(reader)
-            board.pockets[chess.WHITE] = _set_pocket(wp, wn, wb, wr, wq)
-            board.pockets[chess.BLACK] = _set_pocket(bp, bn, bb, br, bq)
+            # optimise?
+            board.pockets[chess.WHITE] = chess.variant.CrazyhousePocket("p"*wp + "n"*wn + "b"*wb + "r"*wr + "q"*wq)
+            board.pockets[chess.BLACK] = chess.variant.CrazyhousePocket("p"*bp + "n"*bn + "b"*bb + "r"*br + "q"*bq)
+            board.promoted = _read_bitboard(reader)
         return board
 
 
@@ -93,7 +95,6 @@ def _unpack_piece(board: chess.Board, sq: chess.Square, nibble: int):
         board.castling_rights |= chess.BB_SQUARES[sq]
         board.set_piece_at(sq, chess.Piece(chess.ROOK, chess.WHITE))
     elif nibble == 14:
-        print("Setting black castling right for square", sq)
         board.castling_rights |= chess.BB_SQUARES[sq]
         board.set_piece_at(sq, chess.Piece(chess.ROOK, chess.BLACK))
     elif nibble == 15:

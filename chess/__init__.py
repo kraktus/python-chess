@@ -3888,6 +3888,13 @@ class Board(BaseBoard):
 
     def __eq__(self, board: object) -> bool:
         if isinstance(board, Board):
+            def dbg(a, b):
+                if a != b:
+                    print(f"DBG {a} != {b}")
+            dbg(self.halfmove_clock, board.halfmove_clock)
+            dbg(self.fullmove_number, board.fullmove_number)
+            dbg(type(self).uci_variant, type(board).uci_variant)
+            dbg(self._transposition_key(), board._transposition_key())
             return (
                 self.halfmove_clock == board.halfmove_clock and
                 self.fullmove_number == board.fullmove_number and

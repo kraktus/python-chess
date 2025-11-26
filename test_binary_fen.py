@@ -13,7 +13,16 @@ import unittest
 import io
 
 import chess
+import chess.variant
 import chess.binary_fen
+
+KOTH = chess.variant.KingOfTheHillBoard
+THREE_CHECKS = chess.variant.ThreeCheckBoard
+ANTI = chess.variant.AntichessBoard
+ATOMIC = chess.variant.AtomicBoard
+HORDE =  chess.variant.HordeBoard
+RK = chess.variant.RacingKingsBoard
+ZH = chess.variant.CrazyhouseBoard
 
 class BinaryFenTestCase(unittest.TestCase):
 
@@ -76,28 +85,39 @@ class BinaryFenTestCase(unittest.TestCase):
         ]
         for binary_fen, expected_fen in test_cases:
             with self.subTest(binary_fen=binary_fen, expected_fen=expected_fen):
-                compressed = bytes.fromhex(binary_fen)
-                board = chess.binary_fen.BinaryFen.decode(compressed)
-                self.assertEqual(expected_fen, board.fen())
+                self.check_binary(binary_fen, expected_fen)
 
 
+    # for python-chess, 960 is handled the same as std
     def test_read_binary_fen_960(self):
         test_cases = [("704f1ee8e81e4f70d60a44000002020813191113511571be000402", "4rrk1/pbbp2p1/1ppnp3/3n1pqp/3N1PQP/1PPNP3/PBBP2P1/4RRK1 w Ff - 0 3")]
         for binary_fen, expected_fen in test_cases:
             with self.subTest(binary_fen=binary_fen, expected_fen=expected_fen):
-                compressed = bytes.fromhex(binary_fen)
-                board = chess.binary_fen.BinaryFen.decode(compressed)
-                self.assertEqual(expected_fen, board.fen())
-                self.assertTrue(board.chess960)
+                self.check_binary(binary_fen, expected_fen)
 
     def test_read_binary_fen_variants(self):
-        test_cases = [("704f1ee8e81e4f70d60a44000002020813191113511571be000402", "4rrk1/pbbp2p1/1ppnp3/3n1pqp/3N1PQP/1PPNP3/PBBP2P1/4RRK1 w Ff - 0 3")]
-        for binary_fen, expected_fen in test_cases:
-            with self.subTest(binary_fen=binary_fen, expected_fen=expected_fen):
-                compressed = bytes.fromhex(binary_fen)
-                board = chess.binary_fen.BinaryFen.decode(compressed)
-                self.assertEqual(expected_fen, board.fen())
-                self.assertTrue(board.chess960)
+        test_cases = [("ffff00000000ffff2d844ad200000000111111113e955be3000004", "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1", KOTH),
+        #("ffff00000000ffff2d844ad200000000111111113e955be363000501", "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 99 1 +0+1", THREE_CHECKS),
+        ("00800000000008001a000106", "8/7p/8/8/8/8/3K4/8 b - - 0 1", ANTI),
+        ("ffff00000000ffff2d844ad200000000111111113e955be3020407", "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 2 3", ATOMIC),
+        ("ffff0066ffffffff000000000000000000000000000000000000111111113e955be3000008", "rnbqkbnr/pppppppp/8/1PP2PP1/PPPPPPPP/PPPPPPPP/PPPPPPPP/PPPPPPPP w kq - 0 1", HORDE),
+        ("000000000000ffff793542867b3542a6000009", "8/8/8/8/8/8/krbnNBRK/qrbnNBRQ w - - 0 1", RK),
+        ("ffff00000000ffff2d844ad200000000111111113e955be300e407010000000000ef0000000000002a", "r~n~b~q~kb~n~r~/pppppppp/8/8/8/8/PPPPPPPP/RN~BQ~KB~NR/ w KQkq - 0 499", ZH),
+        ("ffff00000000ffff2d844ad200000000111111113e955be30000010000000000", "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR/ w KQkq - 0 1", ZH)
+        ]
+        for binary_fen, expected_fen, variant in test_cases:
+            with self.subTest(binary_fen=binary_fen, expected_fen=expected_fen, variant=variant):
+                self.check_binary(binary_fen, expected_fen, variant)
+
+
+    def check_binary(self, binary_fen, expected_fen, variant = None):
+        compressed = bytes.fromhex(binary_fen)
+        board = chess.binary_fen.BinaryFen.decode(compressed)
+        from_fen = chess.Board(fen=expected_fen, chess960=True) if variant is None else variant(fen=expected_fen)
+        self.assertEqual(board, from_fen)
+        # different FEN format exist for these variants
+        if variant not in [ZH, THREE_CHECKS]:
+            self.assertEqual(expected_fen, board.fen())
 
 
 if __name__ == "__main__":
