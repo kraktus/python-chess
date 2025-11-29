@@ -63,7 +63,7 @@ class BinaryFen:
 
     @staticmethod
     def encode(board: chess.Board) -> bytes:
-        builder = bytearray(8 + 32)
+        builder = bytearray()
         _write_bitboard(builder, board.occupied)
         iter_occupied = chess.scan_forward(board.occupied)
         for (sq1, sq2) in zip_longest(iter_occupied, iter_occupied):
@@ -102,11 +102,11 @@ def _encode_variant(board: chess.Board) -> int:
         if root.has_chess960_castling_rights():
             return 2 # chess960
         # TODO FIXME check it works properly
-        elif root == chess.Board():
-            return 0
+        # elif root == chess.Board():
+        #     return 0
         else:
-            # From positon
-            return 3
+            # should we try to differ from position from std?
+            return 0
     elif uci_variant == "crazyhouse":
         return 1
     elif uci_variant == "kingofthehill":
@@ -130,7 +130,7 @@ def _pack_piece(board: chess.Board, sq: chess.Square) -> int:
     if piece is None:
         raise ValueError(f"Unreachable: no piece at square {sq}, board: {board}")
     if piece.piece_type == chess.PAWN:
-        if board.ep_square is not None and (board.ep_square + 8 == board or board.ep_square - 8 == board):
+        if board.ep_square is not None and (board.ep_square + 8 == sq or board.ep_square - 8 == sq):
             return 12
         return 0 if piece.color == chess.WHITE else 1
     elif piece.piece_type == chess.KNIGHT:

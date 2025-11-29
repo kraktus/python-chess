@@ -118,6 +118,8 @@ class BinaryFenTestCase(unittest.TestCase):
         encoded = BinaryFen.encode(board)
         from_fen = chess.Board(fen=expected_fen, chess960=True) if variant is None else variant(fen=expected_fen)
         self.assertEqual(board, from_fen)
+        self.assertEqual(board.fen(), BinaryFen.decode(encoded).fen())
+        self.assertEqual(encoded, compressed)
         # different FEN format exist for these variants
         if variant not in [ZH, THREE_CHECKS]:
             self.assertEqual(expected_fen, board.fen())
