@@ -16,6 +16,8 @@ import chess
 import chess.variant
 import chess.binary_fen
 
+from chess.binary_fen import BinaryFen
+
 KOTH = chess.variant.KingOfTheHillBoard
 THREE_CHECKS = chess.variant.ThreeCheckBoard
 ANTI = chess.variant.AntichessBoard
@@ -112,7 +114,8 @@ class BinaryFenTestCase(unittest.TestCase):
 
     def check_binary(self, binary_fen, expected_fen, variant = None):
         compressed = bytes.fromhex(binary_fen)
-        board = chess.binary_fen.BinaryFen.decode(compressed)
+        board = BinaryFen.decode(compressed)
+        encoded = BinaryFen.encode(board)
         from_fen = chess.Board(fen=expected_fen, chess960=True) if variant is None else variant(fen=expected_fen)
         self.assertEqual(board, from_fen)
         # different FEN format exist for these variants

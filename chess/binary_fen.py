@@ -17,7 +17,6 @@ class BinaryFen:
         """
         TODO
         """
-        #inner = bytearray(data)
         reader = iter(data)
         occupied = _read_bitboard(reader)
 
@@ -38,11 +37,12 @@ class BinaryFen:
             _unpack_piece(board, sq, nibble)
         board.halfmove_clock = halfmove_clock
         board.fullmove_number = plies//2 + 1
-        # from fullmove_number, it is important to write it that way
+        # it is important to write it that way
         # because default turn can have been already set to black inside `_unpack_piece`
         if plies % 2 == 1:
             board.turn = chess.BLACK
 
+        # TODO, use type(board).uci_variant instead? that would break typing
         if isinstance(board, chess.variant.ThreeCheckBoard):
             lo, hi = _read_nibbles(reader)
             board.remaining_checks[chess.WHITE] = 3 - lo
@@ -60,6 +60,94 @@ class BinaryFen:
         return board
 
 
+
+    @staticmethod
+    def encode(board: chess.Board) -> bytes:
+        builder = bytearray(8 + 32)
+        _write_bitboard(builder, board.occupied)
+        iter_occupied = chess.scan_forward(board.occupied)
+        for (sq1, sq2) in zip_longest(iter_occupied, iter_occupied):
+            lo = _pack_piece(board, sq1)
+            hi = _pack_piece(board, sq2) if sq2 is not None else 0
+            _write_nibbles(builder, lo, hi)
+        plies = board.ply()
+        broken_turn = board.king(chess.BLACK) is None and board.turn == chess.BLACK
+        variant_header = _encode_variant(board)
+
+        if board.halfmove_clock > 0 or plies > 1 or broken_turn or variant_header != 0:
+            _write_leb128(builder, board.halfmove_clock)
+
+        if plies > 1 or broken_turn or variant_header != 0:
+            _write_leb128(builder, plies)
+        if variant_header != 0:
+            builder.append(variant_header)
+            if isinstance(board, chess.variant.ThreeCheckBoard):
+                white_checks = 3 - board.remaining_checks[chess.WHITE]
+                black_checks = 3 - board.remaining_checks[chess.BLACK]
+                _write_nibbles(builder, white_checks, black_checks)
+            elif isinstance(board, chess.variant.CrazyhouseBoard):
+                for piece_type in chess.PIECE_TYPES[:-1]:
+                    [w, b] = [board.pockets[color].count(piece_type) for color in chess.COLORS]
+                    _write_nibbles(builder, w, b)
+                if board.promoted:
+                    _write_bitboard(builder, board.promoted)
+        return bytes(builder)
+
+
+def _encode_variant(board: chess.Board) -> int:
+    uci_variant = type(board).uci_variant
+    if uci_variant == "chess":
+        root = board.root()
+        # TODO fixme, is this the proper way to do?
+        if root.has_chess960_castling_rights():
+            return 2 # chess960
+        # TODO FIXME check it works properly
+        elif root == chess.Board():
+            return 0
+        else:
+            # From positon
+            return 3
+    elif uci_variant == "crazyhouse":
+        return 1
+    elif uci_variant == "kingofthehill":
+        return 4
+    elif uci_variant == "3check":
+        return 5
+    elif uci_variant == "antichess":
+        return 6
+    elif uci_variant == "atomic":
+        return 7
+    elif uci_variant == "horde":
+        return 8
+    elif uci_variant == "racingkings":
+        return 9
+    else:
+        raise ValueError(f"Unsupported variant: {uci_variant}")
+
+
+def _pack_piece(board: chess.Board, sq: chess.Square) -> int:
+    piece = board.piece_at(sq)
+    if piece is None:
+        raise ValueError(f"Unreachable: no piece at square {sq}, board: {board}")
+    if piece.piece_type == chess.PAWN:
+        if board.ep_square is not None and (board.ep_square + 8 == board or board.ep_square - 8 == board):
+            return 12
+        return 0 if piece.color == chess.WHITE else 1
+    elif piece.piece_type == chess.KNIGHT:
+        return 2 if piece.color == chess.WHITE else 3
+    elif piece.piece_type == chess.BISHOP:
+        return 4 if piece.color == chess.WHITE else 5
+    elif piece.piece_type == chess.ROOK:
+        if board.castling_rights & chess.BB_SQUARES[sq]:
+            return 13 if piece.color == chess.WHITE else 14
+        return 6 if piece.color == chess.WHITE else 7
+    elif piece.piece_type == chess.QUEEN:
+        return 8 if piece.color == chess.WHITE else 9
+    elif piece.piece_type == chess.KING:
+        if piece.color == chess.BLACK and board.turn == chess.BLACK:
+            return 15
+        return 10 if piece.color == chess.WHITE else 11
+    raise ValueError(f"Unreachable: unknown piece {piece} at square {sq}, board: {board}")
 
 def _unpack_piece(board: chess.Board, sq: chess.Square, nibble: int):
     if nibble == 0:
