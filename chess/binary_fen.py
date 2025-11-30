@@ -43,8 +43,9 @@ class BinaryFen:
 
         raise `ValueError` if data is invalid
         """
-        if not data and strict:
-            # seem sensible to avoid user error on empty data
+        if not data:
+            # seem sensible to error on empty data to reduce confusion in case of usage error
+            # TODO FIXME, ok with that?
             raise ValueError("Empty data")
         reader = iter(data)
         occupied = _read_bitboard(reader)
