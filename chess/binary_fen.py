@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+# Almost all code based on: //github.com/lichess-org/scalachess/blob/8c94e2087f83affb9718fd2be19c34866c9a1a22/core/src/main/scala/format/BinaryFen.scala
+
 import chess
 import chess.variant
 
@@ -45,8 +47,9 @@ class BinaryFen:
         # TODO, use type(board).uci_variant instead? that would break typing
         if isinstance(board, chess.variant.ThreeCheckBoard):
             lo, hi = _read_nibbles(reader)
-            board.remaining_checks[chess.WHITE] = 3 - lo
-            board.remaining_checks[chess.BLACK] = 3 - hi
+            # remaining check are for the opposite side
+            board.remaining_checks[chess.WHITE] = 3 - hi
+            board.remaining_checks[chess.BLACK] = 3 - lo
         elif isinstance(board, chess.variant.CrazyhouseBoard):
             wp, bp = _read_nibbles(reader)
             wn, bn = _read_nibbles(reader)
@@ -83,7 +86,7 @@ class BinaryFen:
             if isinstance(board, chess.variant.ThreeCheckBoard):
                 white_checks = 3 - board.remaining_checks[chess.WHITE]
                 black_checks = 3 - board.remaining_checks[chess.BLACK]
-                _write_nibbles(builder, white_checks, black_checks)
+                _write_nibbles(builder, black_checks, white_checks)
             elif isinstance(board, chess.variant.CrazyhouseBoard):
                 for piece_type in chess.PIECE_TYPES[:-1]:
                     [w, b] = [board.pockets[color].count(piece_type) for color in chess.COLORS]

@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 
+# Almost all tests adapted from https://github.com/lichess-org/scalachess/blob/8c94e2087f83affb9718fd2be19c34866c9a1a22/test-kit/src/test/scala/format/BinaryFenTest.scala#L1
+
 import asyncio
 import copy
 import logging
@@ -73,31 +75,6 @@ class BinaryFenTestCase(unittest.TestCase):
             read_value = chess.binary_fen._read_leb128(iter(data))
             self.assertEqual(value, read_value)
 
-# test("handpicked fens roundtrip"):
-
-#     assertRoundtrip(Atomic, FullFen("rnbq3r/ppp1p1pp/5p2/3p4/8/8/PPPPPPPP/RNBQKB1R b KQ - 0 4"))
-#     assertRoundtrip(Atomic, FullFen("8/6pp/2p2p1n/3p4/4P3/B6P/3P1PP1/1r2K2R b K - 0 17"))
-
-#     assertRoundtrip(RacingKings, FullFen("8/8/8/8/8/8/krbnNBRK/qrbnNBRQ w - - 0 1"))
-#     assertRoundtrip(RacingKings, FullFen("8/8/8/8/8/6K1/krbnNBR1/qrbnNBRQ b - - 1 1"))
-
-#     assertRoundtrip(KingOfTheHill, FullFen("rnbq1bnr/ppp2ppp/3k4/4p2Q/3PK3/8/PPP2PPP/RNB2BNR b - - 0 7"))
-
-#     assertRoundtrip(
-#       ThreeCheck,
-#       FullFen("1r3rk1/pbp1N1pp/3p1q2/1p2bp2/7P/2PBB1P1/PP3Q1R/R5K1 b - - 3 21 +2+1")
-#     )
-
-#     assertRoundtrip(
-#       Crazyhouse,
-#       FullFen("1r3Q1n/p1kp3p/1p2ppq1/2p2b2/8/3P2P1/PPP1PPBP/R4RK1/NRpnnbb w - - 2 28")
-#     )
-#     assertRoundtrip(Crazyhouse, FullFen("b2nkbnQ~/p1pppp1p/pP1q2p1/r7/8/R5PR/P1PP1P1P/1NBQ1BNK/R w - - 1 2"))
-#     assertRoundtrip(Crazyhouse, FullFen("8/8/8/8/8/8/8/8/ w - - 0 1"))
-#     assertRoundtrip(
-#       Crazyhouse,
-#       FullFen("r~n~b~q~kb~n~r~/pppppppp/8/8/8/8/PPPPPPPP/RN~BQ~KB~NR/ w KQkq - 0 1")
-#     )
     def test_binary_fen_roundtrip(self):
         cases = [
             Board(fen="8/8/8/8/8/8/8/8 w - - 0 1"),
@@ -121,17 +98,29 @@ class BinaryFenTestCase(unittest.TestCase):
             Board(fen="r2r3k/p7/3p4/8/8/P6P/8/R3K2R b KQq - 0 4",chess960=True),
             Board(fen="rn2k1r1/ppp1pp1p/3p2p1/5bn1/P7/2N2B2/1PPPPP2/2BNK1RR w Gkq - 4 11", chess960=True),
             Board(fen="8/8/8/8/8/8/2Rk4/1K6 w - - 0 1"),
-            #     assertRoundtrip(
-#       Horde,
-#       FullFen("rn1qkb1r/3bn1p1/2p3P1/pPP2P2/P1PPP1P1/P1PP1PPP/PPPPPPPP/PPPPPPPP w kq a6 0 12")
-#     )
 
-#     assertRoundtrip(Antichess, FullFen("8/2p1p2p/2Q1N2B/8/p7/N7/PPP1P1PP/R4B1R b - - 0 13"))
-#     assertRoundtrip(Antichess, FullFen("8/p6p/4p3/1P4P1/Pp4p1/3P4/7P/8 b - a3 0 1"))
-#     assertRoundtrip(Antichess, FullFen("8/p6p/4p3/1P4P1/1p4pP/3P4/P7/8 b - h3 0 1"))
-#     assertRoundtrip(Antichess, FullFen("8/7p/4p3/pP4P1/1p1P2p1/8/P6P/8 w - a6 0 2"))
-#     assertRoundtrip(Antichess, FullFen("8/p7/4p3/1P4Pp/1p1P2p1/8/P6P/8 w - h6 0 2"))
-            HORDE(fen="rnbqkbnr/pppppppp/8/1PP2PP1/PPPPPPPP/PPPPPPPP/PPPPPPPP/PPPPPPPP w kq - 0 1"),
+            HORDE(fen="rn1qkb1r/3bn1p1/2p3P1/pPP2P2/P1PPP1P1/P1PP1PPP/PPPPPPPP/PPPPPPPP w kq a6 0 12"),
+
+            ANTI("8/2p1p2p/2Q1N2B/8/p7/N7/PPP1P1PP/R4B1R b - - 0 13"),
+            ANTI("8/p6p/4p3/1P4P1/Pp4p1/3P4/7P/8 b - a3 0 1"),
+            ANTI("8/p6p/4p3/1P4P1/1p4pP/3P4/P7/8 b - h3 0 1"),
+            ANTI("8/7p/4p3/pP4P1/1p1P2p1/8/P6P/8 w - a6 0 2"),
+            ANTI("8/p7/4p3/1P4Pp/1p1P2p1/8/P6P/8 w - h6 0 2"),
+
+            ATOMIC(fen="rnbq3r/ppp1p1pp/5p2/3p4/8/8/PPPPPPPP/RNBQKB1R b KQ - 0 4"),
+            ATOMIC(fen="8/6pp/2p2p1n/3p4/4P3/B6P/3P1PP1/1r2K2R b K - 0 17"),
+
+            RK(fen="8/8/8/8/8/8/krbnNBRK/qrbnNBRQ w - - 0 1"),
+            RK(fen="8/8/8/8/8/6K1/krbnNBR1/qrbnNBRQ b - - 1 1"),
+
+            KOTH(fen="rnbq1bnr/ppp2ppp/3k4/4p2Q/3PK3/8/PPP2PPP/RNB2BNR b - - 0 7"),
+
+            THREE_CHECKS(fen="1r3rk1/pbp1N1pp/3p1q2/1p2bp2/7P/2PBB1P1/PP3Q1R/R5K1 b - - 3 21 +2+1"),
+
+            ZH(fen="1r3Q1n/p1kp3p/1p2ppq1/2p2b2/8/3P2P1/PPP1PPBP/R4RK1/NRpnnbb w - - 2 28"),
+            ZH(fen="b2nkbnQ~/p1pppp1p/pP1q2p1/r7/8/R5PR/P1PP1P1P/1NBQ1BNK/R w - - 1 2"),
+            ZH(fen="8/8/8/8/8/8/8/8/ w - - 0 1"),
+            ZH(fen="r~n~b~q~kb~n~r~/pppppppp/8/8/8/8/PPPPPPPP/RN~BQ~KB~NR/ w KQkq - 0 1"),
         ]
         for case in cases:
             case_fen = case.fen()
@@ -152,6 +141,7 @@ class BinaryFenTestCase(unittest.TestCase):
             # TODO FIXME, this is encoded with `standard` variant but with chess960 castling
             # should this be accepted? for now basing on scalachess behavior
             ("8901080000810091ad0d10e1f70007", "r2r3k/p7/3p4/8/8/P6P/8/R3K2R b KQq - 0 4"),
+
             ("95dd00000000dd95ad8d000000111111be9e", "r1k1r2q/p1ppp1pp/8/8/8/8/P1PPP1PP/R1K1R2Q w KQkq - 0 1"),
             ("00000002180000308a1c0f030103", "8/8/8/1k6/3Pp3/8/8/4KQ2 b - d3 3 1")
         ]
@@ -169,7 +159,7 @@ class BinaryFenTestCase(unittest.TestCase):
 
     def test_read_binary_fen_variants(self):
         test_cases = [("ffff00000000ffff2d844ad200000000111111113e955be3000004", "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1", KOTH),
-        #("ffff00000000ffff2d844ad200000000111111113e955be363000501", "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 99 1 +0+1", THREE_CHECKS),
+        ("ffff00000000ffff2d844ad200000000111111113e955be363000501", "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 99 1 +0+1", THREE_CHECKS),
         ("00800000000008001a000106", "8/7p/8/8/8/8/3K4/8 b - - 0 1", ANTI),
         ("ffff00000000ffff2d844ad200000000111111113e955be3020407", "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 2 3", ATOMIC),
         ("ffff0066ffffffff000000000000000000000000000000000000111111113e955be3000008", "rnbqkbnr/pppppppp/8/1PP2PP1/PPPPPPPP/PPPPPPPP/PPPPPPPP/PPPPPPPP w kq - 0 1", HORDE),
@@ -185,11 +175,14 @@ class BinaryFenTestCase(unittest.TestCase):
     def check_binary(self, binary_fen, expected_fen, variant = None):
         compressed = bytes.fromhex(binary_fen)
         board = BinaryFen.decode(compressed)
-        encoded = BinaryFen.encode(board)
         from_fen = chess.Board(fen=expected_fen, chess960=True) if variant is None else variant(fen=expected_fen)
+        encoded = BinaryFen.encode(board)
+
         self.assertEqual(board, from_fen)
         self.assertEqual(board.fen(), BinaryFen.decode(encoded).fen())
-        #self.assertEqual(encoded, compressed)
+        
+        if variant is not None: # for std chess there's ambiguity between std, fromPosition and chess960
+             self.assertEqual(encoded, compressed)
         # different FEN format exist for these variants
         if variant not in [ZH, THREE_CHECKS]:
             self.assertEqual(expected_fen, board.fen())
