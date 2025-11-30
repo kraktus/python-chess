@@ -74,16 +74,6 @@ class BinaryFenTestCase(unittest.TestCase):
             self.assertEqual(value, read_value)
 
 # test("handpicked fens roundtrip"):
-#     assertRoundtrip(
-#       Horde,
-#       FullFen("rn1qkb1r/3bn1p1/2p3P1/pPP2P2/P1PPP1P1/P1PP1PPP/PPPPPPPP/PPPPPPPP w kq a6 0 12")
-#     )
-
-#     assertRoundtrip(Antichess, FullFen("8/2p1p2p/2Q1N2B/8/p7/N7/PPP1P1PP/R4B1R b - - 0 13"))
-#     assertRoundtrip(Antichess, FullFen("8/p6p/4p3/1P4P1/Pp4p1/3P4/7P/8 b - a3 0 1"))
-#     assertRoundtrip(Antichess, FullFen("8/p6p/4p3/1P4P1/1p4pP/3P4/P7/8 b - h3 0 1"))
-#     assertRoundtrip(Antichess, FullFen("8/7p/4p3/pP4P1/1p1P2p1/8/P6P/8 w - a6 0 2"))
-#     assertRoundtrip(Antichess, FullFen("8/p7/4p3/1P4Pp/1p1P2p1/8/P6P/8 w - h6 0 2"))
 
 #     assertRoundtrip(Atomic, FullFen("rnbq3r/ppp1p1pp/5p2/3p4/8/8/PPPPPPPP/RNBQKB1R b KQ - 0 4"))
 #     assertRoundtrip(Atomic, FullFen("8/6pp/2p2p1n/3p4/4P3/B6P/3P1PP1/1r2K2R b K - 0 17"))
@@ -131,6 +121,17 @@ class BinaryFenTestCase(unittest.TestCase):
             Board(fen="r2r3k/p7/3p4/8/8/P6P/8/R3K2R b KQq - 0 4",chess960=True),
             Board(fen="rn2k1r1/ppp1pp1p/3p2p1/5bn1/P7/2N2B2/1PPPPP2/2BNK1RR w Gkq - 4 11", chess960=True),
             Board(fen="8/8/8/8/8/8/2Rk4/1K6 w - - 0 1"),
+            #     assertRoundtrip(
+#       Horde,
+#       FullFen("rn1qkb1r/3bn1p1/2p3P1/pPP2P2/P1PPP1P1/P1PP1PPP/PPPPPPPP/PPPPPPPP w kq a6 0 12")
+#     )
+
+#     assertRoundtrip(Antichess, FullFen("8/2p1p2p/2Q1N2B/8/p7/N7/PPP1P1PP/R4B1R b - - 0 13"))
+#     assertRoundtrip(Antichess, FullFen("8/p6p/4p3/1P4P1/Pp4p1/3P4/7P/8 b - a3 0 1"))
+#     assertRoundtrip(Antichess, FullFen("8/p6p/4p3/1P4P1/1p4pP/3P4/P7/8 b - h3 0 1"))
+#     assertRoundtrip(Antichess, FullFen("8/7p/4p3/pP4P1/1p1P2p1/8/P6P/8 w - a6 0 2"))
+#     assertRoundtrip(Antichess, FullFen("8/p7/4p3/1P4Pp/1p1P2p1/8/P6P/8 w - h6 0 2"))
+            HORDE(fen="rnbqkbnr/pppppppp/8/1PP2PP1/PPPPPPPP/PPPPPPPP/PPPPPPPP/PPPPPPPP w kq - 0 1"),
         ]
         for case in cases:
             case_fen = case.fen()
