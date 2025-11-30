@@ -214,7 +214,13 @@ def _unpack_piece(board: chess.Board, sq: chess.Square, nibble: int):
         board.set_piece_at(sq, chess.Piece(chess.KING, chess.BLACK))
     elif nibble == 12:
         # in scalachess rank starts at 1, python-chess 0
-        color = chess.WHITE if chess.square_rank(sq) < 4 else chess.BLACK
+        rank = chess.square_rank(sq)
+        if rank == 3:
+            color = chess.WHITE
+        elif rank == 4:
+            color = chess.BLACK
+        else:
+            raise ValueError(f"Pawn at square {chess.square_name(sq)} cannot be an en passant pawn")
         board.ep_square = sq - 8 if color else sq + 8
         board.set_piece_at(sq, chess.Piece(chess.PAWN, color))
     elif nibble == 13:

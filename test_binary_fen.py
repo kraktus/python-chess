@@ -19,7 +19,7 @@ import chess.variant
 import chess.binary_fen
 
 from chess import Board
-from chess.binary_fen import BinaryFen
+from chess.binary_fen import BinaryFen, StdMode
 
 KOTH = chess.variant.KingOfTheHillBoard
 THREE_CHECKS = chess.variant.ThreeCheckBoard
@@ -39,6 +39,9 @@ class BinaryFenTestCase(unittest.TestCase):
                 read_lo, read_hi = chess.binary_fen._read_nibbles(iter(data))
                 self.assertEqual(lo, read_lo)
                 self.assertEqual(hi, read_hi)
+
+    def test_std_mode_eq(self):
+        self.assertEqual(StdMode.STANDARD,StdMode.from_int_opt(0))
 
     def test_bitboard_roundtrip(self):
         test_bitboards = [
@@ -128,6 +131,33 @@ class BinaryFenTestCase(unittest.TestCase):
                 encoded = BinaryFen.encode(case)
                 decoded, _ = BinaryFen.decode(encoded)
                 self.assertEqual(case_fen, decoded.fen())
+
+
+    # tests that used to fail the fuzzer at some point
+    def test_fuzzer_fail(self):
+        fuzz_fails = ["23d7",
+        "e17f11efd84522d34878ffffffa600000000ce1b23ffff000943"
+        ]
+        for fuzz_fail in fuzz_fails:
+            with self.subTest(fuzz_fail=fuzz_fail):
+                data = bytes.fromhex(fuzz_fail)
+                try:
+                    board, std_mode = BinaryFen.decode(data)
+                except ValueError:
+                    continue
+                print()
+                print("ep square", board.ep_square)
+                print(board.fen())
+                print()
+                # should not error
+                board.status()
+                list(board.legal_moves)
+                encoded = BinaryFen.encode(board,std_mode=std_mode)
+                board2, std_mode2 = BinaryFen.decode(encoded)
+                # for positions with multiple black kings with black to move,
+                # the binary fen is not unique
+                self.assertEqual(board, board2)
+                self.assertEqual(std_mode, std_mode2)
 
 
     def test_read_binary_fen_std(self):
