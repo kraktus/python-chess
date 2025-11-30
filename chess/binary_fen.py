@@ -2,12 +2,32 @@ from __future__ import annotations
 
 # Almost all code based on: //github.com/lichess-org/scalachess/blob/8c94e2087f83affb9718fd2be19c34866c9a1a22/core/src/main/scala/format/BinaryFen.scala
 
+from enum import IntEnum
+
+import logging
+
 import chess
 import chess.variant
 
-from typing import Tuple, Optional, List, Union, Iterator
+from typing import Tuple, Optional, List, Union, Iterator, Literal
 from itertools import zip_longest
 
+LOGGER = logging.getLogger(__name__)
+
+class StdMode(IntEnum):
+    STANDARD = 0
+    CHESS_960 = 2
+    FROM_POSITION = 3
+
+    @classmethod
+    def from_int_opt(cls, value: int) -> Optional[StdMode]:
+        """Convert an integer to a StdMode enum member, or raise ValueError if unsupported."""
+        try:
+            return cls(value)
+        except ValueError:
+            return None
+
+CHESS_960_POSITIONS = [chess.Board.from_chess960_pos(i) for i in range(960)]
 
 class BinaryFen:
     """
@@ -15,10 +35,17 @@ class BinaryFen:
     """
 
     @staticmethod
-    def decode(data: bytes) -> chess.Board:
+    def decode(data: bytes) -> Tuple[chess.Board, Optional[StdMode]]:
         """
-        TODO
+        Read from bytes and return a chess.Board of the proper variant
+
+        If it is standard chess position, also return the mode (standard, chess960, from_position)
+
+        raise `ValueError` if data is invalid
         """
+        if not data and strict:
+            # seem sensible to avoid user error on empty data
+            raise ValueError("Empty data")
         reader = iter(data)
         occupied = _read_bitboard(reader)
 
@@ -34,6 +61,8 @@ class BinaryFen:
         plies = _read_leb128(reader)
 
         variant = next0(reader)
+        std_mode: Optional[StdMode] = StdMode.from_int_opt(variant)
+
         board = _read_variant(variant)
         for sq, nibble in nibble_squares:
             _unpack_piece(board, sq, nibble)
@@ -60,12 +89,19 @@ class BinaryFen:
             board.pockets[chess.WHITE] = chess.variant.CrazyhousePocket("p"*wp + "n"*wn + "b"*wb + "r"*wr + "q"*wq)
             board.pockets[chess.BLACK] = chess.variant.CrazyhousePocket("p"*bp + "n"*bn + "b"*bb + "r"*br + "q"*bq)
             board.promoted = _read_bitboard(reader)
-        return board
-
+        return (board, std_mode)
 
 
     @staticmethod
-    def encode(board: chess.Board) -> bytes:
+    def encode(board: chess.Board, std_mode: Optional[StdMode]=None) -> bytes:
+        """
+        Given a chess.Board, return its binary FEN representation, and std_mode if applicable
+
+        If the board is a standard chess position, `std_mode` can be provided to specify the mode (standard, chess960, from_position)
+        if not provided, it will be inferred from the root position
+        """
+        if std_mode is not None and type(board).uci_variant != "chess":
+            raise ValueError("std_mode can only be provided for standard chess positions")
         builder = bytearray()
         _write_bitboard(builder, board.occupied)
         iter_occupied = chess.scan_forward(board.occupied)
@@ -75,7 +111,7 @@ class BinaryFen:
             _write_nibbles(builder, lo, hi)
         plies = board.ply()
         broken_turn = board.king(chess.BLACK) is None and board.turn == chess.BLACK
-        variant_header = _encode_variant(board)
+        variant_header = std_mode if std_mode is not None else _encode_variant(board)
         if board.halfmove_clock > 0 or plies > 1 or broken_turn or variant_header != 0:
             _write_leb128(builder, board.halfmove_clock)
 
@@ -95,20 +131,17 @@ class BinaryFen:
                     _write_bitboard(builder, board.promoted)
         return bytes(builder)
 
-
 def _encode_variant(board: chess.Board) -> int:
     uci_variant = type(board).uci_variant
     if uci_variant == "chess":
         root = board.root()
-        # TODO fixme, is this the proper way to do?
-        if root.has_chess960_castling_rights():
+        if root in CHESS_960_POSITIONS:
             return 2 # chess960
         # TODO FIXME check it works properly
-        # elif root == chess.Board():
-        #     return 0
-        else:
-            # should we try to differ from position from std?
+        elif root == chess.Board():
             return 0
+        else:
+            return 3
     elif uci_variant == "crazyhouse":
         return 1
     elif uci_variant == "kingofthehill":

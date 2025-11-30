@@ -126,7 +126,7 @@ class BinaryFenTestCase(unittest.TestCase):
             case_fen = case.fen()
             with self.subTest(fen=case_fen):
                 encoded = BinaryFen.encode(case)
-                decoded = BinaryFen.decode(encoded)
+                decoded, _ = BinaryFen.decode(encoded)
                 self.assertEqual(case_fen, decoded.fen())
 
 
@@ -174,15 +174,15 @@ class BinaryFenTestCase(unittest.TestCase):
 
     def check_binary(self, binary_fen, expected_fen, variant = None):
         compressed = bytes.fromhex(binary_fen)
-        board = BinaryFen.decode(compressed)
+        board, std_mode = BinaryFen.decode(compressed)
         from_fen = chess.Board(fen=expected_fen, chess960=True) if variant is None else variant(fen=expected_fen)
-        encoded = BinaryFen.encode(board)
+        encoded = BinaryFen.encode(board,std_mode=std_mode)
 
         self.assertEqual(board, from_fen)
-        self.assertEqual(board.fen(), BinaryFen.decode(encoded).fen())
+        self.assertEqual(encoded, compressed)
         
-        if variant is not None: # for std chess there's ambiguity between std, fromPosition and chess960
-             self.assertEqual(encoded, compressed)
+        # if variant is not None: # for std chess there's ambiguity between std, fromPosition and chess960
+        #      self.assertEqual(encoded, compressed)
         # different FEN format exist for these variants
         if variant not in [ZH, THREE_CHECKS]:
             self.assertEqual(expected_fen, board.fen())
