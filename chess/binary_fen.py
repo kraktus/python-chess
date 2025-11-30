@@ -73,7 +73,6 @@ class BinaryFen:
         plies = board.ply()
         broken_turn = board.king(chess.BLACK) is None and board.turn == chess.BLACK
         variant_header = _encode_variant(board)
-
         if board.halfmove_clock > 0 or plies > 1 or broken_turn or variant_header != 0:
             _write_leb128(builder, board.halfmove_clock)
 
@@ -126,6 +125,8 @@ def _encode_variant(board: chess.Board) -> int:
 
 
 def _pack_piece(board: chess.Board, sq: chess.Square) -> int:
+    # Encoding from
+    # https://github.com/official-stockfish/nnue-pytorch/blob/2db3787d2e36f7142ea4d0e307b502dda4095cd9/lib/nnue_training_data_formats.h#L4607
     piece = board.piece_at(sq)
     if piece is None:
         raise ValueError(f"Unreachable: no piece at square {sq}, board: {board}")
@@ -189,7 +190,6 @@ def _unpack_piece(board: chess.Board, sq: chess.Square, nibble: int):
         board.turn = chess.BLACK
         board.set_piece_at(sq, chess.Piece(chess.KING, chess.BLACK)) 
 
-
 def next0(reader: Iterator[int]) -> int:
     return next(reader, 0)
 
@@ -247,16 +247,11 @@ def _read_variant(byte: int) -> chess.Board:
         return chess.variant.HordeBoard.empty()
     elif byte == 9:
         return chess.variant.RacingKingsBoard.empty()
-    else: # 0 (std), 2 (chess960) 3 (from position) or fallback
+    elif byte == 0 or byte == 2 or byte == 3: # 0 (std), 2 (chess960) 3 (from position)
         return chess.Board.empty(chess960=True)
-
-
-# TODO, add this as method to ZH pocket?
-# is this premature optimisation?
-def _set_pocket(pawns: int, knights: int, bishops: int, rooks: int, queens: int) -> chess.variant.CrazyhousePocket:
-    pocket = chess.variant.CrazyhousePocket()
-    pocket._pieces = [-1, pawns, knights, bishops, rooks, queens]
-    return pocket
+    # TODO, is this better than silently trying std?
+    else:
+        raise ValueError(f"Unsupported variant byte: {byte}")
 
 
 
