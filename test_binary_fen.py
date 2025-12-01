@@ -211,9 +211,12 @@ class BinaryFenTestCase(unittest.TestCase):
     def check_binary(self, binary_fen_str, expected_fen, variant = None):
         compressed = bytes.fromhex(binary_fen_str)
         board, std_mode = BinaryFen.decode(compressed)
+        binary_fen1 = BinaryFen.parse_from_bytes(compressed)
         from_fen = chess.Board(fen=expected_fen, chess960=True) if variant is None else variant(fen=expected_fen)
         encoded = BinaryFen.encode(board,std_mode=std_mode)
+        binary_fen2 = BinaryFen.parse_from_board(board)
 
+        self.assertEqual(binary_fen1, binary_fen2)
         self.assertEqual(board, from_fen)
         self.assertEqual(encoded, compressed)
         
