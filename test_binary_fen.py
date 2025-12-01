@@ -317,6 +317,7 @@ class BinaryFenTestCase(unittest.TestCase):
         encoded = BinaryFen.encode(board,std_mode=std_mode)
         binary_fen2 = BinaryFen.parse_from_board(board,std_mode=std_mode)
         self.maxDiff = None
+        self.assertEqual(binary_fen2, binary_fen2.to_canonical(), "from board should produce canonical value")
         self.assertEqual(binary_fen1.to_canonical(), binary_fen2.to_canonical())
         self.assertEqual(board, from_fen)
         self.assertEqual(encoded.hex(), compressed.hex())
