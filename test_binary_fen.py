@@ -130,17 +130,11 @@ class BinaryFenTestCase(unittest.TestCase):
         for case in cases:
             case_fen = case.fen()
             with self.subTest(fen=case_fen):
-                encoded = BinaryFen.encode(case)
-                correct_bin_fen = BinaryFen.parse_from_bytes(encoded)
                 bin_fen = BinaryFen.parse_from_board(case)
-                uncorrect_bin_fen = BinaryFen.parse_from_bytes(bin_fen.to_bytes())
-                from pprint import pprint
-                from deepdiff import DeepDiff
-                pprint(DeepDiff(asdict(correct_bin_fen), asdict(uncorrect_bin_fen)),indent=2)
-                self.assertEqual(correct_bin_fen, bin_fen)
-                self.assertEqual(correct_bin_fen, uncorrect_bin_fen)
-                decoded, _ = BinaryFen.decode(encoded)
-                self.assertEqual(case_fen, decoded.fen())
+                bin_fen2 = BinaryFen.parse_from_bytes(bin_fen.to_bytes())
+                self.assertEqual(bin_fen, bin_fen2)
+                decoded, _ = bin_fen2.to_board()
+                self.assertEqual(case, decoded)
 
 
     # tests that used to fail the fuzzer at some point
@@ -233,6 +227,10 @@ class BinaryFenTestCase(unittest.TestCase):
         if variant not in [ZH, THREE_CHECKS]:
             self.assertEqual(expected_fen, board.fen())
 
+def dbg(a, b):
+    from pprint import pprint
+    from deepdiff import DeepDiff
+    pprint(DeepDiff(a, b,indent=2))
 
 if __name__ == "__main__":
     unittest.main()

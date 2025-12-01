@@ -212,7 +212,6 @@ class BinaryFen:
         return binary_fen.to_board()
 
 
-
     @classmethod
     def parse_from_board(cls, board: chess.Board, std_mode: Optional[StdMode]=None) -> BinaryFen:
         """
@@ -307,38 +306,8 @@ class BinaryFen:
         If the board is a standard chess position, `std_mode` can be provided to specify the mode (standard, chess960, from_position)
         if not provided, it will be inferred from the root position
         """
-        #binary_fen = cls.parse_from_board(board, std_mode)
-        #return binary_fen.write()
-        if std_mode is not None and type(board).uci_variant != "chess":
-            raise ValueError("std_mode can only be provided for standard chess positions")
-        builder = bytearray()
-        _write_bitboard(builder, board.occupied)
-        iter_occupied = chess.scan_forward(board.occupied)
-        for (sq1, sq2) in zip_longest(iter_occupied, iter_occupied):
-            lo = _pack_piece(board, sq1)
-            hi = _pack_piece(board, sq2) if sq2 is not None else 0
-            _write_nibbles(builder, lo, hi)
-        plies = board.ply()
-        broken_turn = board.king(chess.BLACK) is None and board.turn == chess.BLACK
-        variant_header = std_mode if std_mode is not None else _encode_variant(board)
-        if board.halfmove_clock > 0 or plies > 1 or broken_turn or variant_header != 0:
-            _write_leb128(builder, board.halfmove_clock)
-
-        if plies > 1 or broken_turn or variant_header != 0:
-            _write_leb128(builder, plies)
-        if variant_header != 0:
-            builder.append(variant_header)
-            if isinstance(board, chess.variant.ThreeCheckBoard):
-                white_checks = 3 - board.remaining_checks[chess.WHITE]
-                black_checks = 3 - board.remaining_checks[chess.BLACK]
-                _write_nibbles(builder, black_checks, white_checks)
-            elif isinstance(board, chess.variant.CrazyhouseBoard):
-                for piece_type in chess.PIECE_TYPES[:-1]:
-                    [w, b] = [board.pockets[color].count(piece_type) for color in chess.COLORS]
-                    _write_nibbles(builder, w, b)
-                if board.promoted:
-                    _write_bitboard(builder, board.promoted)
-        return bytes(builder)
+        binary_fen = cls.parse_from_board(board, std_mode)
+        return binary_fen.to_bytes()
 
 def _encode_variant(board: chess.Board) -> int:
     uci_variant = type(board).uci_variant
