@@ -86,7 +86,7 @@ class BinaryFenTestCase(unittest.TestCase):
             occupied=chess.BB_A1 | chess.BB_B1 | chess.BB_C1,
             nibbles = [15, 15, 15],
             halfmove_clock=3,
-            plies=4,
+            plies=5,
             variant_header=ChessHeader.STANDARD.value,
             variant_data=None,
             )
@@ -229,14 +229,16 @@ class BinaryFenTestCase(unittest.TestCase):
 
     # tests that failed the fuzzer at some point
     def test_fuzzer_fail(self):
-        fuzz_fails = ["23d7",
+        fuzz_fails = [
+        "23d7",
         "e17f11efd84522d34878ffffffa600000000ce1b23ffff000943",
         "20f7076f1718f99824a5020724b3cfc1020146ae00004f85ae28aebc",
         "edf9b3c5cb7fa5008000004081c83e4092a7e63dd95a",
         "f7cef6e64ed47a4ede172a100000009b004c909b",
         "bb7cb00cc3f31dc3f325b8",
         "4584aced8100da50a20bd7251705a15b108000251705",
-        "77ff05111f77111f4214e803647fff6429f0a2f65933310185016400000045bf1e8be6b013ed02"
+        "77ff05111f77111f4214e803647fff6429f0a2f65933310185016400000045bf1e8be6b013ed02",
+        "55d648e9a20fd600400000e9a29c0010043b26fb41d50a50"
         ]
         for fuzz_fail in fuzz_fails:
             with self.subTest(fuzz_fail=fuzz_fail):
@@ -248,6 +250,8 @@ class BinaryFenTestCase(unittest.TestCase):
                     continue
                 print("binary_fen", binary_fen)
                 print("ep square", board.ep_square)
+                print("fullmove", board.fullmove_number)
+                print("halfmove_clock", board.halfmove_clock)
                 print("fen", board.fen())
                 print()
                 # should not error
@@ -257,7 +261,6 @@ class BinaryFenTestCase(unittest.TestCase):
                 print("encoded", binary_fen2.to_bytes().hex())
                 # for positions with multiple black kings with black to move,
                 # the binary fen is not unique
-                print("binary_fen", binary_fen)
                 print("binary_fen2", binary_fen2)
                 dbg(binary_fen, binary_fen2)
                 print("CANONICAL")
@@ -329,4 +332,5 @@ def dbg(a, b):
     pprint(DeepDiff(a, b),indent=2)
 
 if __name__ == "__main__":
+    print("#"*80)
     unittest.main()
