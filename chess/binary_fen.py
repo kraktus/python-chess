@@ -355,8 +355,9 @@ def _pack_piece(board: chess.Board, sq: chess.Square) -> int:
     if piece is None:
         raise ValueError(f"Unreachable: no piece at square {sq}, board: {board}")
     if piece.piece_type == chess.PAWN:
-        if board.ep_square is not None and (board.ep_square + 8 == sq or board.ep_square - 8 == sq):
-            return 12
+        if board.ep_square is not None:
+            if (board.ep_square + 8 == sq and piece.color == chess.WHITE) or (board.ep_square - 8 == sq and piece.color == chess.BLACK):
+                return 12
         return 0 if piece.color == chess.WHITE else 1
     elif piece.piece_type == chess.KNIGHT:
         return 2 if piece.color == chess.WHITE else 3

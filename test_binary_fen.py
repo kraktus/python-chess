@@ -141,7 +141,8 @@ class BinaryFenTestCase(unittest.TestCase):
     def test_fuzzer_fail(self):
         fuzz_fails = ["23d7",
         "e17f11efd84522d34878ffffffa600000000ce1b23ffff000943",
-        "20f7076f1718f99824a5020724b3cfc1020146ae00004f85ae28aebc"
+        "20f7076f1718f99824a5020724b3cfc1020146ae00004f85ae28aebc",
+        "edf9b3c5cb7fa5008000004081c83e4092a7e63dd95a",
         ]
         for fuzz_fail in fuzz_fails:
             with self.subTest(fuzz_fail=fuzz_fail):
@@ -153,21 +154,23 @@ class BinaryFenTestCase(unittest.TestCase):
                     continue
                 print("binary_fen", binary_fen)
                 print("ep square", board.ep_square)
-                print(board.fen())
+                print("fen", board.fen())
                 print()
                 # should not error
                 board.status()
                 list(board.legal_moves)
                 encoded = BinaryFen.encode(board,std_mode=std_mode)
+                binary_fen2 = BinaryFen.parse_from_bytes(encoded)
                 print("encoded", encoded.hex())
-                #board2, std_mode2 = BinaryFen.decode(encoded)
                 # for positions with multiple black kings with black to move,
                 # the binary fen is not unique
-                print("binary_1", BinaryFen.parse_from_bytes(data))
-                print("binary encode", BinaryFen.parse_from_bytes(encoded))
-                self.assertEqual(BinaryFen.parse_from_bytes(data), BinaryFen.parse_from_bytes(encoded))
-                #self.assertEqual(board, board2)
-                #self.assertEqual(std_mode, std_mode2)
+                print("binary_1", binary_fen)
+                print("binary encode", binary_fen2)
+                dbg(binary_fen, binary_fen2)
+                self.assertEqual(binary_fen, binary_fen2)
+                board2, std_mode2 = binary_fen2.to_board()
+                self.assertEqual(board, board2)
+                self.assertEqual(std_mode, std_mode2)
 
 
     def test_read_binary_fen_std(self):
@@ -230,7 +233,7 @@ class BinaryFenTestCase(unittest.TestCase):
 def dbg(a, b):
     from pprint import pprint
     from deepdiff import DeepDiff
-    pprint(DeepDiff(a, b,indent=2))
+    pprint(DeepDiff(a, b),indent=2)
 
 if __name__ == "__main__":
     unittest.main()
