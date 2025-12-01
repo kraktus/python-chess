@@ -131,8 +131,10 @@ class BinaryFen:
 
         - When a position has a black king, is black to move and has an odd number of plies
         - When a position has multiple black kings with black to move
+        - When trailing zeros are omitted from halfmove clock or plies
 
-        The 'canonical' position is then the one with every king with the turn set, 
+        The 'canonical' position is then the one with every king with the turn set
+        And trailing zeros removed
 
         Return the canonical version of the binary FEN
         """
@@ -143,11 +145,22 @@ class BinaryFen:
             canon_nibbles = [(15 if nibble == 11 else nibble) for nibble in self.nibbles]
         else:
             canon_nibbles = self.nibbles.copy()
+
+        is_black_to_move_due_to_plies = (15 not in canon_nibbles) and (self._plies_or_zero() % 2 == 1)
+
+        canon_plies = self.plies
+        canon_halfmove_clock = self.halfmove_clock
+
+        if self.variant_header == 0 and not is_black_to_move_due_to_plies:
+            if self._plies_or_zero() == 0:
+                canon_plies = None
+                if self._halfmove_clock_or_zero() == 0:
+                    canon_halfmove_clock = None
         
         return self.__class__(occupied=self.occupied,
                          nibbles=canon_nibbles,
-                         halfmove_clock=self.halfmove_clock,
-                         plies=self.plies,
+                         halfmove_clock=canon_halfmove_clock,
+                         plies=canon_plies,
                          variant_header=self.variant_header,
                          variant_data=self.variant_data
                          )

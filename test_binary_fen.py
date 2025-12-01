@@ -236,6 +236,7 @@ class BinaryFenTestCase(unittest.TestCase):
         "f7cef6e64ed47a4ede172a100000009b004c909b",
         "bb7cb00cc3f31dc3f325b8",
         "4584aced8100da50a20bd7251705a15b108000251705",
+        "77ff05111f77111f4214e803647fff6429f0a2f65933310185016400000045bf1e8be6b013ed02"
         ]
         for fuzz_fail in fuzz_fails:
             with self.subTest(fuzz_fail=fuzz_fail):
