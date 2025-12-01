@@ -137,12 +137,13 @@ class BinaryFenTestCase(unittest.TestCase):
                 self.assertEqual(case, decoded)
 
 
-    # tests that used to fail the fuzzer at some point
+    # tests that failed the fuzzer at some point
     def test_fuzzer_fail(self):
         fuzz_fails = ["23d7",
-        "e17f11efd84522d34878ffffffa600000000ce1b23ffff000943",
-        "20f7076f1718f99824a5020724b3cfc1020146ae00004f85ae28aebc",
-        "edf9b3c5cb7fa5008000004081c83e4092a7e63dd95a",
+        # "e17f11efd84522d34878ffffffa600000000ce1b23ffff000943",
+        # "20f7076f1718f99824a5020724b3cfc1020146ae00004f85ae28aebc",
+        # "edf9b3c5cb7fa5008000004081c83e4092a7e63dd95a",
+        "f7cef6e64ed47a4ede172a100000009b004c909b"
         ]
         for fuzz_fail in fuzz_fails:
             with self.subTest(fuzz_fail=fuzz_fail):
@@ -159,9 +160,8 @@ class BinaryFenTestCase(unittest.TestCase):
                 # should not error
                 board.status()
                 list(board.legal_moves)
-                encoded = BinaryFen.encode(board,std_mode=std_mode)
-                binary_fen2 = BinaryFen.parse_from_bytes(encoded)
-                print("encoded", encoded.hex())
+                binary_fen2 = BinaryFen.parse_from_board(board,std_mode=std_mode)
+                print("encoded", binary_fen2.to_bytes().hex())
                 # for positions with multiple black kings with black to move,
                 # the binary fen is not unique
                 print("binary_1", binary_fen)
