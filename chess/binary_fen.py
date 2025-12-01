@@ -2,7 +2,7 @@ from __future__ import annotations
 
 # Almost all code based on: //github.com/lichess-org/scalachess/blob/8c94e2087f83affb9718fd2be19c34866c9a1a22/core/src/main/scala/format/BinaryFen.scala
 
-from enum import IntEnum
+from enum import IntEnum, verify, UNIQUE, CONTINUOUS
 
 import logging
 
@@ -10,10 +10,12 @@ import chess
 import chess.variant
 
 from typing import Tuple, Optional, List, Union, Iterator, Literal
+from dataclasses import dataclass
 from itertools import zip_longest
 
 LOGGER = logging.getLogger(__name__)
 
+@verify(UNIQUE)
 class StdMode(IntEnum):
     STANDARD = 0
     CHESS_960 = 2
@@ -21,32 +23,77 @@ class StdMode(IntEnum):
 
     @classmethod
     def from_int_opt(cls, value: int) -> Optional[StdMode]:
-        """Convert an integer to a StdMode enum member, or raise ValueError if unsupported."""
+        """Convert an integer to a StdMode enum member, or return None if invalid."""
         try:
             return cls(value)
         except ValueError:
             return None
 
+@verify(UNIQUE)
+@verify(CONTINUOUS)
+class VariantHeader(IntEnum):
+    # chess/std
+    STANDARD = 0
+    CHESS_960 = 2
+    FROM_POSITION = 3
+
+    CRAZYHOUSE = 1
+    KING_OF_THE_HILL = 4
+    THREE_CHECK = 5
+    ANTICHESS = 6
+    ATOMIC = 7
+    HORDE = 8
+    RACING_KINGS = 9
+
+    def board(self):
+        if self == VariantHeader.CRAZYHOUSE:
+            return chess.variant.CrazyhouseBoard.empty()
+        elif self == VariantHeader.KING_OF_THE_HILL:
+            return chess.variant.KingOfTheHillBoard.empty()
+        elif self == VariantHeader.THREE_CHECK:
+            return chess.variant.ThreeCheckBoard.empty()
+        elif self == VariantHeader.ANTICHESS:
+            return chess.variant.AntichessBoard.empty()
+        elif self == VariantHeader.ATOMIC:
+            return chess.variant.AtomicBoard.empty()
+        elif self == VariantHeader.HORDE:
+            return chess.variant.HordeBoard.empty()
+        elif self == VariantHeader.RACING_KINGS:
+            return chess.variant.RacingKingsBoard.empty()
+        elif self in (VariantHeader.STANDARD, VariantHeader.CHESS_960, VariantHeader.FROM_POSITION):
+            return chess.Board.empty(chess960=True)
+        else:
+            raise ValueError(f"Unsupported variant header: {self}")
+
 CHESS_960_POSITIONS = [chess.Board.from_chess960_pos(i) for i in range(960)]
 
+
+@dataclass(frozen=True)
+class ThreeCheckData:
+    white_received_checks: int
+    black_received_checks: int
+
+@dataclass(frozen=True)
+class CrazyhouseData:
+    white_pocket: chess.variant.CrazyhousePocket
+    black_pocket: chess.variant.CrazyhousePocket
+    promoted: chess.Bitboard
+
+
+@dataclass(frozen=True)
 class BinaryFen:
     """
     TODO
     """
+    occupied: chess.Bitboard
+    nibble_squares: List[Tuple[chess.Square, int]]
+    halfmove_clock: int
+    plies: int
+    variant_header: int
+    variant_data: Optional[Union[ThreeCheckData, CrazyhouseData]]
 
-    @staticmethod
-    def decode(data: bytes) -> Tuple[chess.Board, Optional[StdMode]]:
-        """
-        Read from bytes and return a chess.Board of the proper variant
-
-        If it is standard chess position, also return the mode (standard, chess960, from_position)
-
-        raise `ValueError` if data is invalid
-        """
-        if not data:
-            # seem sensible to error on empty data to reduce confusion in case of usage error
-            # TODO FIXME, ok with that?
-            raise ValueError("Empty data")
+    @classmethod
+    def parse(cls, data: bytes) -> BinaryFen:
         reader = iter(data)
         occupied = _read_bitboard(reader)
 
@@ -61,35 +108,63 @@ class BinaryFen:
         halfmove_clock = _read_leb128(reader)
         plies = _read_leb128(reader)
 
-        variant = next0(reader)
-        std_mode: Optional[StdMode] = StdMode.from_int_opt(variant)
+        variant_header = next0(reader)
 
-        board = _read_variant(variant)
-        for sq, nibble in nibble_squares:
-            _unpack_piece(board, sq, nibble)
-        board.halfmove_clock = halfmove_clock
-        board.fullmove_number = plies//2 + 1
-        # it is important to write it that way
-        # because default turn can have been already set to black inside `_unpack_piece`
-        if plies % 2 == 1:
-            board.turn = chess.BLACK
-
-        # TODO, use type(board).uci_variant instead? that would break typing
-        if isinstance(board, chess.variant.ThreeCheckBoard):
+        variant_data = None
+        if variant_header == VariantHeader.THREE_CHECK:
             lo, hi = _read_nibbles(reader)
-            # remaining check are for the opposite side
-            board.remaining_checks[chess.WHITE] = 3 - hi
-            board.remaining_checks[chess.BLACK] = 3 - lo
-        elif isinstance(board, chess.variant.CrazyhouseBoard):
+            variant_data = ThreeCheckData(white_received_checks=lo, black_received_checks=hi)
+        elif variant_header == VariantHeader.CRAZYHOUSE:
             wp, bp = _read_nibbles(reader)
             wn, bn = _read_nibbles(reader)
             wb, bb = _read_nibbles(reader)
             wr, br = _read_nibbles(reader)
             wq, bq = _read_nibbles(reader)
             # optimise?
-            board.pockets[chess.WHITE] = chess.variant.CrazyhousePocket("p"*wp + "n"*wn + "b"*wb + "r"*wr + "q"*wq)
-            board.pockets[chess.BLACK] = chess.variant.CrazyhousePocket("p"*bp + "n"*bn + "b"*bb + "r"*br + "q"*bq)
-            board.promoted = _read_bitboard(reader)
+            white_pocket = chess.variant.CrazyhousePocket("p"*wp + "n"*wn + "b"*wb + "r"*wr + "q"*wq)
+            black_pocket = chess.variant.CrazyhousePocket("p"*bp + "n"*bn + "b"*bb + "r"*br + "q"*bq)
+            promoted = _read_bitboard(reader)
+            variant_data = CrazyhouseData(white_pocket=white_pocket, black_pocket=black_pocket, promoted=promoted)
+        return cls(occupied=occupied,
+                   nibble_squares=nibble_squares,
+                   halfmove_clock=halfmove_clock,
+                   plies=plies,
+                   variant_header=variant_header,
+                   variant_data=variant_data)
+
+    @classmethod
+    def decode(cls, data: bytes) -> Tuple[chess.Board, Optional[StdMode]]:
+        """
+        Read from bytes and return a chess.Board of the proper variant
+
+        If it is standard chess position, also return the mode (standard, chess960, from_position)
+
+        raise `ValueError` if data is invalid
+        """
+        binary_fen = cls.parse(data)
+
+        variant = binary_fen.variant_header
+        std_mode: Optional[StdMode] = StdMode.from_int_opt(binary_fen.variant_header)
+
+        board = _read_variant(binary_fen.variant_header)
+        for sq, nibble in binary_fen.nibble_squares:
+            _unpack_piece(board, sq, nibble)
+        board.halfmove_clock = binary_fen.halfmove_clock
+        board.fullmove_number = binary_fen.plies//2 + 1
+        # it is important to write it that way
+        # because default turn can have been already set to black inside `_unpack_piece`
+        if binary_fen.plies % 2 == 1:
+            board.turn = chess.BLACK
+
+        # TODO, use type(board).uci_variant instead? that would break typing
+        if isinstance(board, chess.variant.ThreeCheckBoard) and isinstance(binary_fen.variant_data, ThreeCheckData):
+            # remaining check are for the opposite side
+            board.remaining_checks[chess.WHITE] = 3 - binary_fen.variant_data.black_received_checks
+            board.remaining_checks[chess.BLACK] = 3 - binary_fen.variant_data.white_received_checks
+        elif isinstance(board, chess.variant.CrazyhouseBoard) and isinstance(binary_fen.variant_data, CrazyhouseData):
+            board.pockets[chess.WHITE] = binary_fen.variant_data.white_pocket
+            board.pockets[chess.BLACK] = binary_fen.variant_data.black_pocket
+            board.promoted = binary_fen.variant_data.promoted
         return (board, std_mode)
 
 
