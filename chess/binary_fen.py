@@ -2,7 +2,7 @@ from __future__ import annotations
 
 # Almost all code based on: //github.com/lichess-org/scalachess/blob/8c94e2087f83affb9718fd2be19c34866c9a1a22/core/src/main/scala/format/BinaryFen.scala
 
-from enum import IntEnum, verify, UNIQUE, CONTINUOUS
+from enum import IntEnum, UNIQUE, CONTINUOUS, verify
 
 import logging
 
@@ -13,17 +13,15 @@ from typing import Tuple, Optional, List, Union, Iterator, Literal
 from dataclasses import dataclass, field
 from itertools import zip_longest
 
-LOGGER = logging.getLogger(__name__)
-
 @verify(UNIQUE)
-class StdMode(IntEnum):
+class ChessHeader(IntEnum):
     STANDARD = 0
     CHESS_960 = 2
     FROM_POSITION = 3
 
     @classmethod
-    def from_int_opt(cls, value: int) -> Optional[StdMode]:
-        """Convert an integer to a StdMode enum member, or return None if invalid."""
+    def from_int_opt(cls, value: int) -> Optional[ChessHeader]:
+        """Convert an integer to a ChessHeader enum member, or return None if invalid."""
         try:
             return cls(value)
         except ValueError:
@@ -65,9 +63,10 @@ class VariantHeader(IntEnum):
         else:
             raise ValueError(f"Unsupported variant header: {self}")
 
-CHESS_960_POSITIONS = [chess.Board.from_chess960_pos(i) for i in range(960)]
+CHESS_960_STARTING_POSITIONS = [chess.Board.from_chess960_pos(i) for i in range(960)]
 
 
+# TODO FIXME actually implement __eq__ for variant.pocket?
 # not using `chess.variant.CrazyhousePocket` because its __eq__ is wrong for our case
 # only using `chess.variant.CrazyhousePocket` public API for now
 @dataclass(frozen=True)
@@ -121,12 +120,42 @@ class BinaryFen:
     variant_header: int
     variant_data: Optional[Union[ThreeCheckData, CrazyhouseData]]
 
-    #broken_turn: bool = field(default=False,compare=False)
-
-    def halfmove_clock_or_zero(self) -> int:
+    def _halfmove_clock_or_zero(self) -> int:
         return self.halfmove_clock if self.halfmove_clock is not None else 0
-    def plies_or_zero(self) -> int:
+    def _plies_or_zero(self) -> int:
         return self.plies if self.plies is not None else 0
+
+    def to_canonical(self) -> BinaryFen:
+        """
+        Multiple binary FEN can correspond to the same position:
+
+        - When a position has multiple black kings with black to move
+
+        The 'canonical' position is then the one with only one king with the turn set, 
+        and it must be the first king in the nibble list
+
+        Return the canonical version of the binary FEN
+        """
+        is_15_in_nibbles = 15 in self.nibbles
+        first_15_idx = None
+        # list of int, so no deepcopy necessary
+        canon_nibbles = self.nibbles.copy()
+        for i, nibble in enumerate(self.nibbles):
+            if nibble == 15:
+                if first_15_idx is None:
+                    first_15_idx = i
+                else:
+                    canon_nibbles[i] = 11
+            elif nibble == 11 and first_15_idx is None and is_15_in_nibbles:
+                canon_nibbles[i] = 15
+                first_15_idx = i
+        return self.__class__(occupied=self.occupied,
+                         nibbles=canon_nibbles,
+                         halfmove_clock=self.halfmove_clock,
+                         plies=self.plies,
+                         variant_header=self.variant_header,
+                         variant_data=self.variant_data
+                         )
 
     @classmethod
     def parse_from_bytes(cls, data: bytes) -> BinaryFen:
@@ -169,7 +198,7 @@ class BinaryFen:
                    variant_data=variant_data)
 
 
-    def to_board(self) -> Tuple[chess.Board, Optional[StdMode]]:
+    def to_board(self) -> Tuple[chess.Board, Optional[ChessHeader]]:
         """
         Return a chess.Board of the proper variant, and std_mode if applicable
 
@@ -180,7 +209,7 @@ class BinaryFen:
         - Invalid en passant square
         - Multiple en passant squares
         """
-        std_mode: Optional[StdMode] = StdMode.from_int_opt(self.variant_header)
+        std_mode: Optional[ChessHeader] = ChessHeader.from_int_opt(self.variant_header)
 
         board = VariantHeader(self.variant_header).board()
         ep_square_set = False
@@ -190,11 +219,11 @@ class BinaryFen:
             else:
                 if _unpack_piece(board, sq, nibble):
                     raise ValueError("At least two passant squares found")
-        board.halfmove_clock = self.halfmove_clock_or_zero()
-        board.fullmove_number = self.plies_or_zero()//2 + 1
+        board.halfmove_clock = self._halfmove_clock_or_zero()
+        board.fullmove_number = self._plies_or_zero()//2 + 1
         # it is important to write it that way
         # because default turn can have been already set to black inside `_unpack_piece`
-        if self.plies_or_zero() % 2 == 1:
+        if self._plies_or_zero() % 2 == 1:
             board.turn = chess.BLACK
 
         # TODO, use type(board).uci_variant instead? that would break typing
@@ -210,7 +239,7 @@ class BinaryFen:
         
 
     @classmethod
-    def decode(cls, data: bytes) -> Tuple[chess.Board, Optional[StdMode]]:
+    def decode(cls, data: bytes) -> Tuple[chess.Board, Optional[ChessHeader]]:
         """
         Read from bytes and return a chess.Board of the proper variant
 
@@ -223,7 +252,7 @@ class BinaryFen:
 
 
     @classmethod
-    def parse_from_board(cls, board: chess.Board, std_mode: Optional[StdMode]=None) -> BinaryFen:
+    def parse_from_board(cls, board: chess.Board, std_mode: Optional[ChessHeader]=None) -> BinaryFen:
         """
         Given a chess.Board, return its binary FEN representation, and std_mode if applicable
 
@@ -309,7 +338,7 @@ class BinaryFen:
 
 
     @classmethod
-    def encode(cls, board: chess.Board, std_mode: Optional[StdMode]=None) -> bytes:
+    def encode(cls, board: chess.Board, std_mode: Optional[ChessHeader]=None) -> bytes:
         """
         Given a chess.Board, return its binary FEN representation, and std_mode if applicable
 
@@ -323,7 +352,7 @@ def _encode_variant(board: chess.Board) -> int:
     uci_variant = type(board).uci_variant
     if uci_variant == "chess":
         root = board.root()
-        if root in CHESS_960_POSITIONS:
+        if root in CHESS_960_STARTING_POSITIONS:
             return 2 # chess960
         # TODO FIXME check it works properly
         elif root == chess.Board():

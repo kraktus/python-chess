@@ -21,7 +21,7 @@ import chess.binary_fen
 from dataclasses import asdict
 
 from chess import Board
-from chess.binary_fen import BinaryFen, StdMode
+from chess.binary_fen import BinaryFen, ChessHeader, VariantHeader
 
 KOTH = chess.variant.KingOfTheHillBoard
 THREE_CHECKS = chess.variant.ThreeCheckBoard
@@ -43,7 +43,7 @@ class BinaryFenTestCase(unittest.TestCase):
                 self.assertEqual(hi, read_hi)
 
     def test_std_mode_eq(self):
-        self.assertEqual(StdMode.STANDARD,StdMode.from_int_opt(0))
+        self.assertEqual(ChessHeader.STANDARD,ChessHeader.from_int_opt(0))
 
     def test_bitboard_roundtrip(self):
         test_bitboards = [
@@ -79,6 +79,47 @@ class BinaryFenTestCase(unittest.TestCase):
             chess.binary_fen._write_leb128(data, value)
             read_value = chess.binary_fen._read_leb128(iter(data))
             self.assertEqual(value, read_value)
+
+    def test_to_canonical(self):
+        # illegal position, but it should not matter
+        canon = BinaryFen(
+            occupied=chess.BB_A1 | chess.BB_B1 | chess.BB_C1,
+            nibbles = [15, 11, 11],
+            halfmove_clock=3,
+            plies=4,
+            variant_header=ChessHeader.STANDARD.value,
+            variant_data=None,
+            )
+        cases = [BinaryFen(
+            occupied=chess.BB_A1 | chess.BB_B1 | chess.BB_C1,
+            nibbles = [11, 15, 11],
+            halfmove_clock=3,
+            plies=4,
+            variant_header=ChessHeader.STANDARD.value,
+            variant_data=None
+            ),
+        BinaryFen(
+            occupied=chess.BB_A1 | chess.BB_B1 | chess.BB_C1,
+            nibbles = [15, 15, 11],
+            halfmove_clock=3,
+            plies=4,
+            variant_header=ChessHeader.STANDARD.value,
+            variant_data=None
+            ),
+        BinaryFen(
+            occupied=chess.BB_A1 | chess.BB_B1 | chess.BB_C1,
+            nibbles = [11, 15, 15],
+            halfmove_clock=3,
+            plies=4,
+            variant_header=ChessHeader.STANDARD.value,
+            variant_data=None
+            ),
+        ]
+        for case in cases:
+            with self.subTest(case=case):
+                self.assertNotEqual(canon, case)
+                canon_case = case.to_canonical()
+                self.assertEqual(canon, canon_case)
 
     def test_binary_fen_roundtrip(self):
         cases = [
@@ -132,7 +173,7 @@ class BinaryFenTestCase(unittest.TestCase):
             with self.subTest(fen=case_fen):
                 bin_fen = BinaryFen.parse_from_board(case)
                 bin_fen2 = BinaryFen.parse_from_bytes(bin_fen.to_bytes())
-                self.assertEqual(bin_fen, bin_fen2)
+                self.assertEqual(bin_fen.to_canonical(), bin_fen2.to_canonical())
                 decoded, _ = bin_fen2.to_board()
                 self.assertEqual(case, decoded)
 
@@ -140,10 +181,11 @@ class BinaryFenTestCase(unittest.TestCase):
     # tests that failed the fuzzer at some point
     def test_fuzzer_fail(self):
         fuzz_fails = ["23d7",
-        # "e17f11efd84522d34878ffffffa600000000ce1b23ffff000943",
-        # "20f7076f1718f99824a5020724b3cfc1020146ae00004f85ae28aebc",
-        # "edf9b3c5cb7fa5008000004081c83e4092a7e63dd95a",
-        "f7cef6e64ed47a4ede172a100000009b004c909b"
+        "e17f11efd84522d34878ffffffa600000000ce1b23ffff000943",
+        "20f7076f1718f99824a5020724b3cfc1020146ae00004f85ae28aebc",
+        "edf9b3c5cb7fa5008000004081c83e4092a7e63dd95a",
+        "f7cef6e64ed47a4ede172a100000009b004c909b",
+        "bb7cb00cc3f31dc3f325b8",
         ]
         for fuzz_fail in fuzz_fails:
             with self.subTest(fuzz_fail=fuzz_fail):
@@ -167,7 +209,7 @@ class BinaryFenTestCase(unittest.TestCase):
                 print("binary_1", binary_fen)
                 print("binary encode", binary_fen2)
                 dbg(binary_fen, binary_fen2)
-                self.assertEqual(binary_fen, binary_fen2)
+                self.assertEqual(binary_fen.to_canonical(), binary_fen2.to_canonical())
                 board2, std_mode2 = binary_fen2.to_board()
                 self.assertEqual(board, board2)
                 self.assertEqual(std_mode, std_mode2)
@@ -223,7 +265,7 @@ class BinaryFenTestCase(unittest.TestCase):
         encoded = BinaryFen.encode(board,std_mode=std_mode)
         binary_fen2 = BinaryFen.parse_from_board(board,std_mode=std_mode)
         self.maxDiff = None
-        self.assertEqual(binary_fen1, binary_fen2)
+        self.assertEqual(binary_fen1.to_canonical(), binary_fen2.to_canonical())
         self.assertEqual(board, from_fen)
         self.assertEqual(encoded.hex(), compressed.hex())
         # different FEN format exist for these variants
