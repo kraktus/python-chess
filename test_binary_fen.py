@@ -142,8 +142,9 @@ class BinaryFenTestCase(unittest.TestCase):
     #     for fuzz_fail in fuzz_fails:
     #         with self.subTest(fuzz_fail=fuzz_fail):
     #             data = bytes.fromhex(fuzz_fail)
+    #             binary_fen = BinaryFen.parse_from_bytes(data)
     #             try:
-    #                 board, std_mode = BinaryFen.decode(data)
+    #                 board, std_mode = binary_fen.validate()
     #             except ValueError:
     #                 continue
     #             print()
@@ -155,11 +156,14 @@ class BinaryFenTestCase(unittest.TestCase):
     #             list(board.legal_moves)
     #             encoded = BinaryFen.encode(board,std_mode=std_mode)
     #             print("encoded", encoded.hex())
-    #             board2, std_mode2 = BinaryFen.decode(encoded)
+    #             #board2, std_mode2 = BinaryFen.decode(encoded)
     #             # for positions with multiple black kings with black to move,
     #             # the binary fen is not unique
-    #             self.assertEqual(board, board2)
-    #             self.assertEqual(std_mode, std_mode2)
+    #             print("binary_1", BinaryFen.parse_from_bytes(data))
+    #             print("binary encode", BinaryFen.parse_from_bytes(encoded))
+    #             self.assertEqual(BinaryFen.parse_from_bytes(data), BinaryFen.parse_from_bytes(encoded))
+    #             #self.assertEqual(board, board2)
+    #             #self.assertEqual(std_mode, std_mode2)
 
 
     def test_read_binary_fen_std(self):
@@ -199,13 +203,13 @@ class BinaryFenTestCase(unittest.TestCase):
         ("ffff00000000ffff2d844ad200000000111111113e955be300e407010000000000ef0000000000002a", "r~n~b~q~kb~n~r~/pppppppp/8/8/8/8/PPPPPPPP/RN~BQ~KB~NR/ w KQkq - 0 499", ZH),
         ("ffff00000000ffff2d844ad200000000111111113e955be30000010000000000", "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR/ w KQkq - 0 1", ZH)
         ]
-        for binary_fen, expected_fen, variant in test_cases:
-            with self.subTest(binary_fen=binary_fen, expected_fen=expected_fen, variant=variant):
-                self.check_binary(binary_fen, expected_fen, variant)
+        for binary_fen_str, expected_fen, variant in test_cases:
+            with self.subTest(binary_fen=binary_fen_str, expected_fen=expected_fen, variant=variant):
+                self.check_binary(binary_fen_str, expected_fen, variant)
 
 
-    def check_binary(self, binary_fen, expected_fen, variant = None):
-        compressed = bytes.fromhex(binary_fen)
+    def check_binary(self, binary_fen_str, expected_fen, variant = None):
+        compressed = bytes.fromhex(binary_fen_str)
         board, std_mode = BinaryFen.decode(compressed)
         from_fen = chess.Board(fen=expected_fen, chess960=True) if variant is None else variant(fen=expected_fen)
         encoded = BinaryFen.encode(board,std_mode=std_mode)
