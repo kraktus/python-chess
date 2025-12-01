@@ -80,11 +80,11 @@ class BinaryFenTestCase(unittest.TestCase):
             read_value = chess.binary_fen._read_leb128(iter(data))
             self.assertEqual(value, read_value)
 
-    def test_to_canonical(self):
+    def test_to_canonical_1(self):
         # illegal position, but it should not matter
         canon = BinaryFen(
             occupied=chess.BB_A1 | chess.BB_B1 | chess.BB_C1,
-            nibbles = [15, 11, 11],
+            nibbles = [15, 15, 15],
             halfmove_clock=3,
             plies=4,
             variant_header=ChessHeader.STANDARD.value,
@@ -111,6 +111,55 @@ class BinaryFenTestCase(unittest.TestCase):
             nibbles = [11, 15, 15],
             halfmove_clock=3,
             plies=4,
+            variant_header=ChessHeader.STANDARD.value,
+            variant_data=None
+            ),
+        ]
+        for case in cases:
+            with self.subTest(case=case):
+                self.assertNotEqual(canon, case)
+                canon_case = case.to_canonical()
+                self.assertEqual(canon, canon_case)
+
+    def test_to_canonical_2(self):
+        # illegal position, but it should not matter
+        canon = BinaryFen(
+            occupied=chess.BB_A1 | chess.BB_B1 | chess.BB_C1,
+            nibbles = [15, 15, 15],
+            halfmove_clock=3,
+            plies=5,
+            variant_header=ChessHeader.STANDARD.value,
+            variant_data=None,
+            )
+        cases = [BinaryFen(
+            occupied=chess.BB_A1 | chess.BB_B1 | chess.BB_C1,
+            nibbles = [11, 15, 11],
+            halfmove_clock=3,
+            plies=5,
+            variant_header=ChessHeader.STANDARD.value,
+            variant_data=None
+            ),
+        BinaryFen(
+            occupied=chess.BB_A1 | chess.BB_B1 | chess.BB_C1,
+            nibbles = [15, 15, 11],
+            halfmove_clock=3,
+            plies=5,
+            variant_header=ChessHeader.STANDARD.value,
+            variant_data=None
+            ),
+        BinaryFen(
+            occupied=chess.BB_A1 | chess.BB_B1 | chess.BB_C1,
+            nibbles = [11, 15, 15],
+            halfmove_clock=3,
+            plies=5,
+            variant_header=ChessHeader.STANDARD.value,
+            variant_data=None
+            ),
+        BinaryFen(
+            occupied=chess.BB_A1 | chess.BB_B1 | chess.BB_C1,
+            nibbles = [11, 11, 11],
+            halfmove_clock=3,
+            plies=5,
             variant_header=ChessHeader.STANDARD.value,
             variant_data=None
             ),
@@ -186,6 +235,7 @@ class BinaryFenTestCase(unittest.TestCase):
         "edf9b3c5cb7fa5008000004081c83e4092a7e63dd95a",
         "f7cef6e64ed47a4ede172a100000009b004c909b",
         "bb7cb00cc3f31dc3f325b8",
+        "4584aced8100da50a20bd7251705a15b108000251705",
         ]
         for fuzz_fail in fuzz_fails:
             with self.subTest(fuzz_fail=fuzz_fail):
@@ -206,9 +256,11 @@ class BinaryFenTestCase(unittest.TestCase):
                 print("encoded", binary_fen2.to_bytes().hex())
                 # for positions with multiple black kings with black to move,
                 # the binary fen is not unique
-                print("binary_1", binary_fen)
-                print("binary encode", binary_fen2)
+                print("binary_fen", binary_fen)
+                print("binary_fen2", binary_fen2)
                 dbg(binary_fen, binary_fen2)
+                print("CANONICAL")
+                dbg(binary_fen.to_canonical(), binary_fen2.to_canonical())
                 self.assertEqual(binary_fen.to_canonical(), binary_fen2.to_canonical())
                 board2, std_mode2 = binary_fen2.to_board()
                 self.assertEqual(board, board2)

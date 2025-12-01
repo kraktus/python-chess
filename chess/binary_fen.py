@@ -129,26 +129,21 @@ class BinaryFen:
         """
         Multiple binary FEN can correspond to the same position:
 
+        - When a position has a black king, is black to move and has an odd number of plies
         - When a position has multiple black kings with black to move
 
-        The 'canonical' position is then the one with only one king with the turn set, 
-        and it must be the first king in the nibble list
+        The 'canonical' position is then the one with every king with the turn set, 
 
         Return the canonical version of the binary FEN
         """
-        is_15_in_nibbles = 15 in self.nibbles
-        first_15_idx = None
+        is_black_to_move = (15 in self.nibbles) or (self._plies_or_zero() % 2 == 1)
         # list of int, so no deepcopy necessary
-        canon_nibbles = self.nibbles.copy()
-        for i, nibble in enumerate(self.nibbles):
-            if nibble == 15:
-                if first_15_idx is None:
-                    first_15_idx = i
-                else:
-                    canon_nibbles[i] = 11
-            elif nibble == 11 and first_15_idx is None and is_15_in_nibbles:
-                canon_nibbles[i] = 15
-                first_15_idx = i
+        
+        if is_black_to_move:
+            canon_nibbles = [(15 if nibble == 11 else nibble) for nibble in self.nibbles]
+        else:
+            canon_nibbles = self.nibbles.copy()
+        
         return self.__class__(occupied=self.occupied,
                          nibbles=canon_nibbles,
                          halfmove_clock=self.halfmove_clock,
