@@ -9,7 +9,7 @@ import logging
 import chess
 import chess.variant
 
-from typing import Tuple, Optional, List, Union, Iterator, Literal
+from typing import Tuple, Optional, List, Union, Iterator, Literal, cast
 from dataclasses import dataclass, field
 from itertools import zip_longest
 
@@ -63,28 +63,59 @@ class VariantHeader(IntEnum):
         else:
             raise ValueError(f"Unsupported variant header: {self}")
 
-CHESS_960_STARTING_POSITIONS = [chess.Board.from_chess960_pos(i) for i in range(960)]
+    @classmethod
+    def encode(cls, board: chess.Board) -> VariantHeader:
+        uci_variant = type(board).uci_variant
+        if uci_variant == "chess":
+            # TODO check if this auto mode is OK
+            root = board.root()
+            if root in CHESS_960_STARTING_POSITIONS:
+                return cls.CHESS_960
+            elif root == STANDARD_STARTING_POSITION:
+                return cls.STANDARD
+            else:
+                return cls.FROM_POSITION
+        elif uci_variant == "crazyhouse":
+            return cls.CRAZYHOUSE
+        elif uci_variant == "kingofthehill":
+            return cls.KING_OF_THE_HILL
+        elif uci_variant == "3check":
+            return cls.THREE_CHECK
+        elif uci_variant == "antichess":
+            return cls.ANTICHESS
+        elif uci_variant == "atomic":
+            return cls.ATOMIC
+        elif uci_variant == "horde":
+            return cls.HORDE
+        elif uci_variant == "racingkings":
+            return cls.RACING_KINGS
+        else:
+            raise ValueError(f"Unsupported variant: {uci_variant}")
 
+CHESS_960_STARTING_POSITIONS = [chess.Board.from_chess960_pos(i) for i in range(960)]
+STANDARD_STARTING_POSITION = chess.Board()
+
+Nibble = Literal[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15]
 
 # TODO FIXME actually implement __eq__ for variant.pocket?
 # not using `chess.variant.CrazyhousePocket` because its __eq__ is wrong for our case
 # only using `chess.variant.CrazyhousePocket` public API for now
 @dataclass(frozen=True)
 class CrazyhousePiecePocket:
-    pawns: int
-    knights: int
-    bishops: int
-    rooks: int
-    queens: int
+    pawns: Nibble
+    knights: Nibble
+    bishops: Nibble
+    rooks: Nibble
+    queens: Nibble
 
     @classmethod
     def from_crazyhouse_pocket(cls, pocket: chess.variant.CrazyhousePocket) -> CrazyhousePiecePocket:
         return cls(
-            pawns=pocket.count(chess.PAWN),
-            knights=pocket.count(chess.KNIGHT),
-            bishops=pocket.count(chess.BISHOP),
-            rooks=pocket.count(chess.ROOK),
-            queens=pocket.count(chess.QUEEN)
+            pawns=_to_nibble(pocket.count(chess.PAWN)),
+            knights=_to_nibble(pocket.count(chess.KNIGHT)),
+            bishops=_to_nibble(pocket.count(chess.BISHOP)),
+            rooks=_to_nibble(pocket.count(chess.ROOK)),
+            queens=_to_nibble(pocket.count(chess.QUEEN))
         )
 
     def to_crazyhouse_pocket(self) -> chess.variant.CrazyhousePocket:
@@ -98,8 +129,8 @@ class CrazyhousePiecePocket:
 
 @dataclass(frozen=True)
 class ThreeCheckData:
-    white_received_checks: int
-    black_received_checks: int
+    white_received_checks: Nibble
+    black_received_checks: Nibble
 
 @dataclass(frozen=True)
 class CrazyhouseData:
@@ -107,14 +138,15 @@ class CrazyhouseData:
     black_pocket: CrazyhousePiecePocket
     promoted: chess.Bitboard
 
-
 @dataclass(frozen=True)
 class BinaryFen:
     """
-    TODO
+    A simple binary format that encode a position in a compact way, initially used by Stockfish and Lichess 
+
+    See https://lichess.org/@/revoof/blog/adapting-nnue-pytorchs-binary-position-format-for-lichess/cpeeAMeY for more information
     """
     occupied: chess.Bitboard
-    nibbles: List[int] # 0 to 16
+    nibbles: List[Nibble]
     halfmove_clock: Optional[int]
     plies: Optional[int]
     variant_header: int
@@ -129,7 +161,7 @@ class BinaryFen:
         """
         Multiple binary FEN can correspond to the same position:
 
-        - When a position has a black king, is black to move and has an odd number of plies
+        - When a position has a black king, with black to move and has an odd number of plies
         - When a position has multiple black kings with black to move
         - When trailing zeros are omitted from halfmove clock or plies
         - When its black to move and the ply is even, add one to it
@@ -142,7 +174,7 @@ class BinaryFen:
         is_black_to_move = (15 in self.nibbles) or (self._plies_or_zero() % 2 == 1)
         
         if is_black_to_move:
-            canon_nibbles = [(15 if nibble == 11 else nibble) for nibble in self.nibbles]
+            canon_nibbles: List[Nibble] = [(15 if nibble == 11 else nibble) for nibble in self.nibbles]
         else:
             canon_nibbles = self.nibbles.copy()
 
@@ -169,7 +201,21 @@ class BinaryFen:
 
     @classmethod
     def parse_from_bytes(cls, data: bytes) -> BinaryFen:
+        """
+        Read from bytes and return a BinaryFen
+
+        should not error even if data is invalid
+        """
         reader = iter(data)
+        return cls.parse_from_iter(reader)
+
+    @classmethod
+    def parse_from_iter(cls, reader: Iterator[int]) -> BinaryFen:
+        """
+        Read from bytes and return a `BinaryFen`
+
+        should not error even if data is invalid
+        """
         occupied = _read_bitboard(reader)
 
         nibbles = []
@@ -183,7 +229,7 @@ class BinaryFen:
         halfmove_clock = _read_leb128(reader)
         plies = _read_leb128(reader)
 
-        variant_header = next0(reader)
+        variant_header = _next0(reader)
 
         variant_data = None
         if variant_header == VariantHeader.THREE_CHECK:
@@ -236,7 +282,6 @@ class BinaryFen:
         if self._plies_or_zero() % 2 == 1:
             board.turn = chess.BLACK
 
-        # TODO, use type(board).uci_variant instead? that would break typing
         if isinstance(board, chess.variant.ThreeCheckBoard) and isinstance(self.variant_data, ThreeCheckData):
             # remaining check are for the opposite side
             board.remaining_checks[chess.WHITE] = 3 - self.variant_data.black_received_checks
@@ -286,7 +331,7 @@ class BinaryFen:
         binary_halfmove_clock = None
 
         broken_turn = board.king(chess.BLACK) is None and board.turn == chess.BLACK
-        variant_header = std_mode.value if std_mode is not None else _encode_variant(board)
+        variant_header = std_mode.value if std_mode is not None else VariantHeader.encode(board).value
 
         if board.halfmove_clock > 0 or plies > 1 or broken_turn or variant_header != 0:
             binary_halfmove_clock = board.halfmove_clock
@@ -297,8 +342,8 @@ class BinaryFen:
         variant_data = None
         if variant_header != VariantHeader.STANDARD:
             if isinstance(board, chess.variant.ThreeCheckBoard):
-                black_received_checks = 3 - board.remaining_checks[chess.WHITE]
-                white_received_checks = 3 - board.remaining_checks[chess.BLACK]
+                black_received_checks = _to_nibble(3 - board.remaining_checks[chess.WHITE])
+                white_received_checks = _to_nibble(3 - board.remaining_checks[chess.BLACK])
                 variant_data = ThreeCheckData(white_received_checks=white_received_checks, black_received_checks=black_received_checks)
             elif isinstance(board, chess.variant.CrazyhouseBoard):
                 variant_data = CrazyhouseData(
@@ -316,13 +361,13 @@ class BinaryFen:
 
     def to_bytes(self) -> bytes:
         """
-        Write the BinaryFen data to bytes
+        Write the BinaryFen data as bytes
         """
         builder = bytearray()
         _write_bitboard(builder, self.occupied)
-        iter_nibbles = iter(self.nibbles)
+        iter_nibbles: Iterator[Nibble] = iter(self.nibbles)
         for (lo, hi) in zip_longest(iter_nibbles, iter_nibbles,fillvalue=0):
-            _write_nibbles(builder, lo, hi)
+            _write_nibbles(builder, cast(Nibble, lo), cast(Nibble, hi))
         
 
         if self.halfmove_clock is not None:
@@ -346,6 +391,14 @@ class BinaryFen:
                     _write_bitboard(builder, self.variant_data.promoted)
         return bytes(builder)
 
+    def __bytes__(self) -> bytes:
+        """
+        Write the BinaryFen data as bytes
+
+        Example: bytes(my_binary_fen)
+        """
+        return self.to_bytes()
+
 
     @classmethod
     def encode(cls, board: chess.Board, std_mode: Optional[ChessHeader]=None) -> bytes:
@@ -357,35 +410,6 @@ class BinaryFen:
         """
         binary_fen = cls.parse_from_board(board, std_mode)
         return binary_fen.to_bytes()
-
-def _encode_variant(board: chess.Board) -> int:
-    uci_variant = type(board).uci_variant
-    if uci_variant == "chess":
-        root = board.root()
-        if root in CHESS_960_STARTING_POSITIONS:
-            return 2 # chess960
-        # TODO FIXME check it works properly
-        elif root == chess.Board():
-            return 0
-        else:
-            return 3
-    elif uci_variant == "crazyhouse":
-        return 1
-    elif uci_variant == "kingofthehill":
-        return 4
-    elif uci_variant == "3check":
-        return 5
-    elif uci_variant == "antichess":
-        return 6
-    elif uci_variant == "atomic":
-        return 7
-    elif uci_variant == "horde":
-        return 8
-    elif uci_variant == "racingkings":
-        return 9
-    else:
-        raise ValueError(f"Unsupported variant: {uci_variant}")
-
 
 def _pack_piece(board: chess.Board, sq: chess.Square) -> int:
     # Encoding from
@@ -466,24 +490,24 @@ def _unpack_piece(board: chess.Board, sq: chess.Square, nibble: int) -> bool:
         raise ValueError(f"Impossible nibble value: {nibble} at square {chess.square_name(sq)}")
     return False
 
-def next0(reader: Iterator[int]) -> int:
+def _next0(reader: Iterator[int]) -> int:
     return next(reader, 0)
 
 def _read_bitboard(reader: Iterator[int]) -> chess.Bitboard:
     bb = chess.BB_EMPTY
     for _ in range(8):
-        bb = (bb << 8) | (next0(reader) & 0xFF)
+        bb = (bb << 8) | (_next0(reader) & 0xFF)
     return bb
 
 def _write_bitboard(data: bytearray, bb: chess.Bitboard) -> None:
     for shift in range(56, -1, -8):
         data.append((bb >> shift) & 0xFF)
 
-def _read_nibbles(reader: Iterator[int]) -> Tuple[int, int]:
-    byte = next0(reader)
-    return byte & 0x0F, (byte >> 4) & 0x0F
+def _read_nibbles(reader: Iterator[int]) -> Tuple[Nibble, Nibble]:
+    byte = _next0(reader)
+    return cast(Nibble, byte & 0x0F), cast(Nibble, (byte >> 4) & 0x0F)
 
-def _write_nibbles(data: bytearray, lo: int, hi: int) -> None:
+def _write_nibbles(data: bytearray, lo: Nibble, hi: Nibble) -> None:
     data.append((hi << 4) | (lo & 0x0F)) 
 
 def _read_leb128(reader: Iterator[int]) -> Optional[int]:
@@ -509,6 +533,12 @@ def _write_leb128(data: bytearray, value: int) -> None:
         data.append(byte)
         if value == 0:
             break
+
+def _to_nibble(value: int) -> Nibble:
+    if 0 <= value <= 15:
+        return cast(Nibble, value)
+    else:
+        raise ValueError(f"Value {value} cannot be represented as a nibble")
 
 
 
