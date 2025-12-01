@@ -171,15 +171,25 @@ class BinaryFen:
 
     def to_board(self) -> Tuple[chess.Board, Optional[StdMode]]:
         """
-        Validate the BinaryFen data
+        Return a chess.Board of the proper variant, and std_mode if applicable
 
-        return True if valid, False otherwise
+        The returned board might be illegal, check with `board.is_valid()`
+
+        Raise `ValueError` if the BinaryFen data is invalid in a way that chess.Board cannot handle:
+        - Invalid variant header
+        - Invalid en passant square
+        - Multiple en passant squares
         """
         std_mode: Optional[StdMode] = StdMode.from_int_opt(self.variant_header)
 
         board = VariantHeader(self.variant_header).board()
+        ep_square_set = False
         for sq, nibble in zip(chess.scan_forward(self.occupied), self.nibbles):
-            _unpack_piece(board, sq, nibble)
+            if not ep_square_set:
+                ep_square_set = _unpack_piece(board, sq, nibble)
+            else:
+                if _unpack_piece(board, sq, nibble):
+                    raise ValueError("At least two passant squares found")
         board.halfmove_clock = self.halfmove_clock_or_zero()
         board.fullmove_number = self.plies_or_zero()//2 + 1
         # it is important to write it that way
@@ -364,7 +374,8 @@ def _pack_piece(board: chess.Board, sq: chess.Square) -> int:
         return 10 if piece.color == chess.WHITE else 11
     raise ValueError(f"Unreachable: unknown piece {piece} at square {sq}, board: {board}")
 
-def _unpack_piece(board: chess.Board, sq: chess.Square, nibble: int):
+def _unpack_piece(board: chess.Board, sq: chess.Square, nibble: int) -> bool:
+    """Return true if set the en passant square"""
     if nibble == 0:
         board.set_piece_at(sq, chess.Piece(chess.PAWN, chess.WHITE))
     elif nibble == 1:
@@ -400,6 +411,7 @@ def _unpack_piece(board: chess.Board, sq: chess.Square, nibble: int):
             raise ValueError(f"Pawn at square {chess.square_name(sq)} cannot be an en passant pawn")
         board.ep_square = sq - 8 if color else sq + 8
         board.set_piece_at(sq, chess.Piece(chess.PAWN, color))
+        return True
     elif nibble == 13:
         board.castling_rights |= chess.BB_SQUARES[sq]
         board.set_piece_at(sq, chess.Piece(chess.ROOK, chess.WHITE))
@@ -408,7 +420,10 @@ def _unpack_piece(board: chess.Board, sq: chess.Square, nibble: int):
         board.set_piece_at(sq, chess.Piece(chess.ROOK, chess.BLACK))
     elif nibble == 15:
         board.turn = chess.BLACK
-        board.set_piece_at(sq, chess.Piece(chess.KING, chess.BLACK)) 
+        board.set_piece_at(sq, chess.Piece(chess.KING, chess.BLACK))
+    else:
+        raise ValueError(f"Impossible nibble value: {nibble} at square {chess.square_name(sq)}")
+    return False
 
 def next0(reader: Iterator[int]) -> int:
     return next(reader, 0)

@@ -138,36 +138,36 @@ class BinaryFenTestCase(unittest.TestCase):
 
 
     # tests that used to fail the fuzzer at some point
-    # def test_fuzzer_fail(self):
-    #     fuzz_fails = ["23d7",
-    #     "e17f11efd84522d34878ffffffa600000000ce1b23ffff000943",
-    #     "20f7076f1718f99824a5020724b3cfc1020146ae00004f85ae28aebc"
-    #     ]
-    #     for fuzz_fail in fuzz_fails:
-    #         with self.subTest(fuzz_fail=fuzz_fail):
-    #             data = bytes.fromhex(fuzz_fail)
-    #             binary_fen = BinaryFen.parse_from_bytes(data)
-    #             try:
-    #                 board, std_mode = binary_fen.validate()
-    #             except ValueError:
-    #                 continue
-    #             print()
-    #             print("ep square", board.ep_square)
-    #             print(board.fen())
-    #             print()
-    #             # should not error
-    #             board.status()
-    #             list(board.legal_moves)
-    #             encoded = BinaryFen.encode(board,std_mode=std_mode)
-    #             print("encoded", encoded.hex())
-    #             #board2, std_mode2 = BinaryFen.decode(encoded)
-    #             # for positions with multiple black kings with black to move,
-    #             # the binary fen is not unique
-    #             print("binary_1", BinaryFen.parse_from_bytes(data))
-    #             print("binary encode", BinaryFen.parse_from_bytes(encoded))
-    #             self.assertEqual(BinaryFen.parse_from_bytes(data), BinaryFen.parse_from_bytes(encoded))
-    #             #self.assertEqual(board, board2)
-    #             #self.assertEqual(std_mode, std_mode2)
+    def test_fuzzer_fail(self):
+        fuzz_fails = ["23d7",
+        "e17f11efd84522d34878ffffffa600000000ce1b23ffff000943",
+        "20f7076f1718f99824a5020724b3cfc1020146ae00004f85ae28aebc"
+        ]
+        for fuzz_fail in fuzz_fails:
+            with self.subTest(fuzz_fail=fuzz_fail):
+                data = bytes.fromhex(fuzz_fail)
+                binary_fen = BinaryFen.parse_from_bytes(data)
+                try:
+                    board, std_mode = binary_fen.to_board()
+                except ValueError:
+                    continue
+                print("binary_fen", binary_fen)
+                print("ep square", board.ep_square)
+                print(board.fen())
+                print()
+                # should not error
+                board.status()
+                list(board.legal_moves)
+                encoded = BinaryFen.encode(board,std_mode=std_mode)
+                print("encoded", encoded.hex())
+                #board2, std_mode2 = BinaryFen.decode(encoded)
+                # for positions with multiple black kings with black to move,
+                # the binary fen is not unique
+                print("binary_1", BinaryFen.parse_from_bytes(data))
+                print("binary encode", BinaryFen.parse_from_bytes(encoded))
+                self.assertEqual(BinaryFen.parse_from_bytes(data), BinaryFen.parse_from_bytes(encoded))
+                #self.assertEqual(board, board2)
+                #self.assertEqual(std_mode, std_mode2)
 
 
     def test_read_binary_fen_std(self):
