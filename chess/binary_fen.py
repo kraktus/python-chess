@@ -266,15 +266,15 @@ class BinaryFen:
                      variant_data=variant_data)
 
 
-    def write(self) -> bytes:
+    def to_bytes(self) -> bytes:
         """
         Write the BinaryFen data to bytes
         """
         builder = bytearray()
         _write_bitboard(builder, self.occupied)
-        for (lo, hi) in zip_longest(self.nibbles, self.nibbles):
+        iter_nibbles = iter(self.nibbles)
+        for (lo, hi) in zip_longest(iter_nibbles, iter_nibbles,fillvalue=0):
             _write_nibbles(builder, lo, hi)
-
         
 
         if self.halfmove_clock is not None:
@@ -282,10 +282,11 @@ class BinaryFen:
 
         if self.plies is not None:
             _write_leb128(builder, self.plies)
+
         if self.variant_header != VariantHeader.STANDARD:
             builder.append(self.variant_header)
             if isinstance(self.variant_data, ThreeCheckData):
-                _write_nibbles(builder, self.variant_data.black_received_checks, self.variant_data.white_received_checks)
+                _write_nibbles(builder, self.variant_data.white_received_checks, self.variant_data.black_received_checks)
             elif isinstance(self.variant_data, CrazyhouseData):
                 _write_nibbles(builder, self.variant_data.white_pocket.pawns, self.variant_data.black_pocket.pawns)
                 _write_nibbles(builder, self.variant_data.white_pocket.knights, self.variant_data.black_pocket.knights)
