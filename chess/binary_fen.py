@@ -132,6 +132,37 @@ class BinaryFen:
                    variant_header=variant_header,
                    variant_data=variant_data)
 
+
+    def validate(self) -> Tuple[chess.Board, Optional[StdMode]]:
+        """
+        Validate the BinaryFen data
+
+        return True if valid, False otherwise
+        """
+        std_mode: Optional[StdMode] = StdMode.from_int_opt(self.variant_header)
+
+        board = _read_variant(self.variant_header)
+        for sq, nibble in self.nibble_squares:
+            _unpack_piece(board, sq, nibble)
+        board.halfmove_clock = self.halfmove_clock
+        board.fullmove_number = self.plies//2 + 1
+        # it is important to write it that way
+        # because default turn can have been already set to black inside `_unpack_piece`
+        if self.plies % 2 == 1:
+            board.turn = chess.BLACK
+
+        # TODO, use type(board).uci_variant instead? that would break typing
+        if isinstance(board, chess.variant.ThreeCheckBoard) and isinstance(self.variant_data, ThreeCheckData):
+            # remaining check are for the opposite side
+            board.remaining_checks[chess.WHITE] = 3 - self.variant_data.black_received_checks
+            board.remaining_checks[chess.BLACK] = 3 - self.variant_data.white_received_checks
+        elif isinstance(board, chess.variant.CrazyhouseBoard) and isinstance(self.variant_data, CrazyhouseData):
+            board.pockets[chess.WHITE] = self.variant_data.white_pocket
+            board.pockets[chess.BLACK] = self.variant_data.black_pocket
+            board.promoted = self.variant_data.promoted
+        return (board, std_mode)
+        
+
     @classmethod
     def decode(cls, data: bytes) -> Tuple[chess.Board, Optional[StdMode]]:
         """
@@ -142,30 +173,7 @@ class BinaryFen:
         raise `ValueError` if data is invalid
         """
         binary_fen = cls.parse(data)
-
-        variant = binary_fen.variant_header
-        std_mode: Optional[StdMode] = StdMode.from_int_opt(binary_fen.variant_header)
-
-        board = _read_variant(binary_fen.variant_header)
-        for sq, nibble in binary_fen.nibble_squares:
-            _unpack_piece(board, sq, nibble)
-        board.halfmove_clock = binary_fen.halfmove_clock
-        board.fullmove_number = binary_fen.plies//2 + 1
-        # it is important to write it that way
-        # because default turn can have been already set to black inside `_unpack_piece`
-        if binary_fen.plies % 2 == 1:
-            board.turn = chess.BLACK
-
-        # TODO, use type(board).uci_variant instead? that would break typing
-        if isinstance(board, chess.variant.ThreeCheckBoard) and isinstance(binary_fen.variant_data, ThreeCheckData):
-            # remaining check are for the opposite side
-            board.remaining_checks[chess.WHITE] = 3 - binary_fen.variant_data.black_received_checks
-            board.remaining_checks[chess.BLACK] = 3 - binary_fen.variant_data.white_received_checks
-        elif isinstance(board, chess.variant.CrazyhouseBoard) and isinstance(binary_fen.variant_data, CrazyhouseData):
-            board.pockets[chess.WHITE] = binary_fen.variant_data.white_pocket
-            board.pockets[chess.BLACK] = binary_fen.variant_data.black_pocket
-            board.promoted = binary_fen.variant_data.promoted
-        return (board, std_mode)
+        return binary_fen.validate()
 
 
     @staticmethod
