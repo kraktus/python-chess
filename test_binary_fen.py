@@ -174,6 +174,7 @@ class BinaryFenTestCase(unittest.TestCase):
         cases = [
             Board(fen="8/8/8/8/8/8/8/8 w - - 0 1"),
             Board(fen="8/8/8/8/8/8/8/8 b - - 0 1"),
+            Board(fen="8/8/8/8/8/8/8/7k b - - 0 1"),
             Board(fen="8/8/8/8/8/8/8/8 w - - 0 2"),
             Board(fen="8/8/8/8/8/8/8/8 b - - 0 2"),
             Board(fen="8/8/8/8/8/8/8/8 b - - 100 432"),
@@ -222,6 +223,7 @@ class BinaryFenTestCase(unittest.TestCase):
             with self.subTest(fen=case_fen):
                 bin_fen = BinaryFen.parse_from_board(case)
                 bin_fen2 = BinaryFen.parse_from_bytes(bin_fen.to_bytes())
+                self.assertEqual(bin_fen2, bin_fen2.to_canonical(), "from_bytes should produce canonical value")
                 self.assertEqual(bin_fen.to_canonical(), bin_fen2.to_canonical())
                 decoded, _ = bin_fen2.to_board()
                 self.assertEqual(case, decoded)
@@ -238,7 +240,8 @@ class BinaryFenTestCase(unittest.TestCase):
         "bb7cb00cc3f31dc3f325b8",
         "4584aced8100da50a20bd7251705a15b108000251705",
         "77ff05111f77111f4214e803647fff6429f0a2f65933310185016400000045bf1e8be6b013ed02",
-        "55d648e9a20fd600400000e9a29c0010043b26fb41d50a50"
+        "55d648e9a20fd600400000e9a29c0010043b26fb41d50a50",
+        "d8805347e76003102228687fffff41b19e2bff00000100020220c6"
         ]
         for fuzz_fail in fuzz_fails:
             with self.subTest(fuzz_fail=fuzz_fail):
@@ -264,7 +267,8 @@ class BinaryFenTestCase(unittest.TestCase):
                 print("binary_fen2", binary_fen2)
                 dbg(binary_fen, binary_fen2)
                 print("CANONICAL")
-                dbg(binary_fen.to_canonical(), binary_fen2.to_canonical())
+                dbg(binary_fen.to_canonical(), binary_fen)
+                self.assertEqual(binary_fen2, binary_fen2.to_canonical(), "from board should produce canonical value")
                 self.assertEqual(binary_fen.to_canonical(), binary_fen2.to_canonical())
                 board2, std_mode2 = binary_fen2.to_board()
                 self.assertEqual(board, board2)

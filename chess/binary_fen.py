@@ -140,7 +140,6 @@ class BinaryFen:
         Return the canonical version of the binary FEN
         """
         is_black_to_move = (15 in self.nibbles) or (self._plies_or_zero() % 2 == 1)
-        # list of int, so no deepcopy necessary
         
         if is_black_to_move:
             canon_nibbles = [(15 if nibble == 11 else nibble) for nibble in self.nibbles]
@@ -153,7 +152,9 @@ class BinaryFen:
         canon_halfmove_clock = self.halfmove_clock
 
         if self.variant_header == 0 and not is_black_to_move_due_to_plies:
-            if self._plies_or_zero() == 0:
+            # with black to move, ply == 1 add no information, it's the same as ply == None which
+            # equivalent to ply == 0
+            if self._plies_or_zero() <= 1:
                 canon_plies = None
                 if self._halfmove_clock_or_zero() == 0:
                     canon_halfmove_clock = None
