@@ -68,6 +68,35 @@ class VariantHeader(IntEnum):
 CHESS_960_POSITIONS = [chess.Board.from_chess960_pos(i) for i in range(960)]
 
 
+# not using `chess.variant.CrazyhousePocket` because its __eq__ is wrong for our case
+# only using `chess.variant.CrazyhousePocket` public API for now
+@dataclass(frozen=True)
+class CrazyhousePiecePocket:
+    pawns: int
+    knights: int
+    bishops: int
+    rooks: int
+    queens: int
+
+    @classmethod
+    def from_crazyhouse_pocket(cls, pocket: chess.variant.CrazyhousePocket) -> CrazyhousePiecePocket:
+        return cls(
+            pawns=pocket.count(chess.PAWN),
+            knights=pocket.count(chess.KNIGHT),
+            bishops=pocket.count(chess.BISHOP),
+            rooks=pocket.count(chess.ROOK),
+            queens=pocket.count(chess.QUEEN)
+        )
+
+    def to_crazyhouse_pocket(self) -> chess.variant.CrazyhousePocket:
+        return chess.variant.CrazyhousePocket(
+            "p"*self.pawns +
+            "n"*self.knights +
+            "b"*self.bishops +
+            "r"*self.rooks +
+            "q"*self.queens
+        )
+
 @dataclass(frozen=True)
 class ThreeCheckData:
     white_received_checks: int
@@ -75,8 +104,8 @@ class ThreeCheckData:
 
 @dataclass(frozen=True)
 class CrazyhouseData:
-    white_pocket: chess.variant.CrazyhousePocket
-    black_pocket: chess.variant.CrazyhousePocket
+    white_pocket: CrazyhousePiecePocket
+    black_pocket: CrazyhousePiecePocket
     promoted: chess.Bitboard
 
 
@@ -128,8 +157,8 @@ class BinaryFen:
             wr, br = _read_nibbles(reader)
             wq, bq = _read_nibbles(reader)
             # optimise?
-            white_pocket = chess.variant.CrazyhousePocket("p"*wp + "n"*wn + "b"*wb + "r"*wr + "q"*wq)
-            black_pocket = chess.variant.CrazyhousePocket("p"*bp + "n"*bn + "b"*bb + "r"*br + "q"*bq)
+            white_pocket = CrazyhousePiecePocket(pawns=wp, knights=wn, bishops=wb, rooks=wr, queens=wq)
+            black_pocket = CrazyhousePiecePocket(pawns=bp, knights=bn, bishops=bb, rooks=br, queens=bq)
             promoted = _read_bitboard(reader)
             variant_data = CrazyhouseData(white_pocket=white_pocket, black_pocket=black_pocket, promoted=promoted)
         return cls(occupied=occupied,
@@ -164,8 +193,8 @@ class BinaryFen:
             board.remaining_checks[chess.WHITE] = 3 - self.variant_data.black_received_checks
             board.remaining_checks[chess.BLACK] = 3 - self.variant_data.white_received_checks
         elif isinstance(board, chess.variant.CrazyhouseBoard) and isinstance(self.variant_data, CrazyhouseData):
-            board.pockets[chess.WHITE] = self.variant_data.white_pocket
-            board.pockets[chess.BLACK] = self.variant_data.black_pocket
+            board.pockets[chess.WHITE] = self.variant_data.white_pocket.to_crazyhouse_pocket()
+            board.pockets[chess.BLACK] = self.variant_data.black_pocket.to_crazyhouse_pocket()
             board.promoted = self.variant_data.promoted
         return (board, std_mode)
         
@@ -199,15 +228,17 @@ class BinaryFen:
         nibbles = []
         for (sq1, sq2) in zip_longest(iter_occupied, iter_occupied):
             lo = _pack_piece(board, sq1)
-            hi = _pack_piece(board, sq2) if sq2 is not None else 0
-            nibbles.extend([lo, hi])
+            nibbles.append(lo)
+            if sq2 is not None:
+                hi = _pack_piece(board, sq2)
+                nibbles.append(hi)
             
         plies = board.ply()
         binary_ply = None
         binary_halfmove_clock = None
 
         broken_turn = board.king(chess.BLACK) is None and board.turn == chess.BLACK
-        variant_header = std_mode if std_mode is not None else _encode_variant(board)
+        variant_header = std_mode.value if std_mode is not None else _encode_variant(board)
 
         if board.halfmove_clock > 0 or plies > 1 or broken_turn or variant_header != 0:
             binary_halfmove_clock = board.halfmove_clock
@@ -223,8 +254,8 @@ class BinaryFen:
                 variant_data = ThreeCheckData(white_received_checks=white_received_checks, black_received_checks=black_received_checks)
             elif isinstance(board, chess.variant.CrazyhouseBoard):
                 variant_data = CrazyhouseData(
-                    white_pocket=board.pockets[chess.WHITE].copy(),
-                    black_pocket=board.pockets[chess.BLACK].copy(),
+                    white_pocket=CrazyhousePiecePocket.from_crazyhouse_pocket(board.pockets[chess.WHITE]),
+                    black_pocket=CrazyhousePiecePocket.from_crazyhouse_pocket(board.pockets[chess.BLACK]),
                     promoted=board.promoted
                 )
         return cls(occupied=occupied,
@@ -256,9 +287,12 @@ class BinaryFen:
             if isinstance(self.variant_data, ThreeCheckData):
                 _write_nibbles(builder, self.variant_data.black_received_checks, self.variant_data.white_received_checks)
             elif isinstance(self.variant_data, CrazyhouseData):
-                for piece_type in chess.PIECE_TYPES[:-1]:
-                    [w, b] = [self.variant_data.white_pocket.count(piece_type), self.variant_data.black_pocket.count(piece_type)]
-                    _write_nibbles(builder, w, b)
+                _write_nibbles(builder, self.variant_data.white_pocket.pawns, self.variant_data.black_pocket.pawns)
+                _write_nibbles(builder, self.variant_data.white_pocket.knights, self.variant_data.black_pocket.knights)
+                _write_nibbles(builder, self.variant_data.white_pocket.bishops, self.variant_data.black_pocket.bishops)
+                _write_nibbles(builder, self.variant_data.white_pocket.rooks, self.variant_data.black_pocket.rooks)
+                _write_nibbles(builder, self.variant_data.white_pocket.queens, self.variant_data.black_pocket.queens)
+
                 if self.variant_data.promoted:
                     _write_bitboard(builder, self.variant_data.promoted)
         return bytes(builder)
