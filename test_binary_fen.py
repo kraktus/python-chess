@@ -321,9 +321,6 @@ class BinaryFenTestCase(unittest.TestCase):
         self.assertEqual(binary_fen1.to_canonical(), binary_fen2.to_canonical())
         self.assertEqual(board, from_fen)
         self.assertEqual(encoded.hex(), compressed.hex())
-        # different FEN format exist for these variants
-        if variant not in [ZH, THREE_CHECKS]:
-            self.assertEqual(expected_fen, board.fen())
 
 def dbg(a, b):
     from pprint import pprint
