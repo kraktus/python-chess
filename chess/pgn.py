@@ -402,7 +402,7 @@ class GameNode(abc.ABC):
 
     def add_variation(self, move: chess.Move, *, comment: Union[str, list[str]] = "", starting_comment: Union[str, list[str]] = "", nags: Iterable[int] = []) -> ChildNode:
         """Creates a child node with the given attributes."""
-        # Instanciate ChildNode only in this method.
+        # Instantiate ChildNode only in this method.
         return ChildNode(self, move, comment=comment, starting_comment=starting_comment, nags=nags)
 
     def add_main_variation(self, move: chess.Move, *, comment: str = "", nags: Iterable[int] = []) -> ChildNode:
