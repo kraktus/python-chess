@@ -1,6 +1,15 @@
 Changelog for python-chess
 ==========================
 
+New in unreleased (27th Mar 2026)
+---------------------------------
+
+Bugfixes:
+* Fixed typo in README.rst.
+
+Changes:
+* Added ``board.piece_count`` function.
+
 New in v1.11.2 (25th Feb 2025)
 ------------------------------
 

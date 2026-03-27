@@ -1220,7 +1220,7 @@ class BoardTestCase(unittest.TestCase):
         self.assertFalse(board.ep_square)
 
         self.assertFalse(board.piece_at(chess.E1))
-        self.assertEqual(chess.popcount(board.occupied), 0)
+        self.assertEqual(board.piece_count(), 0)
 
     def test_threefold_repetition(self):
         board = chess.Board()

@@ -841,6 +841,9 @@ class BaseBoard:
         :class:`~chess.Board` also clears the move stack.
         """
         self._clear_board()
+    
+    def piece_count(self) -> int:
+        return popcount(self.occupied)
 
     def pieces_mask(self, piece_type: PieceType, color: Color) -> Bitboard:
         if piece_type == PAWN:
