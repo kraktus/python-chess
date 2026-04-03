@@ -841,8 +841,13 @@ class BaseBoard:
         :class:`~chess.Board` also clears the move stack.
         """
         self._clear_board()
-    
+
     def piece_count(self) -> int:
+        """
+        Gets the number of pieces on the board.
+
+        Does not include Crazyhouse pockets.
+        """
         return popcount(self.occupied)
 
     def pieces_mask(self, piece_type: PieceType, color: Color) -> Bitboard:
