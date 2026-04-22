@@ -4,6 +4,7 @@
 
 import asyncio
 import copy
+import csv
 import logging
 import os
 import os.path
@@ -23,16 +24,8 @@ from dataclasses import asdict
 from chess import Board
 from chess.binary_fen import BinaryFen, ChessHeader, VariantHeader
 
-KOTH = chess.variant.KingOfTheHillBoard
-THREE_CHECKS = chess.variant.ThreeCheckBoard
-ANTI = chess.variant.AntichessBoard
-ATOMIC = chess.variant.AtomicBoard
-HORDE =  chess.variant.HordeBoard
-RK = chess.variant.RacingKingsBoard
-ZH = chess.variant.CrazyhouseBoard
 
 class BinaryFenTestCase(unittest.TestCase):
-
     def test_nibble_roundtrip(self):
         for lo in range(16):
             for hi in range(16):
@@ -170,78 +163,66 @@ class BinaryFenTestCase(unittest.TestCase):
                 canon_case = case.to_canonical()
                 self.assertEqual(canon, canon_case)
 
-    def test_binary_fen_roundtrip(self):
-        cases = [
-            Board(fen="8/8/8/8/8/8/8/8 w - - 0 1"),
-            Board(fen="8/8/8/8/8/8/8/8 b - - 0 1"),
-            Board(fen="8/8/8/8/8/8/8/7k b - - 0 1"),
-            Board(fen="8/8/8/8/8/8/8/8 w - - 0 2"),
-            Board(fen="8/8/8/8/8/8/8/8 b - - 0 2"),
-            Board(fen="8/8/8/8/8/8/8/8 b - - 100 432"),
-            Board(fen="rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1"),
-            Board(fen="4nrk1/1pp3pp/p4p2/4P3/2BB1n2/8/PP3P1P/2K3R1 b - - 1 25"),
-            Board(fen="4nrk1/1pp3pp/p4p2/4P3/2BB1n2/8/PP3P1P/2K3R1 b - - 1 25"),
-            Board(fen="5k2/6p1/8/1Pp5/6P1/8/8/3K4 w - c6 0 1"),
-            Board(fen="4k3/8/8/8/3pP3/8/6N1/7K b - e3 0 1"),
-            Board(fen="r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1"),
-            Board(fen="r1k1r2q/p1ppp1pp/8/8/8/8/P1PPP1PP/R1K1R2Q w KQkq - 0 1",chess960=True),
-            Board(fen="r1k2r1q/p1ppp1pp/8/8/8/8/P1PPP1PP/R1K2R1Q w KQkq - 0 1", chess960=True),
-            Board(fen="8/8/8/4B2b/6nN/8/5P2/2R1K2k w Q - 1 1",  chess960=True),
-            Board(fen="2r5/8/8/8/8/8/6PP/k2KR3 w K - 0 2",  chess960=True),
-            Board(fen="4r3/3k4/8/8/8/8/6PP/qR1K1R2 w KQ - 2 1", chess960=True),
-            Board(fen="4rrk1/pbbp2p1/1ppnp3/3n1pqp/3N1PQP/1PPNP3/PBBP2P1/4RRK1 w Ff - 0 3",  chess960=True),
-            Board(fen="8/8/8/1k6/3Pp3/8/8/4KQ2 b - d3 3 1"),
-            Board(fen="r2r3k/p7/3p4/8/8/P6P/8/R3K2R b KQq - 0 4",chess960=True),
-            Board(fen="rn2k1r1/ppp1pp1p/3p2p1/5bn1/P7/2N2B2/1PPPPP2/2BNK1RR w Gkq - 4 11", chess960=True),
-            Board(fen="8/8/8/8/8/8/2Rk4/1K6 w - - 0 1"),
+    _VARIANT_CLASSES = {
+        "standard": lambda fen: chess.Board(fen=fen, chess960=False),
+        "chess960": lambda fen: chess.Board(fen=fen, chess960=True),
+        "koth": lambda fen: chess.variant.KingOfTheHillBoard(fen=fen),
+        "three_check": lambda fen: chess.variant.ThreeCheckBoard(fen=fen),
+        "antichess": lambda fen: chess.variant.AntichessBoard(fen=fen),
+        "atomic": lambda fen: chess.variant.AtomicBoard(fen=fen),
+        "horde": lambda fen: chess.variant.HordeBoard(fen=fen),
+        "racing_kings": lambda fen: chess.variant.RacingKingsBoard(fen=fen),
+        "crazyhouse": lambda fen: chess.variant.CrazyhouseBoard(fen=fen),
+    }
 
-            HORDE(fen="rn1qkb1r/3bn1p1/2p3P1/pPP2P2/P1PPP1P1/P1PP1PPP/PPPPPPPP/PPPPPPPP w kq a6 0 12"),
+    def _run_case(self, binary_fen_hex, canonical_hex, fen, variant_name):
+        expected_board = self._VARIANT_CLASSES[variant_name](fen)
 
-            ANTI("8/2p1p2p/2Q1N2B/8/p7/N7/PPP1P1PP/R4B1R b - - 0 13"),
-            ANTI("8/p6p/4p3/1P4P1/Pp4p1/3P4/7P/8 b - a3 0 1"),
-            ANTI("8/p6p/4p3/1P4P1/1p4pP/3P4/P7/8 b - h3 0 1"),
-            ANTI("8/7p/4p3/pP4P1/1p1P2p1/8/P6P/8 w - a6 0 2"),
-            ANTI("8/p7/4p3/1P4Pp/1p1P2p1/8/P6P/8 w - h6 0 2"),
+        decoded_board, std_mode = BinaryFen.decode(bytes.fromhex(binary_fen_hex))
 
-            ATOMIC(fen="rnbq3r/ppp1p1pp/5p2/3p4/8/8/PPPPPPPP/RNBQKB1R b KQ - 0 4"),
-            ATOMIC(fen="8/6pp/2p2p1n/3p4/4P3/B6P/3P1PP1/1r2K2R b K - 0 17"),
+        encoded_hex = BinaryFen.encode(expected_board, std_mode=std_mode).hex()
+        self.assertEqual(
+            encoded_hex, canonical_hex, "encode(board) must equal canonical_binary_fen"
+        )
 
-            RK(fen="8/8/8/8/8/8/krbnNBRK/qrbnNBRQ w - - 0 1"),
-            RK(fen="8/8/8/8/8/6K1/krbnNBR1/qrbnNBRQ b - - 1 1"),
+        self.assertEqual(
+            decoded_board,
+            expected_board,
+            "decode(canonical_binary_fen) must equal board from FEN",
+        )
 
-            KOTH(fen="rnbq1bnr/ppp2ppp/3k4/4p2Q/3PK3/8/PPP2PPP/RNB2BNR b - - 0 7"),
+        parsed = BinaryFen.parse_from_bytes(bytes.fromhex(binary_fen_hex))
+        self.assertEqual(
+            parsed.to_canonical().to_bytes().hex(),
+            canonical_hex,
+            "parse_from_bytes(binary_fen).to_canonical() must equal canonical_binary_fen",
+        )
 
-            THREE_CHECKS(fen="1r3rk1/pbp1N1pp/3p1q2/1p2bp2/7P/2PBB1P1/PP3Q1R/R5K1 b - - 3 21 +2+1"),
-
-            ZH(fen="1r3Q1n/p1kp3p/1p2ppq1/2p2b2/8/3P2P1/PPP1PPBP/R4RK1/NRpnnbb w - - 2 28"),
-            ZH(fen="b2nkbnQ~/p1pppp1p/pP1q2p1/r7/8/R5PR/P1PP1P1P/1NBQ1BNK/R w - - 1 2"),
-            ZH(fen="8/8/8/8/8/8/8/8/ w - - 0 1"),
-            ZH(fen="r~n~b~q~kb~n~r~/pppppppp/8/8/8/8/PPPPPPPP/RN~BQ~KB~NR/ w KQkq - 0 1"),
-        ]
-        for case in cases:
-            case_fen = case.fen()
-            with self.subTest(fen=case_fen):
-                bin_fen = BinaryFen.parse_from_board(case)
-                bin_fen2 = BinaryFen.parse_from_bytes(bin_fen.to_bytes())
-                self.assertEqual(bin_fen2, bin_fen2.to_canonical(), "from_bytes should produce canonical value")
-                self.assertEqual(bin_fen.to_canonical(), bin_fen2.to_canonical())
-                decoded, _ = bin_fen2.to_board()
-                self.assertEqual(case, decoded)
-
-
-    # tests that failed the fuzzer at some point
-    def test_fuzzer_fail(self):
+    def test_data_driven(self):
+        csv_path = os.path.join(os.path.dirname(__file__), "data/test_binary_fen_cases.csv")
+        with open(csv_path, newline="") as f:
+            reader = csv.DictReader(f)
+            for row in reader:
+                with self.subTest(
+                    binary_fen=row["binary_fen"], fen=row["fen"], variant=row["variant"]
+                ):
+                    self._run_case(
+                        binary_fen_hex=row["binary_fen"],
+                        canonical_hex=row["canonical_binary_fen"],
+                        fen=row["fen"],
+                        variant_name=row["variant"] or "standard",
+                    )
         fuzz_fails = [
-        "23d7",
-        "e17f11efd84522d34878ffffffa600000000ce1b23ffff000943",
-        "20f7076f1718f99824a5020724b3cfc1020146ae00004f85ae28aebc",
-        "edf9b3c5cb7fa5008000004081c83e4092a7e63dd95a",
-        "f7cef6e64ed47a4ede172a100000009b004c909b",
-        "bb7cb00cc3f31dc3f325b8",
-        "4584aced8100da50a20bd7251705a15b108000251705",
-        "77ff05111f77111f4214e803647fff6429f0a2f65933310185016400000045bf1e8be6b013ed02",
-        "55d648e9a20fd600400000e9a29c0010043b26fb41d50a50",
-        "d8805347e76003102228687fffff41b19e2bff00000100020220c6"
+            "23d7",
+            "e17f11efd84522d34878ffffffa600000000ce1b23ffff000943",
+            "20f7076f1718f99824a5020724b3cfc1020146ae00004f85ae28aebc",
+            "edf9b3c5cb7fa5008000004081c83e4092a7e63dd95a",
+            "f7cef6e64ed47a4ede172a100000009b004c909b",
+            "bb7cb00cc3f31dc3f325b8",
+            "4584aced8100da50a20bd7251705a15b108000251705",
+            "77ff05111f77111f4214e803647fff6429f0a2f65933310185016400000045bf1e8be6b013ed02",
+            "55d648e9a20fd600400000e9a29c0010043b26fb41d50a50",
+            "d8805347e76003102228687fffff41b19e2bff00000100020220c6",
         ]
         for fuzz_fail in fuzz_fails:
             with self.subTest(fuzz_fail=fuzz_fail):
