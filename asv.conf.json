@@ -1,0 +1,13 @@
+{
+    "version": 1,
+    "project": "python-chess",
+    "project_url": "https://github.com/kraktus/python-ches",
+    "repo": ".",
+    "branches": ["asv"],
+    // TODO switch to UV after .6.6?
+    "environment_type": "existing",
+    "benchmark_dir": "benchmarks",
+    "env_dir": ".asv/env",
+    "results_dir": ".asv/results",
+    "html_dir": ".asv/html",
+}

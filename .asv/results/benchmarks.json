@@ -1,0 +1,33 @@
+{
+    "Suite.time_baseboard_from_fen": {
+        "code": "class Suite:\n    def time_baseboard_from_fen(self):\n        chess.BaseBoard(board_fen=\"8/8/8/8/8/8/8/8\")\n\n    def setup(self):\n        self.piece_symbols = [x for p in [\"p\", \"k\", \"b\", \"r\", \"q\", \"k\"] for x in [p, p.upper()]]",
+        "min_run_count": 2,
+        "name": "Suite.time_baseboard_from_fen",
+        "number": 0,
+        "param_names": [],
+        "params": [],
+        "repeat": 0,
+        "rounds": 2,
+        "sample_time": 0.01,
+        "type": "time",
+        "unit": "seconds",
+        "version": "8ab8bdafb31bc5eed1b96812ba8d14d74f55a90cbecdd182c0584f81a3f0d15f",
+        "warmup_time": -1
+    },
+    "Suite.time_piece_from_symbol": {
+        "code": "class Suite:\n    def time_piece_from_symbol(self):\n        for p in self.piece_symbols:\n            chess.Piece.from_symbol(p)\n\n    def setup(self):\n        self.piece_symbols = [x for p in [\"p\", \"k\", \"b\", \"r\", \"q\", \"k\"] for x in [p, p.upper()]]",
+        "min_run_count": 2,
+        "name": "Suite.time_piece_from_symbol",
+        "number": 0,
+        "param_names": [],
+        "params": [],
+        "repeat": 0,
+        "rounds": 2,
+        "sample_time": 0.01,
+        "type": "time",
+        "unit": "seconds",
+        "version": "e28f71012efa906ba976c09e04870029b8fe0f959b28de50a8c294fa8d9d0fcd",
+        "warmup_time": -1
+    },
+    "version": 2
+}

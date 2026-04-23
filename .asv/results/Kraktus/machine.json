@@ -1,0 +1,9 @@
+{
+    "arch": "arm64",
+    "cpu": "Apple M1",
+    "machine": "Kraktus",
+    "num_cpu": "8",
+    "os": "Darwin 24.6.0",
+    "ram": "16GB",
+    "version": 1
+}
