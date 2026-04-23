@@ -194,6 +194,13 @@ class BoardSuite:
         self.push_pop_board = chess.Board()
         self.push_pop_moves = list(self.push_pop_board.legal_moves)[:5]
 
+        self.variation_moves = []
+        b = chess.Board()
+        for _ in range(5):
+            move = list(b.legal_moves)[0]
+            self.variation_moves.append(move)
+            b.push(move)
+
         self.pseudo_legal_moves = list(self.board.pseudo_legal_moves)
         self.epd_string = self.board.epd()
 
@@ -286,7 +293,7 @@ class BoardSuite:
             self.board.parse_san(san)
 
     def time_variation_san(self):
-        self.board.variation_san(self.push_pop_moves)
+        self.board.variation_san(self.variation_moves)
 
     def time_uci(self):
         for move in self.legal_moves:
@@ -478,3 +485,172 @@ class SquareSetSuite:
 
     def time_int(self):
         int(self.sparse)
+
+class GlobalFunctionSuite:
+    def setup(self):
+        self.squares = list(chess.SQUARES)
+        self.square_names = [chess.square_name(sq) for sq in self.squares]
+        self.files = list(chess.FILES)
+        self.ranks = list(chess.RANKS)
+        self.file_names = [chess.file_name(f) for f in self.files]
+        self.rank_names = [chess.rank_name(r) for r in self.ranks]
+        self.piece_types = list(chess.PIECE_TYPES)
+
+    def time_piece_symbol(self):
+        for pt in self.piece_types:
+            chess.piece_symbol(pt)
+
+    def time_piece_name(self):
+        for pt in self.piece_types:
+            chess.piece_name(pt)
+
+    def time_parse_square(self):
+        for name in self.square_names:
+            chess.parse_square(name)
+
+    def time_square_name(self):
+        for sq in self.squares:
+            chess.square_name(sq)
+
+    def time_square(self):
+        for f in self.files:
+            for r in self.ranks:
+                chess.square(f, r)
+
+    def time_parse_file(self):
+        for name in self.file_names:
+            chess.parse_file(name)
+
+    def time_file_name(self):
+        for f in self.files:
+            chess.file_name(f)
+
+    def time_parse_rank(self):
+        for name in self.rank_names:
+            chess.parse_rank(name)
+
+    def time_rank_name(self):
+        for r in self.ranks:
+            chess.rank_name(r)
+
+    def time_square_file(self):
+        for sq in self.squares:
+            chess.square_file(sq)
+
+    def time_square_rank(self):
+        for sq in self.squares:
+            chess.square_rank(sq)
+
+    def time_square_distance(self):
+        for sq in self.squares:
+            chess.square_distance(chess.A1, sq)
+
+    def time_square_manhattan_distance(self):
+        for sq in self.squares:
+            chess.square_manhattan_distance(chess.A1, sq)
+
+    def time_square_knight_distance(self):
+        for sq in self.squares:
+            chess.square_knight_distance(chess.A1, sq)
+
+    def time_square_mirror(self):
+        for sq in self.squares:
+            chess.square_mirror(sq)
+
+class BitboardSuite:
+    def setup(self):
+        self.bitboards = [
+            chess.BB_EMPTY, chess.BB_ALL,
+            chess.BB_RANK_1, chess.BB_FILE_A,
+            0x8040201008040201, 0x0102040810204080,
+            0x10204081020408
+        ]
+        self.squares = list(chess.SQUARES)
+
+    def time_lsb(self):
+        for bb in self.bitboards[1:]:
+            chess.lsb(bb)
+
+    def time_scan_forward(self):
+        for bb in self.bitboards:
+            list(chess.scan_forward(bb))
+
+    def time_msb(self):
+        for bb in self.bitboards[1:]:
+            chess.msb(bb)
+
+    def time_scan_reversed(self):
+        for bb in self.bitboards:
+            list(chess.scan_reversed(bb))
+
+    def time_flip_vertical(self):
+        for bb in self.bitboards:
+            chess.flip_vertical(bb)
+
+    def time_flip_horizontal(self):
+        for bb in self.bitboards:
+            chess.flip_horizontal(bb)
+
+    def time_flip_diagonal(self):
+        for bb in self.bitboards:
+            chess.flip_diagonal(bb)
+
+    def time_flip_anti_diagonal(self):
+        for bb in self.bitboards:
+            chess.flip_anti_diagonal(bb)
+
+    def time_shift_down(self):
+        for bb in self.bitboards:
+            chess.shift_down(bb)
+
+    def time_shift_2_down(self):
+        for bb in self.bitboards:
+            chess.shift_2_down(bb)
+
+    def time_shift_up(self):
+        for bb in self.bitboards:
+            chess.shift_up(bb)
+
+    def time_shift_2_up(self):
+        for bb in self.bitboards:
+            chess.shift_2_up(bb)
+
+    def time_shift_right(self):
+        for bb in self.bitboards:
+            chess.shift_right(bb)
+
+    def time_shift_2_right(self):
+        for bb in self.bitboards:
+            chess.shift_2_right(bb)
+
+    def time_shift_left(self):
+        for bb in self.bitboards:
+            chess.shift_left(bb)
+
+    def time_shift_2_left(self):
+        for bb in self.bitboards:
+            chess.shift_2_left(bb)
+
+    def time_shift_up_left(self):
+        for bb in self.bitboards:
+            chess.shift_up_left(bb)
+
+    def time_shift_up_right(self):
+        for bb in self.bitboards:
+            chess.shift_up_right(bb)
+
+    def time_shift_down_left(self):
+        for bb in self.bitboards:
+            chess.shift_down_left(bb)
+
+    def time_shift_down_right(self):
+        for bb in self.bitboards:
+            chess.shift_down_right(bb)
+
+    def time_ray(self):
+        for sq in self.squares:
+            chess.ray(chess.E4, sq)
+
+    def time_between(self):
+        for sq in self.squares:
+            chess.between(chess.E4, sq)
