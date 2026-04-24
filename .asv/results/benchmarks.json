@@ -1,4 +1,34 @@
 {
+    "BaseBoardSuite.time_apply_mirror": {
+        "code": "class BaseBoardSuite:\n    def time_apply_mirror(self):\n        self.board.apply_mirror()\n\n    def setup(self):\n        self.board = chess.BaseBoard(chess.STARTING_BOARD_FEN)\n        self.squares = list(chess.SQUARES)\n        self.piece_map = self.board.piece_map()\n        self.board_copy = self.board.copy()\n        self.occupied = list(self.piece_map.keys())",
+        "min_run_count": 2,
+        "name": "BaseBoardSuite.time_apply_mirror",
+        "number": 0,
+        "param_names": [],
+        "params": [],
+        "repeat": 0,
+        "rounds": 2,
+        "sample_time": 0.01,
+        "type": "time",
+        "unit": "seconds",
+        "version": "c3d82be851a291915ce34cff2128eecc73e2642120389e4d563704fac50fdc04",
+        "warmup_time": -1
+    },
+    "BaseBoardSuite.time_apply_transform": {
+        "code": "class BaseBoardSuite:\n    def time_apply_transform(self):\n        self.board.apply_transform(chess.flip_vertical)\n\n    def setup(self):\n        self.board = chess.BaseBoard(chess.STARTING_BOARD_FEN)\n        self.squares = list(chess.SQUARES)\n        self.piece_map = self.board.piece_map()\n        self.board_copy = self.board.copy()\n        self.occupied = list(self.piece_map.keys())",
+        "min_run_count": 2,
+        "name": "BaseBoardSuite.time_apply_transform",
+        "number": 0,
+        "param_names": [],
+        "params": [],
+        "repeat": 0,
+        "rounds": 2,
+        "sample_time": 0.01,
+        "type": "time",
+        "unit": "seconds",
+        "version": "b6dd87a4a2be81c3c0d02eb10796bdd770bcaca661d17f39b1f3f2d5b84c36b6",
+        "warmup_time": -1
+    },
     "BaseBoardSuite.time_attackers": {
         "code": "class BaseBoardSuite:\n    def time_attackers(self):\n        for sq in self.squares:\n            self.board.attackers(chess.WHITE, sq)\n\n    def setup(self):\n        self.board = chess.BaseBoard(chess.STARTING_BOARD_FEN)\n        self.squares = list(chess.SQUARES)\n        self.piece_map = self.board.piece_map()\n        self.board_copy = self.board.copy()\n        self.occupied = list(self.piece_map.keys())",
         "min_run_count": 2,
@@ -60,7 +90,7 @@
         "warmup_time": -1
     },
     "BaseBoardSuite.time_board_fen": {
-        "code": "class BaseBoardSuite:\n    def time_board_fen(self):\n        self.board.board_fen()\n\n    def setup(self):\n        self.board = chess.BaseBoard(chess.STARTING_BOARD_FEN)\n        self.squares = list(chess.SQUARES)\n        self.piece_map = self.board.piece_map()\n        self.board_copy = self.board.copy()\n        self.occupied = list(self.piece_map.keys())",
+        "code": "class BaseBoardSuite:\n    def time_board_fen(self):\n        self.board.board_fen()\n        self.board.board_fen(promoted=True)\n        self.board.board_fen(promoted=False)\n\n    def setup(self):\n        self.board = chess.BaseBoard(chess.STARTING_BOARD_FEN)\n        self.squares = list(chess.SQUARES)\n        self.piece_map = self.board.piece_map()\n        self.board_copy = self.board.copy()\n        self.occupied = list(self.piece_map.keys())",
         "min_run_count": 2,
         "name": "BaseBoardSuite.time_board_fen",
         "number": 0,
@@ -71,7 +101,7 @@
         "sample_time": 0.01,
         "type": "time",
         "unit": "seconds",
-        "version": "2f3722c8aa58d511aed6d34050303998785090c47f7a013c5a8f91e331197575",
+        "version": "a747f28c3796515e46e86ea249bb161a529a983eaaefbe8f8336f81650c5aee8",
         "warmup_time": -1
     },
     "BaseBoardSuite.time_chess960_pos": {
@@ -120,7 +150,7 @@
         "warmup_time": -1
     },
     "BaseBoardSuite.time_copy": {
-        "code": "class BaseBoardSuite:\n    def time_copy(self):\n        self.board.copy()\n\n    def setup(self):\n        self.board = chess.BaseBoard(chess.STARTING_BOARD_FEN)\n        self.squares = list(chess.SQUARES)\n        self.piece_map = self.board.piece_map()\n        self.board_copy = self.board.copy()\n        self.occupied = list(self.piece_map.keys())",
+        "code": "class BaseBoardSuite:\n    def time_copy(self):\n        self.board.copy()\n        import copy\n    \n        copy.copy(self.board)\n        copy.deepcopy(self.board)\n\n    def setup(self):\n        self.board = chess.BaseBoard(chess.STARTING_BOARD_FEN)\n        self.squares = list(chess.SQUARES)\n        self.piece_map = self.board.piece_map()\n        self.board_copy = self.board.copy()\n        self.occupied = list(self.piece_map.keys())",
         "min_run_count": 2,
         "name": "BaseBoardSuite.time_copy",
         "number": 0,
@@ -131,7 +161,22 @@
         "sample_time": 0.01,
         "type": "time",
         "unit": "seconds",
-        "version": "a2f359fa0e9a1075487617c17f4de829146af8524ea5a0bd859c1fd47c1caf71",
+        "version": "c505a977d122805e6ad8a3155f3ee752e10aad7aa90a74034a8f88f9d8c92876",
+        "warmup_time": -1
+    },
+    "BaseBoardSuite.time_empty_classmethod": {
+        "code": "class BaseBoardSuite:\n    def time_empty_classmethod(self):\n        chess.BaseBoard.empty()\n\n    def setup(self):\n        self.board = chess.BaseBoard(chess.STARTING_BOARD_FEN)\n        self.squares = list(chess.SQUARES)\n        self.piece_map = self.board.piece_map()\n        self.board_copy = self.board.copy()\n        self.occupied = list(self.piece_map.keys())",
+        "min_run_count": 2,
+        "name": "BaseBoardSuite.time_empty_classmethod",
+        "number": 0,
+        "param_names": [],
+        "params": [],
+        "repeat": 0,
+        "rounds": 2,
+        "sample_time": 0.01,
+        "type": "time",
+        "unit": "seconds",
+        "version": "ec4e18b712555289354ccc92106742ca86776d1b3bc0de28eb8a23c9b4be0bf9",
         "warmup_time": -1
     },
     "BaseBoardSuite.time_eq": {
@@ -147,6 +192,36 @@
         "type": "time",
         "unit": "seconds",
         "version": "9af3557ce81a2dd26075f3d15952bf46caf561a6d5ea5a6c0a31139e342f0ecf",
+        "warmup_time": -1
+    },
+    "BaseBoardSuite.time_from_chess960_pos_classmethod": {
+        "code": "class BaseBoardSuite:\n    def time_from_chess960_pos_classmethod(self):\n        chess.BaseBoard.from_chess960_pos(518)\n\n    def setup(self):\n        self.board = chess.BaseBoard(chess.STARTING_BOARD_FEN)\n        self.squares = list(chess.SQUARES)\n        self.piece_map = self.board.piece_map()\n        self.board_copy = self.board.copy()\n        self.occupied = list(self.piece_map.keys())",
+        "min_run_count": 2,
+        "name": "BaseBoardSuite.time_from_chess960_pos_classmethod",
+        "number": 0,
+        "param_names": [],
+        "params": [],
+        "repeat": 0,
+        "rounds": 2,
+        "sample_time": 0.01,
+        "type": "time",
+        "unit": "seconds",
+        "version": "37712109cc39ada0d1a79beb32a1d3561ca4bc772a4c52c827daae0c8ba79869",
+        "warmup_time": -1
+    },
+    "BaseBoardSuite.time_init_custom_fen": {
+        "code": "class BaseBoardSuite:\n    def time_init_custom_fen(self):\n        chess.BaseBoard(\"8/8/8/8/8/8/8/8\")\n\n    def setup(self):\n        self.board = chess.BaseBoard(chess.STARTING_BOARD_FEN)\n        self.squares = list(chess.SQUARES)\n        self.piece_map = self.board.piece_map()\n        self.board_copy = self.board.copy()\n        self.occupied = list(self.piece_map.keys())",
+        "min_run_count": 2,
+        "name": "BaseBoardSuite.time_init_custom_fen",
+        "number": 0,
+        "param_names": [],
+        "params": [],
+        "repeat": 0,
+        "rounds": 2,
+        "sample_time": 0.01,
+        "type": "time",
+        "unit": "seconds",
+        "version": "d9ff1056c0e7b788cce8524418b95c7d113c596bd8f5b492bc7e9dfea47ed2e6",
         "warmup_time": -1
     },
     "BaseBoardSuite.time_is_attacked_by": {
@@ -299,8 +374,38 @@
         "version": "0b1b793c3f9e32cc016364cd5b574daaefed74858fcd0047be41205a288117fb",
         "warmup_time": -1
     },
+    "BaseBoardSuite.time_pieces_mask_invalid": {
+        "code": "class BaseBoardSuite:\n    def time_pieces_mask_invalid(self):\n        try:\n            self.board.pieces_mask(99, chess.WHITE)\n        except AssertionError:\n            pass\n\n    def setup(self):\n        self.board = chess.BaseBoard(chess.STARTING_BOARD_FEN)\n        self.squares = list(chess.SQUARES)\n        self.piece_map = self.board.piece_map()\n        self.board_copy = self.board.copy()\n        self.occupied = list(self.piece_map.keys())",
+        "min_run_count": 2,
+        "name": "BaseBoardSuite.time_pieces_mask_invalid",
+        "number": 0,
+        "param_names": [],
+        "params": [],
+        "repeat": 0,
+        "rounds": 2,
+        "sample_time": 0.01,
+        "type": "time",
+        "unit": "seconds",
+        "version": "59dfb8e9fdf8b9b7f40f1d266ee73405d672be6bd5642efe07a61f92201fddde",
+        "warmup_time": -1
+    },
+    "BaseBoardSuite.time_pin": {
+        "code": "class BaseBoardSuite:\n    def time_pin(self):\n        self.board.pin(chess.WHITE, chess.E2)\n\n    def setup(self):\n        self.board = chess.BaseBoard(chess.STARTING_BOARD_FEN)\n        self.squares = list(chess.SQUARES)\n        self.piece_map = self.board.piece_map()\n        self.board_copy = self.board.copy()\n        self.occupied = list(self.piece_map.keys())",
+        "min_run_count": 2,
+        "name": "BaseBoardSuite.time_pin",
+        "number": 0,
+        "param_names": [],
+        "params": [],
+        "repeat": 0,
+        "rounds": 2,
+        "sample_time": 0.01,
+        "type": "time",
+        "unit": "seconds",
+        "version": "892e85efedc1155146a8fc502c22215f98f463cef4ea5f39f24a0a1499dff18d",
+        "warmup_time": -1
+    },
     "BaseBoardSuite.time_pin_mask": {
-        "code": "class BaseBoardSuite:\n    def time_pin_mask(self):\n        for sq in self.squares:\n            self.board.pin_mask(chess.WHITE, sq)\n\n    def setup(self):\n        self.board = chess.BaseBoard(chess.STARTING_BOARD_FEN)\n        self.squares = list(chess.SQUARES)\n        self.piece_map = self.board.piece_map()\n        self.board_copy = self.board.copy()\n        self.occupied = list(self.piece_map.keys())",
+        "code": "class BaseBoardSuite:\n    def time_pin_mask(self):\n        for sq in self.squares:\n            self.board.pin_mask(chess.WHITE, sq)\n        # Empty board pin_mask\n        chess.BaseBoard(None).pin_mask(chess.WHITE, chess.A1)\n\n    def setup(self):\n        self.board = chess.BaseBoard(chess.STARTING_BOARD_FEN)\n        self.squares = list(chess.SQUARES)\n        self.piece_map = self.board.piece_map()\n        self.board_copy = self.board.copy()\n        self.occupied = list(self.piece_map.keys())",
         "min_run_count": 2,
         "name": "BaseBoardSuite.time_pin_mask",
         "number": 0,
@@ -311,7 +416,37 @@
         "sample_time": 0.01,
         "type": "time",
         "unit": "seconds",
-        "version": "970d5983cd057884ff09bc78475ec585d396d5c106a58ca566fa984d78f86dc8",
+        "version": "43eacb984d08905dbc5a4c0458ced7e360fa64d911c094a7cafe8b8c9ee80043",
+        "warmup_time": -1
+    },
+    "BaseBoardSuite.time_remove_set_piece": {
+        "code": "class BaseBoardSuite:\n    def time_remove_set_piece(self):\n        self.board.remove_piece_at(chess.E2)\n        self.board.set_piece_at(chess.E2, None)\n        self.board.set_piece_at(chess.E4, chess.Piece(chess.PAWN, chess.WHITE))\n\n    def setup(self):\n        self.board = chess.BaseBoard(chess.STARTING_BOARD_FEN)\n        self.squares = list(chess.SQUARES)\n        self.piece_map = self.board.piece_map()\n        self.board_copy = self.board.copy()\n        self.occupied = list(self.piece_map.keys())",
+        "min_run_count": 2,
+        "name": "BaseBoardSuite.time_remove_set_piece",
+        "number": 0,
+        "param_names": [],
+        "params": [],
+        "repeat": 0,
+        "rounds": 2,
+        "sample_time": 0.01,
+        "type": "time",
+        "unit": "seconds",
+        "version": "584269dd0d95d0e39c83d314dac7e2ebdf0a155832cf9a2c1151eb5503adbf50",
+        "warmup_time": -1
+    },
+    "BaseBoardSuite.time_repr_svg": {
+        "code": "class BaseBoardSuite:\n    def time_repr_svg(self):\n        self.board._repr_svg_()\n\n    def setup(self):\n        self.board = chess.BaseBoard(chess.STARTING_BOARD_FEN)\n        self.squares = list(chess.SQUARES)\n        self.piece_map = self.board.piece_map()\n        self.board_copy = self.board.copy()\n        self.occupied = list(self.piece_map.keys())",
+        "min_run_count": 2,
+        "name": "BaseBoardSuite.time_repr_svg",
+        "number": 0,
+        "param_names": [],
+        "params": [],
+        "repeat": 0,
+        "rounds": 2,
+        "sample_time": 0.01,
+        "type": "time",
+        "unit": "seconds",
+        "version": "7931a912ed59cbe6c7380372b4462787886b15813f3305a9f79a0193cab64464",
         "warmup_time": -1
     },
     "BaseBoardSuite.time_reset_board": {
@@ -344,6 +479,21 @@
         "version": "5162700de41c4d6004fb61d4a1b826b92e44e27244f82be8eb065a8159b26f1f",
         "warmup_time": -1
     },
+    "BaseBoardSuite.time_set_board_fen_invalid": {
+        "code": "class BaseBoardSuite:\n    def time_set_board_fen_invalid(self):\n        for fen in [\n            \"8/8\",\n            \"8/8/8/8/8/8/8/8 w\",\n            \"8/8/8/8/8/8/8/8/8\",\n            \"11/8/8/8/8/8/8/8\",\n            \"Z/8/8/8/8/8/8/8\",\n            \"p~p/8/8/8/8/8/8/8\",\n        ]:\n            try:\n                self.board.set_board_fen(fen)\n            except ValueError:\n                pass\n\n    def setup(self):\n        self.board = chess.BaseBoard(chess.STARTING_BOARD_FEN)\n        self.squares = list(chess.SQUARES)\n        self.piece_map = self.board.piece_map()\n        self.board_copy = self.board.copy()\n        self.occupied = list(self.piece_map.keys())",
+        "min_run_count": 2,
+        "name": "BaseBoardSuite.time_set_board_fen_invalid",
+        "number": 0,
+        "param_names": [],
+        "params": [],
+        "repeat": 0,
+        "rounds": 2,
+        "sample_time": 0.01,
+        "type": "time",
+        "unit": "seconds",
+        "version": "40cde8ccde1c50d9ddab62d660229d7b1e942f929bacaaa7be490f11af2bad4e",
+        "warmup_time": -1
+    },
     "BaseBoardSuite.time_set_chess960_pos": {
         "code": "class BaseBoardSuite:\n    def time_set_chess960_pos(self):\n        self.board.set_chess960_pos(518)\n\n    def setup(self):\n        self.board = chess.BaseBoard(chess.STARTING_BOARD_FEN)\n        self.squares = list(chess.SQUARES)\n        self.piece_map = self.board.piece_map()\n        self.board_copy = self.board.copy()\n        self.occupied = list(self.piece_map.keys())",
         "min_run_count": 2,
@@ -357,6 +507,21 @@
         "type": "time",
         "unit": "seconds",
         "version": "bc2ed096d9dabf6d75bc248fdd283d86edc2d1f70df2a476c1f89af0630e3139",
+        "warmup_time": -1
+    },
+    "BaseBoardSuite.time_set_chess960_pos_invalid": {
+        "code": "class BaseBoardSuite:\n    def time_set_chess960_pos_invalid(self):\n        try:\n            self.board.set_chess960_pos(1000)\n        except ValueError:\n            pass\n\n    def setup(self):\n        self.board = chess.BaseBoard(chess.STARTING_BOARD_FEN)\n        self.squares = list(chess.SQUARES)\n        self.piece_map = self.board.piece_map()\n        self.board_copy = self.board.copy()\n        self.occupied = list(self.piece_map.keys())",
+        "min_run_count": 2,
+        "name": "BaseBoardSuite.time_set_chess960_pos_invalid",
+        "number": 0,
+        "param_names": [],
+        "params": [],
+        "repeat": 0,
+        "rounds": 2,
+        "sample_time": 0.01,
+        "type": "time",
+        "unit": "seconds",
+        "version": "aab1bd0dc1d30d19aa32d7e7e69d9c3bc3f50b5c60bed13f4d1b8edaa53e3c19",
         "warmup_time": -1
     },
     "BaseBoardSuite.time_set_piece_map": {
@@ -374,6 +539,36 @@
         "version": "c32b216464ebb9e6c43391202495a46f6206cb42954893badddc718ccae967d4",
         "warmup_time": -1
     },
+    "BaseBoardSuite.time_str_repr": {
+        "code": "class BaseBoardSuite:\n    def time_str_repr(self):\n        str(self.board)\n        repr(self.board)\n\n    def setup(self):\n        self.board = chess.BaseBoard(chess.STARTING_BOARD_FEN)\n        self.squares = list(chess.SQUARES)\n        self.piece_map = self.board.piece_map()\n        self.board_copy = self.board.copy()\n        self.occupied = list(self.piece_map.keys())",
+        "min_run_count": 2,
+        "name": "BaseBoardSuite.time_str_repr",
+        "number": 0,
+        "param_names": [],
+        "params": [],
+        "repeat": 0,
+        "rounds": 2,
+        "sample_time": 0.01,
+        "type": "time",
+        "unit": "seconds",
+        "version": "59cfef350605bce9fe50b5280464d0198a91602dcdc3f83e47d341ee20aaf24d",
+        "warmup_time": -1
+    },
+    "BaseBoardSuite.time_transform": {
+        "code": "class BaseBoardSuite:\n    def time_transform(self):\n        self.board.transform(chess.flip_vertical)\n\n    def setup(self):\n        self.board = chess.BaseBoard(chess.STARTING_BOARD_FEN)\n        self.squares = list(chess.SQUARES)\n        self.piece_map = self.board.piece_map()\n        self.board_copy = self.board.copy()\n        self.occupied = list(self.piece_map.keys())",
+        "min_run_count": 2,
+        "name": "BaseBoardSuite.time_transform",
+        "number": 0,
+        "param_names": [],
+        "params": [],
+        "repeat": 0,
+        "rounds": 2,
+        "sample_time": 0.01,
+        "type": "time",
+        "unit": "seconds",
+        "version": "c625e42d5a3e6103589aa797a07399385e5b2a34ed322ffe766f4cf77d33b1d0",
+        "warmup_time": -1
+    },
     "BaseBoardSuite.time_unicode": {
         "code": "class BaseBoardSuite:\n    def time_unicode(self):\n        self.board.unicode()\n\n    def setup(self):\n        self.board = chess.BaseBoard(chess.STARTING_BOARD_FEN)\n        self.squares = list(chess.SQUARES)\n        self.piece_map = self.board.piece_map()\n        self.board_copy = self.board.copy()\n        self.occupied = list(self.piece_map.keys())",
         "min_run_count": 2,
@@ -389,8 +584,23 @@
         "version": "cb33e7195b33143350d2cb69a8b505ce07e13480d4a2f350b03bef4359dc10bb",
         "warmup_time": -1
     },
+    "BaseBoardSuite.time_unicode_options": {
+        "code": "class BaseBoardSuite:\n    def time_unicode_options(self):\n        self.board.unicode(borders=True)\n        self.board.unicode(orientation=chess.BLACK)\n\n    def setup(self):\n        self.board = chess.BaseBoard(chess.STARTING_BOARD_FEN)\n        self.squares = list(chess.SQUARES)\n        self.piece_map = self.board.piece_map()\n        self.board_copy = self.board.copy()\n        self.occupied = list(self.piece_map.keys())",
+        "min_run_count": 2,
+        "name": "BaseBoardSuite.time_unicode_options",
+        "number": 0,
+        "param_names": [],
+        "params": [],
+        "repeat": 0,
+        "rounds": 2,
+        "sample_time": 0.01,
+        "type": "time",
+        "unit": "seconds",
+        "version": "9f2433ae07762eb5c0dc9212d503764f87cc14a79fdbe903c178a9a6471d7721",
+        "warmup_time": -1
+    },
     "BitboardSuite.time_between": {
-        "code": "class BitboardSuite:\n    def time_between(self):\n        for sq in self.squares:\n            chess.between(chess.E4, sq)\n\n    def setup(self):\n        self.bitboards = [\n            chess.BB_EMPTY, chess.BB_ALL,\n            chess.BB_RANK_1, chess.BB_FILE_A,\n            0x8040201008040201, 0x0102040810204080,\n            0x10204081020408\n        ]\n        self.squares = list(chess.SQUARES)",
+        "code": "class BitboardSuite:\n    def time_between(self):\n        for sq in self.squares:\n            chess.between(chess.E4, sq)\n\n    def setup(self):\n        self.bitboards = [\n            chess.BB_EMPTY,\n            chess.BB_ALL,\n            chess.BB_RANK_1,\n            chess.BB_FILE_A,\n            0x8040201008040201,\n            0x0102040810204080,\n            0x10204081020408,\n        ]\n        self.squares = list(chess.SQUARES)",
         "min_run_count": 2,
         "name": "BitboardSuite.time_between",
         "number": 0,
@@ -401,11 +611,11 @@
         "sample_time": 0.01,
         "type": "time",
         "unit": "seconds",
-        "version": "8c30e7a1606c979896a1e7f8a1b70c8ef12fc89abe6d5eec0b9e53ab76b28788",
+        "version": "822248af1f93b68723c88c119695c84659a86872cb5e8f9fea250a728b99bb78",
         "warmup_time": -1
     },
     "BitboardSuite.time_flip_anti_diagonal": {
-        "code": "class BitboardSuite:\n    def time_flip_anti_diagonal(self):\n        for bb in self.bitboards:\n            chess.flip_anti_diagonal(bb)\n\n    def setup(self):\n        self.bitboards = [\n            chess.BB_EMPTY, chess.BB_ALL,\n            chess.BB_RANK_1, chess.BB_FILE_A,\n            0x8040201008040201, 0x0102040810204080,\n            0x10204081020408\n        ]\n        self.squares = list(chess.SQUARES)",
+        "code": "class BitboardSuite:\n    def time_flip_anti_diagonal(self):\n        for bb in self.bitboards:\n            chess.flip_anti_diagonal(bb)\n\n    def setup(self):\n        self.bitboards = [\n            chess.BB_EMPTY,\n            chess.BB_ALL,\n            chess.BB_RANK_1,\n            chess.BB_FILE_A,\n            0x8040201008040201,\n            0x0102040810204080,\n            0x10204081020408,\n        ]\n        self.squares = list(chess.SQUARES)",
         "min_run_count": 2,
         "name": "BitboardSuite.time_flip_anti_diagonal",
         "number": 0,
@@ -416,11 +626,11 @@
         "sample_time": 0.01,
         "type": "time",
         "unit": "seconds",
-        "version": "bf73b2214c776fc217ce63a4f866818dcb03d84a08b0d7a4110413bd33ecc394",
+        "version": "ce9a1fb69ec72ec3c575cfbe5d9cd3bbc5dd9a492f5569083293b7a1ca635c17",
         "warmup_time": -1
     },
     "BitboardSuite.time_flip_diagonal": {
-        "code": "class BitboardSuite:\n    def time_flip_diagonal(self):\n        for bb in self.bitboards:\n            chess.flip_diagonal(bb)\n\n    def setup(self):\n        self.bitboards = [\n            chess.BB_EMPTY, chess.BB_ALL,\n            chess.BB_RANK_1, chess.BB_FILE_A,\n            0x8040201008040201, 0x0102040810204080,\n            0x10204081020408\n        ]\n        self.squares = list(chess.SQUARES)",
+        "code": "class BitboardSuite:\n    def time_flip_diagonal(self):\n        for bb in self.bitboards:\n            chess.flip_diagonal(bb)\n\n    def setup(self):\n        self.bitboards = [\n            chess.BB_EMPTY,\n            chess.BB_ALL,\n            chess.BB_RANK_1,\n            chess.BB_FILE_A,\n            0x8040201008040201,\n            0x0102040810204080,\n            0x10204081020408,\n        ]\n        self.squares = list(chess.SQUARES)",
         "min_run_count": 2,
         "name": "BitboardSuite.time_flip_diagonal",
         "number": 0,
@@ -431,11 +641,11 @@
         "sample_time": 0.01,
         "type": "time",
         "unit": "seconds",
-        "version": "42db9c93ce755e67dc2a00111d2bdbacd5dfb6ae3e2a6c80de8da2e58e1f4a1a",
+        "version": "c123efae83ae02e47fd7ec16d60c4f41cc8a12b3dce113030eaea479550240ae",
         "warmup_time": -1
     },
     "BitboardSuite.time_flip_horizontal": {
-        "code": "class BitboardSuite:\n    def time_flip_horizontal(self):\n        for bb in self.bitboards:\n            chess.flip_horizontal(bb)\n\n    def setup(self):\n        self.bitboards = [\n            chess.BB_EMPTY, chess.BB_ALL,\n            chess.BB_RANK_1, chess.BB_FILE_A,\n            0x8040201008040201, 0x0102040810204080,\n            0x10204081020408\n        ]\n        self.squares = list(chess.SQUARES)",
+        "code": "class BitboardSuite:\n    def time_flip_horizontal(self):\n        for bb in self.bitboards:\n            chess.flip_horizontal(bb)\n\n    def setup(self):\n        self.bitboards = [\n            chess.BB_EMPTY,\n            chess.BB_ALL,\n            chess.BB_RANK_1,\n            chess.BB_FILE_A,\n            0x8040201008040201,\n            0x0102040810204080,\n            0x10204081020408,\n        ]\n        self.squares = list(chess.SQUARES)",
         "min_run_count": 2,
         "name": "BitboardSuite.time_flip_horizontal",
         "number": 0,
@@ -446,11 +656,11 @@
         "sample_time": 0.01,
         "type": "time",
         "unit": "seconds",
-        "version": "8defab506e89bfa304ccac51cdec36dbb59f74c40536125d2ddf2da48bf1b85d",
+        "version": "fa794d98ad6d5995e564f5b92038ca914ff79ec0534c3e1e112d19b42ec1a909",
         "warmup_time": -1
     },
     "BitboardSuite.time_flip_vertical": {
-        "code": "class BitboardSuite:\n    def time_flip_vertical(self):\n        for bb in self.bitboards:\n            chess.flip_vertical(bb)\n\n    def setup(self):\n        self.bitboards = [\n            chess.BB_EMPTY, chess.BB_ALL,\n            chess.BB_RANK_1, chess.BB_FILE_A,\n            0x8040201008040201, 0x0102040810204080,\n            0x10204081020408\n        ]\n        self.squares = list(chess.SQUARES)",
+        "code": "class BitboardSuite:\n    def time_flip_vertical(self):\n        for bb in self.bitboards:\n            chess.flip_vertical(bb)\n\n    def setup(self):\n        self.bitboards = [\n            chess.BB_EMPTY,\n            chess.BB_ALL,\n            chess.BB_RANK_1,\n            chess.BB_FILE_A,\n            0x8040201008040201,\n            0x0102040810204080,\n            0x10204081020408,\n        ]\n        self.squares = list(chess.SQUARES)",
         "min_run_count": 2,
         "name": "BitboardSuite.time_flip_vertical",
         "number": 0,
@@ -461,11 +671,11 @@
         "sample_time": 0.01,
         "type": "time",
         "unit": "seconds",
-        "version": "0754b9edc34502e96a2b56b7dab6841365ff4a64dd4cf0b44f709d2813f1368a",
+        "version": "888095669f62e5e8f396cd7e5142519e070c5b1d19cede7579a48d35b9c382ba",
         "warmup_time": -1
     },
     "BitboardSuite.time_lsb": {
-        "code": "class BitboardSuite:\n    def time_lsb(self):\n        for bb in self.bitboards[1:]:\n            chess.lsb(bb)\n\n    def setup(self):\n        self.bitboards = [\n            chess.BB_EMPTY, chess.BB_ALL,\n            chess.BB_RANK_1, chess.BB_FILE_A,\n            0x8040201008040201, 0x0102040810204080,\n            0x10204081020408\n        ]\n        self.squares = list(chess.SQUARES)",
+        "code": "class BitboardSuite:\n    def time_lsb(self):\n        for bb in self.bitboards[1:]:\n            chess.lsb(bb)\n\n    def setup(self):\n        self.bitboards = [\n            chess.BB_EMPTY,\n            chess.BB_ALL,\n            chess.BB_RANK_1,\n            chess.BB_FILE_A,\n            0x8040201008040201,\n            0x0102040810204080,\n            0x10204081020408,\n        ]\n        self.squares = list(chess.SQUARES)",
         "min_run_count": 2,
         "name": "BitboardSuite.time_lsb",
         "number": 0,
@@ -476,11 +686,11 @@
         "sample_time": 0.01,
         "type": "time",
         "unit": "seconds",
-        "version": "420364dc69147124c4bf2ccbc3493efd2fd7b37c85fad22416b3e6007fa903cb",
+        "version": "a462d0d9982c294a6ca3e48062294738a2b9e852931f23a5bbf3850bd376a580",
         "warmup_time": -1
     },
     "BitboardSuite.time_msb": {
-        "code": "class BitboardSuite:\n    def time_msb(self):\n        for bb in self.bitboards[1:]:\n            chess.msb(bb)\n\n    def setup(self):\n        self.bitboards = [\n            chess.BB_EMPTY, chess.BB_ALL,\n            chess.BB_RANK_1, chess.BB_FILE_A,\n            0x8040201008040201, 0x0102040810204080,\n            0x10204081020408\n        ]\n        self.squares = list(chess.SQUARES)",
+        "code": "class BitboardSuite:\n    def time_msb(self):\n        for bb in self.bitboards[1:]:\n            chess.msb(bb)\n\n    def setup(self):\n        self.bitboards = [\n            chess.BB_EMPTY,\n            chess.BB_ALL,\n            chess.BB_RANK_1,\n            chess.BB_FILE_A,\n            0x8040201008040201,\n            0x0102040810204080,\n            0x10204081020408,\n        ]\n        self.squares = list(chess.SQUARES)",
         "min_run_count": 2,
         "name": "BitboardSuite.time_msb",
         "number": 0,
@@ -491,11 +701,11 @@
         "sample_time": 0.01,
         "type": "time",
         "unit": "seconds",
-        "version": "235457ca07b68e73dbae2afe6bac060d30ba9c9c71e8c102a3dc5532a170b8c3",
+        "version": "5c727073032d92e659d9dc2f0a204ca6213524f45e0e4b001ab6c7c110ce2e4a",
         "warmup_time": -1
     },
     "BitboardSuite.time_ray": {
-        "code": "class BitboardSuite:\n    def time_ray(self):\n        for sq in self.squares:\n            chess.ray(chess.E4, sq)\n\n    def setup(self):\n        self.bitboards = [\n            chess.BB_EMPTY, chess.BB_ALL,\n            chess.BB_RANK_1, chess.BB_FILE_A,\n            0x8040201008040201, 0x0102040810204080,\n            0x10204081020408\n        ]\n        self.squares = list(chess.SQUARES)",
+        "code": "class BitboardSuite:\n    def time_ray(self):\n        for sq in self.squares:\n            chess.ray(chess.E4, sq)\n\n    def setup(self):\n        self.bitboards = [\n            chess.BB_EMPTY,\n            chess.BB_ALL,\n            chess.BB_RANK_1,\n            chess.BB_FILE_A,\n            0x8040201008040201,\n            0x0102040810204080,\n            0x10204081020408,\n        ]\n        self.squares = list(chess.SQUARES)",
         "min_run_count": 2,
         "name": "BitboardSuite.time_ray",
         "number": 0,
@@ -506,11 +716,11 @@
         "sample_time": 0.01,
         "type": "time",
         "unit": "seconds",
-        "version": "54403dc7e49ca3e0120b3b2207d39d0c9b4d29bcd32949c610999530372f8045",
+        "version": "d250a90dc5042ffe4cc0da1d22b206bc3397f52edadb68d3d504c8d65bfd87c4",
         "warmup_time": -1
     },
     "BitboardSuite.time_scan_forward": {
-        "code": "class BitboardSuite:\n    def time_scan_forward(self):\n        for bb in self.bitboards:\n            list(chess.scan_forward(bb))\n\n    def setup(self):\n        self.bitboards = [\n            chess.BB_EMPTY, chess.BB_ALL,\n            chess.BB_RANK_1, chess.BB_FILE_A,\n            0x8040201008040201, 0x0102040810204080,\n            0x10204081020408\n        ]\n        self.squares = list(chess.SQUARES)",
+        "code": "class BitboardSuite:\n    def time_scan_forward(self):\n        for bb in self.bitboards:\n            list(chess.scan_forward(bb))\n\n    def setup(self):\n        self.bitboards = [\n            chess.BB_EMPTY,\n            chess.BB_ALL,\n            chess.BB_RANK_1,\n            chess.BB_FILE_A,\n            0x8040201008040201,\n            0x0102040810204080,\n            0x10204081020408,\n        ]\n        self.squares = list(chess.SQUARES)",
         "min_run_count": 2,
         "name": "BitboardSuite.time_scan_forward",
         "number": 0,
@@ -521,11 +731,11 @@
         "sample_time": 0.01,
         "type": "time",
         "unit": "seconds",
-        "version": "d94cf92ac53d303de7d11401fb049a1f1bfa86e8be6e1cc288f8f3529937f8b4",
+        "version": "95f558d142995c8e3b5ccbeec4da97a9a1e6de4141e0f0644d7374e88f6bdc86",
         "warmup_time": -1
     },
     "BitboardSuite.time_scan_reversed": {
-        "code": "class BitboardSuite:\n    def time_scan_reversed(self):\n        for bb in self.bitboards:\n            list(chess.scan_reversed(bb))\n\n    def setup(self):\n        self.bitboards = [\n            chess.BB_EMPTY, chess.BB_ALL,\n            chess.BB_RANK_1, chess.BB_FILE_A,\n            0x8040201008040201, 0x0102040810204080,\n            0x10204081020408\n        ]\n        self.squares = list(chess.SQUARES)",
+        "code": "class BitboardSuite:\n    def time_scan_reversed(self):\n        for bb in self.bitboards:\n            list(chess.scan_reversed(bb))\n\n    def setup(self):\n        self.bitboards = [\n            chess.BB_EMPTY,\n            chess.BB_ALL,\n            chess.BB_RANK_1,\n            chess.BB_FILE_A,\n            0x8040201008040201,\n            0x0102040810204080,\n            0x10204081020408,\n        ]\n        self.squares = list(chess.SQUARES)",
         "min_run_count": 2,
         "name": "BitboardSuite.time_scan_reversed",
         "number": 0,
@@ -536,11 +746,11 @@
         "sample_time": 0.01,
         "type": "time",
         "unit": "seconds",
-        "version": "d411f2b2e6e73f7fb85dc1cf53828009acff59d6272cd3519a2ab06407512c2c",
+        "version": "83efa1d38454f77ef3e2c943af742c37440eeea8663455425298840e7b464968",
         "warmup_time": -1
     },
     "BitboardSuite.time_shift_2_down": {
-        "code": "class BitboardSuite:\n    def time_shift_2_down(self):\n        for bb in self.bitboards:\n            chess.shift_2_down(bb)\n\n    def setup(self):\n        self.bitboards = [\n            chess.BB_EMPTY, chess.BB_ALL,\n            chess.BB_RANK_1, chess.BB_FILE_A,\n            0x8040201008040201, 0x0102040810204080,\n            0x10204081020408\n        ]\n        self.squares = list(chess.SQUARES)",
+        "code": "class BitboardSuite:\n    def time_shift_2_down(self):\n        for bb in self.bitboards:\n            chess.shift_2_down(bb)\n\n    def setup(self):\n        self.bitboards = [\n            chess.BB_EMPTY,\n            chess.BB_ALL,\n            chess.BB_RANK_1,\n            chess.BB_FILE_A,\n            0x8040201008040201,\n            0x0102040810204080,\n            0x10204081020408,\n        ]\n        self.squares = list(chess.SQUARES)",
         "min_run_count": 2,
         "name": "BitboardSuite.time_shift_2_down",
         "number": 0,
@@ -551,11 +761,11 @@
         "sample_time": 0.01,
         "type": "time",
         "unit": "seconds",
-        "version": "9a94c8127cd8d5dbe1a8d46ee1b5c5a21159d9b2220a66236ce3e7f65f188dab",
+        "version": "d3defcdce5386073585dbaf9402e9489ff02fb4598e5b4fdace47e7c803f5bfb",
         "warmup_time": -1
     },
     "BitboardSuite.time_shift_2_left": {
-        "code": "class BitboardSuite:\n    def time_shift_2_left(self):\n        for bb in self.bitboards:\n            chess.shift_2_left(bb)\n\n    def setup(self):\n        self.bitboards = [\n            chess.BB_EMPTY, chess.BB_ALL,\n            chess.BB_RANK_1, chess.BB_FILE_A,\n            0x8040201008040201, 0x0102040810204080,\n            0x10204081020408\n        ]\n        self.squares = list(chess.SQUARES)",
+        "code": "class BitboardSuite:\n    def time_shift_2_left(self):\n        for bb in self.bitboards:\n            chess.shift_2_left(bb)\n\n    def setup(self):\n        self.bitboards = [\n            chess.BB_EMPTY,\n            chess.BB_ALL,\n            chess.BB_RANK_1,\n            chess.BB_FILE_A,\n            0x8040201008040201,\n            0x0102040810204080,\n            0x10204081020408,\n        ]\n        self.squares = list(chess.SQUARES)",
         "min_run_count": 2,
         "name": "BitboardSuite.time_shift_2_left",
         "number": 0,
@@ -566,11 +776,11 @@
         "sample_time": 0.01,
         "type": "time",
         "unit": "seconds",
-        "version": "161084ebf8d55ff3041cd3e365987a450921285cb0b834c280b2f0a45300855c",
+        "version": "557797de618b79ff136d0961583ae180ef374fd2bfab8019bdaa1103db46f066",
         "warmup_time": -1
     },
     "BitboardSuite.time_shift_2_right": {
-        "code": "class BitboardSuite:\n    def time_shift_2_right(self):\n        for bb in self.bitboards:\n            chess.shift_2_right(bb)\n\n    def setup(self):\n        self.bitboards = [\n            chess.BB_EMPTY, chess.BB_ALL,\n            chess.BB_RANK_1, chess.BB_FILE_A,\n            0x8040201008040201, 0x0102040810204080,\n            0x10204081020408\n        ]\n        self.squares = list(chess.SQUARES)",
+        "code": "class BitboardSuite:\n    def time_shift_2_right(self):\n        for bb in self.bitboards:\n            chess.shift_2_right(bb)\n\n    def setup(self):\n        self.bitboards = [\n            chess.BB_EMPTY,\n            chess.BB_ALL,\n            chess.BB_RANK_1,\n            chess.BB_FILE_A,\n            0x8040201008040201,\n            0x0102040810204080,\n            0x10204081020408,\n        ]\n        self.squares = list(chess.SQUARES)",
         "min_run_count": 2,
         "name": "BitboardSuite.time_shift_2_right",
         "number": 0,
@@ -581,11 +791,11 @@
         "sample_time": 0.01,
         "type": "time",
         "unit": "seconds",
-        "version": "bce351a829b0eb87f1a326ad60c5d855ffcccf0963f1ed9d729b62b783ea722a",
+        "version": "329d016623d59f8784921d33e9914b358bee26e7aebcd33904575ad932c8da49",
         "warmup_time": -1
     },
     "BitboardSuite.time_shift_2_up": {
-        "code": "class BitboardSuite:\n    def time_shift_2_up(self):\n        for bb in self.bitboards:\n            chess.shift_2_up(bb)\n\n    def setup(self):\n        self.bitboards = [\n            chess.BB_EMPTY, chess.BB_ALL,\n            chess.BB_RANK_1, chess.BB_FILE_A,\n            0x8040201008040201, 0x0102040810204080,\n            0x10204081020408\n        ]\n        self.squares = list(chess.SQUARES)",
+        "code": "class BitboardSuite:\n    def time_shift_2_up(self):\n        for bb in self.bitboards:\n            chess.shift_2_up(bb)\n\n    def setup(self):\n        self.bitboards = [\n            chess.BB_EMPTY,\n            chess.BB_ALL,\n            chess.BB_RANK_1,\n            chess.BB_FILE_A,\n            0x8040201008040201,\n            0x0102040810204080,\n            0x10204081020408,\n        ]\n        self.squares = list(chess.SQUARES)",
         "min_run_count": 2,
         "name": "BitboardSuite.time_shift_2_up",
         "number": 0,
@@ -596,11 +806,11 @@
         "sample_time": 0.01,
         "type": "time",
         "unit": "seconds",
-        "version": "d568134077bfb0a85004b1d93801bc3578b7994c23e3794d4d1423b6ef5428a1",
+        "version": "2d6e5ff68e041a200265b5188911f96ba3c2ec4bc9e8f81cc0e02838cf63790b",
         "warmup_time": -1
     },
     "BitboardSuite.time_shift_down": {
-        "code": "class BitboardSuite:\n    def time_shift_down(self):\n        for bb in self.bitboards:\n            chess.shift_down(bb)\n\n    def setup(self):\n        self.bitboards = [\n            chess.BB_EMPTY, chess.BB_ALL,\n            chess.BB_RANK_1, chess.BB_FILE_A,\n            0x8040201008040201, 0x0102040810204080,\n            0x10204081020408\n        ]\n        self.squares = list(chess.SQUARES)",
+        "code": "class BitboardSuite:\n    def time_shift_down(self):\n        for bb in self.bitboards:\n            chess.shift_down(bb)\n\n    def setup(self):\n        self.bitboards = [\n            chess.BB_EMPTY,\n            chess.BB_ALL,\n            chess.BB_RANK_1,\n            chess.BB_FILE_A,\n            0x8040201008040201,\n            0x0102040810204080,\n            0x10204081020408,\n        ]\n        self.squares = list(chess.SQUARES)",
         "min_run_count": 2,
         "name": "BitboardSuite.time_shift_down",
         "number": 0,
@@ -611,11 +821,11 @@
         "sample_time": 0.01,
         "type": "time",
         "unit": "seconds",
-        "version": "6cb2fc352efb5a9a359f07edefef1386a20d1e9efb027d4a10b251d1a8fa935a",
+        "version": "8b3ca161e71131264f69a4f2e3d6cefc49350d1e4d98f4ad04acc57bb17e231b",
         "warmup_time": -1
     },
     "BitboardSuite.time_shift_down_left": {
-        "code": "class BitboardSuite:\n    def time_shift_down_left(self):\n        for bb in self.bitboards:\n            chess.shift_down_left(bb)\n\n    def setup(self):\n        self.bitboards = [\n            chess.BB_EMPTY, chess.BB_ALL,\n            chess.BB_RANK_1, chess.BB_FILE_A,\n            0x8040201008040201, 0x0102040810204080,\n            0x10204081020408\n        ]\n        self.squares = list(chess.SQUARES)",
+        "code": "class BitboardSuite:\n    def time_shift_down_left(self):\n        for bb in self.bitboards:\n            chess.shift_down_left(bb)\n\n    def setup(self):\n        self.bitboards = [\n            chess.BB_EMPTY,\n            chess.BB_ALL,\n            chess.BB_RANK_1,\n            chess.BB_FILE_A,\n            0x8040201008040201,\n            0x0102040810204080,\n            0x10204081020408,\n        ]\n        self.squares = list(chess.SQUARES)",
         "min_run_count": 2,
         "name": "BitboardSuite.time_shift_down_left",
         "number": 0,
@@ -626,11 +836,11 @@
         "sample_time": 0.01,
         "type": "time",
         "unit": "seconds",
-        "version": "b554e80069c2a02eac9a2b2c0c3be1d0b5e112f27a54506f0ecfa4d820a3e156",
+        "version": "911f856cc16db420716c864b5e15f22930463e3265e98746f162e99ac3aa5214",
         "warmup_time": -1
     },
     "BitboardSuite.time_shift_down_right": {
-        "code": "class BitboardSuite:\n    def time_shift_down_right(self):\n        for bb in self.bitboards:\n            chess.shift_down_right(bb)\n\n    def setup(self):\n        self.bitboards = [\n            chess.BB_EMPTY, chess.BB_ALL,\n            chess.BB_RANK_1, chess.BB_FILE_A,\n            0x8040201008040201, 0x0102040810204080,\n            0x10204081020408\n        ]\n        self.squares = list(chess.SQUARES)",
+        "code": "class BitboardSuite:\n    def time_shift_down_right(self):\n        for bb in self.bitboards:\n            chess.shift_down_right(bb)\n\n    def setup(self):\n        self.bitboards = [\n            chess.BB_EMPTY,\n            chess.BB_ALL,\n            chess.BB_RANK_1,\n            chess.BB_FILE_A,\n            0x8040201008040201,\n            0x0102040810204080,\n            0x10204081020408,\n        ]\n        self.squares = list(chess.SQUARES)",
         "min_run_count": 2,
         "name": "BitboardSuite.time_shift_down_right",
         "number": 0,
@@ -641,11 +851,11 @@
         "sample_time": 0.01,
         "type": "time",
         "unit": "seconds",
-        "version": "a5120adf32da2c634581e30470d57a4ae4586bfaf7f49f4c3bf802f71e7aeef2",
+        "version": "4c8d44f969eb7fdf021455d42faf948ce98688e179c9402e055daf5a5a99e4c7",
         "warmup_time": -1
     },
     "BitboardSuite.time_shift_left": {
-        "code": "class BitboardSuite:\n    def time_shift_left(self):\n        for bb in self.bitboards:\n            chess.shift_left(bb)\n\n    def setup(self):\n        self.bitboards = [\n            chess.BB_EMPTY, chess.BB_ALL,\n            chess.BB_RANK_1, chess.BB_FILE_A,\n            0x8040201008040201, 0x0102040810204080,\n            0x10204081020408\n        ]\n        self.squares = list(chess.SQUARES)",
+        "code": "class BitboardSuite:\n    def time_shift_left(self):\n        for bb in self.bitboards:\n            chess.shift_left(bb)\n\n    def setup(self):\n        self.bitboards = [\n            chess.BB_EMPTY,\n            chess.BB_ALL,\n            chess.BB_RANK_1,\n            chess.BB_FILE_A,\n            0x8040201008040201,\n            0x0102040810204080,\n            0x10204081020408,\n        ]\n        self.squares = list(chess.SQUARES)",
         "min_run_count": 2,
         "name": "BitboardSuite.time_shift_left",
         "number": 0,
@@ -656,11 +866,11 @@
         "sample_time": 0.01,
         "type": "time",
         "unit": "seconds",
-        "version": "8b13aed8fc9180b678d4eeb70eb1f5a33042d04e0b8069926dbfd7de28202679",
+        "version": "72bc8bf17416d711757c435cb92e2a54e25b7205e4c20e7e73cf09eabd74f180",
         "warmup_time": -1
     },
     "BitboardSuite.time_shift_right": {
-        "code": "class BitboardSuite:\n    def time_shift_right(self):\n        for bb in self.bitboards:\n            chess.shift_right(bb)\n\n    def setup(self):\n        self.bitboards = [\n            chess.BB_EMPTY, chess.BB_ALL,\n            chess.BB_RANK_1, chess.BB_FILE_A,\n            0x8040201008040201, 0x0102040810204080,\n            0x10204081020408\n        ]\n        self.squares = list(chess.SQUARES)",
+        "code": "class BitboardSuite:\n    def time_shift_right(self):\n        for bb in self.bitboards:\n            chess.shift_right(bb)\n\n    def setup(self):\n        self.bitboards = [\n            chess.BB_EMPTY,\n            chess.BB_ALL,\n            chess.BB_RANK_1,\n            chess.BB_FILE_A,\n            0x8040201008040201,\n            0x0102040810204080,\n            0x10204081020408,\n        ]\n        self.squares = list(chess.SQUARES)",
         "min_run_count": 2,
         "name": "BitboardSuite.time_shift_right",
         "number": 0,
@@ -671,11 +881,11 @@
         "sample_time": 0.01,
         "type": "time",
         "unit": "seconds",
-        "version": "164660c27eba4e55a21350aa241b259fdec3c436a03c544772a93d6cf0a22ba9",
+        "version": "1fba25abe82958ecdfb444596a17f35ef2e90993e961339305120bedae8966ce",
         "warmup_time": -1
     },
     "BitboardSuite.time_shift_up": {
-        "code": "class BitboardSuite:\n    def time_shift_up(self):\n        for bb in self.bitboards:\n            chess.shift_up(bb)\n\n    def setup(self):\n        self.bitboards = [\n            chess.BB_EMPTY, chess.BB_ALL,\n            chess.BB_RANK_1, chess.BB_FILE_A,\n            0x8040201008040201, 0x0102040810204080,\n            0x10204081020408\n        ]\n        self.squares = list(chess.SQUARES)",
+        "code": "class BitboardSuite:\n    def time_shift_up(self):\n        for bb in self.bitboards:\n            chess.shift_up(bb)\n\n    def setup(self):\n        self.bitboards = [\n            chess.BB_EMPTY,\n            chess.BB_ALL,\n            chess.BB_RANK_1,\n            chess.BB_FILE_A,\n            0x8040201008040201,\n            0x0102040810204080,\n            0x10204081020408,\n        ]\n        self.squares = list(chess.SQUARES)",
         "min_run_count": 2,
         "name": "BitboardSuite.time_shift_up",
         "number": 0,
@@ -686,11 +896,11 @@
         "sample_time": 0.01,
         "type": "time",
         "unit": "seconds",
-        "version": "cbf6947d392b9c1f3868952c54f987f7a33827b3b74bacad4f30bc7fc75d6904",
+        "version": "f49d8cef4af408361dfef8f0a551192502de7daf4e6d9ada3280052bbc8d4724",
         "warmup_time": -1
     },
     "BitboardSuite.time_shift_up_left": {
-        "code": "class BitboardSuite:\n    def time_shift_up_left(self):\n        for bb in self.bitboards:\n            chess.shift_up_left(bb)\n\n    def setup(self):\n        self.bitboards = [\n            chess.BB_EMPTY, chess.BB_ALL,\n            chess.BB_RANK_1, chess.BB_FILE_A,\n            0x8040201008040201, 0x0102040810204080,\n            0x10204081020408\n        ]\n        self.squares = list(chess.SQUARES)",
+        "code": "class BitboardSuite:\n    def time_shift_up_left(self):\n        for bb in self.bitboards:\n            chess.shift_up_left(bb)\n\n    def setup(self):\n        self.bitboards = [\n            chess.BB_EMPTY,\n            chess.BB_ALL,\n            chess.BB_RANK_1,\n            chess.BB_FILE_A,\n            0x8040201008040201,\n            0x0102040810204080,\n            0x10204081020408,\n        ]\n        self.squares = list(chess.SQUARES)",
         "min_run_count": 2,
         "name": "BitboardSuite.time_shift_up_left",
         "number": 0,
@@ -701,11 +911,11 @@
         "sample_time": 0.01,
         "type": "time",
         "unit": "seconds",
-        "version": "4c9beab45b2b7545d6e30ca6f3e8372eaefc9c20b7f1c9e7d2a49299993781c3",
+        "version": "9c8e02f32a3ec5b2255a1984ca2579bad5fe5986c9827936159be2516f5cfb9f",
         "warmup_time": -1
     },
     "BitboardSuite.time_shift_up_right": {
-        "code": "class BitboardSuite:\n    def time_shift_up_right(self):\n        for bb in self.bitboards:\n            chess.shift_up_right(bb)\n\n    def setup(self):\n        self.bitboards = [\n            chess.BB_EMPTY, chess.BB_ALL,\n            chess.BB_RANK_1, chess.BB_FILE_A,\n            0x8040201008040201, 0x0102040810204080,\n            0x10204081020408\n        ]\n        self.squares = list(chess.SQUARES)",
+        "code": "class BitboardSuite:\n    def time_shift_up_right(self):\n        for bb in self.bitboards:\n            chess.shift_up_right(bb)\n\n    def setup(self):\n        self.bitboards = [\n            chess.BB_EMPTY,\n            chess.BB_ALL,\n            chess.BB_RANK_1,\n            chess.BB_FILE_A,\n            0x8040201008040201,\n            0x0102040810204080,\n            0x10204081020408,\n        ]\n        self.squares = list(chess.SQUARES)",
         "min_run_count": 2,
         "name": "BitboardSuite.time_shift_up_right",
         "number": 0,
@@ -716,13 +926,13 @@
         "sample_time": 0.01,
         "type": "time",
         "unit": "seconds",
-        "version": "8a024be20e925652eaa348724cdbe2f44e4c802f0510830004d8b1efa8efc53c",
+        "version": "4fadfccc2bd1e46fade85e6086568a761c5fd70295a5bf362fb6596b63637c59",
         "warmup_time": -1
     },
-    "BoardSuite.time_can_claim_draw": {
-        "code": "class BoardSuite:\n    def time_can_claim_draw(self):\n        self.board.can_claim_draw()\n\n    def setup(self):\n        self.board = chess.Board(chess.STARTING_FEN)\n        self.midgame_fen = (\n            \"r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1\"\n        )\n        self.midgame_board = chess.Board(self.midgame_fen)\n        self.checkmate_fen = (\n            \"rnb1kbnr/pppp1ppp/4p3/8/6Pq/5P2/PPPPP2P/RNBQKBNR w KQkq - 1 3\"\n        )\n        self.checkmate_board = chess.Board(self.checkmate_fen)\n        self.stalemate_fen = \"k7/8/1Q6/8/8/8/8/7K b - - 0 1\"\n        self.stalemate_board = chess.Board(self.stalemate_fen)\n        self.legal_moves = list(self.board.legal_moves)\n    \n        self.push_pop_board = chess.Board()\n        self.push_pop_moves = list(self.push_pop_board.legal_moves)[:5]\n    \n        self.variation_moves = []\n        b = chess.Board()\n        for _ in range(5):\n            move = list(b.legal_moves)[0]\n            self.variation_moves.append(move)\n            b.push(move)\n    \n        self.pseudo_legal_moves = list(self.board.pseudo_legal_moves)\n        self.epd_string = self.board.epd()",
+    "BoardSuite.time_board_fen_promoted": {
+        "code": "class BoardSuite:\n    def time_board_fen_promoted(self):\n        b = chess.Board()\n        b.set_piece_at(chess.E4, chess.Piece(chess.QUEEN, chess.WHITE), promoted=True)\n        b.board_fen(promoted=True)\n        b.board_fen(promoted=False)\n        try:\n            b.set_board_fen(\"Q~7/8/8/8/8/8/8/8\")\n        except ValueError:\n            pass\n\n    def setup(self):\n        self.board = chess.Board(chess.STARTING_FEN)\n        self.midgame_fen = (\n            \"r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1\"\n        )\n        self.midgame_board = chess.Board(self.midgame_fen)\n        self.checkmate_fen = (\n            \"rnb1kbnr/pppp1ppp/4p3/8/6Pq/5P2/PPPPP2P/RNBQKBNR w KQkq - 1 3\"\n        )\n        self.checkmate_board = chess.Board(self.checkmate_fen)\n        self.stalemate_fen = \"k7/8/1Q6/8/8/8/8/7K b - - 0 1\"\n        self.stalemate_board = chess.Board(self.stalemate_fen)\n        self.legal_moves = list(self.board.legal_moves)\n    \n        self.push_pop_board = chess.Board()\n        self.push_pop_moves = list(self.push_pop_board.legal_moves)[:5]\n    \n        self.variation_moves = []\n        b = chess.Board()\n        for _ in range(5):\n            move = list(b.legal_moves)[0]\n            self.variation_moves.append(move)\n            b.push(move)\n    \n        self.pseudo_legal_moves = list(self.board.pseudo_legal_moves)\n        self.epd_string = self.board.epd()",
         "min_run_count": 2,
-        "name": "BoardSuite.time_can_claim_draw",
+        "name": "BoardSuite.time_board_fen_promoted",
         "number": 0,
         "param_names": [],
         "params": [],
@@ -731,11 +941,71 @@
         "sample_time": 0.01,
         "type": "time",
         "unit": "seconds",
-        "version": "cd5bb0b3fe1d3ab085a28e33201e0bc709ae8d9d0afdbdab597ec0cefa3dcaa2",
+        "version": "e9dc813b72f446a1e55572a56cf0168d404ba7bda30a9819174397c050cfaad7",
+        "warmup_time": -1
+    },
+    "BoardSuite.time_can_claim_draw_full": {
+        "code": "class BoardSuite:\n    def time_can_claim_draw_full(self):\n        # Setup a position to claim 50 moves\n        b = chess.Board(\"8/8/8/8/8/8/8/8 w - - 99 1\")\n        b.can_claim_fifty_moves()\n        b.can_claim_draw()\n        # Setup a position to claim threefold repetition\n        b = chess.Board()\n        b.push_san(\"e4\")\n        b.push_san(\"e5\")\n        b.push_san(\"Nf3\")\n        b.push_san(\"Nc6\")\n        b.push_san(\"Ng1\")\n        b.push_san(\"Nb8\")\n        b.push_san(\"Nf3\")\n        b.push_san(\"Nc6\")\n        b.can_claim_threefold_repetition()\n\n    def setup(self):\n        self.board = chess.Board(chess.STARTING_FEN)\n        self.midgame_fen = (\n            \"r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1\"\n        )\n        self.midgame_board = chess.Board(self.midgame_fen)\n        self.checkmate_fen = (\n            \"rnb1kbnr/pppp1ppp/4p3/8/6Pq/5P2/PPPPP2P/RNBQKBNR w KQkq - 1 3\"\n        )\n        self.checkmate_board = chess.Board(self.checkmate_fen)\n        self.stalemate_fen = \"k7/8/1Q6/8/8/8/8/7K b - - 0 1\"\n        self.stalemate_board = chess.Board(self.stalemate_fen)\n        self.legal_moves = list(self.board.legal_moves)\n    \n        self.push_pop_board = chess.Board()\n        self.push_pop_moves = list(self.push_pop_board.legal_moves)[:5]\n    \n        self.variation_moves = []\n        b = chess.Board()\n        for _ in range(5):\n            move = list(b.legal_moves)[0]\n            self.variation_moves.append(move)\n            b.push(move)\n    \n        self.pseudo_legal_moves = list(self.board.pseudo_legal_moves)\n        self.epd_string = self.board.epd()",
+        "min_run_count": 2,
+        "name": "BoardSuite.time_can_claim_draw_full",
+        "number": 0,
+        "param_names": [],
+        "params": [],
+        "repeat": 0,
+        "rounds": 2,
+        "sample_time": 0.01,
+        "type": "time",
+        "unit": "seconds",
+        "version": "b7799e7d8d0502d9393783b8d3a4f51d27b94431833c557a751f54074f892a99",
+        "warmup_time": -1
+    },
+    "BoardSuite.time_can_claim_fifty_moves": {
+        "code": "class BoardSuite:\n    def time_can_claim_fifty_moves(self):\n        self.board.can_claim_fifty_moves()\n\n    def setup(self):\n        self.board = chess.Board(chess.STARTING_FEN)\n        self.midgame_fen = (\n            \"r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1\"\n        )\n        self.midgame_board = chess.Board(self.midgame_fen)\n        self.checkmate_fen = (\n            \"rnb1kbnr/pppp1ppp/4p3/8/6Pq/5P2/PPPPP2P/RNBQKBNR w KQkq - 1 3\"\n        )\n        self.checkmate_board = chess.Board(self.checkmate_fen)\n        self.stalemate_fen = \"k7/8/1Q6/8/8/8/8/7K b - - 0 1\"\n        self.stalemate_board = chess.Board(self.stalemate_fen)\n        self.legal_moves = list(self.board.legal_moves)\n    \n        self.push_pop_board = chess.Board()\n        self.push_pop_moves = list(self.push_pop_board.legal_moves)[:5]\n    \n        self.variation_moves = []\n        b = chess.Board()\n        for _ in range(5):\n            move = list(b.legal_moves)[0]\n            self.variation_moves.append(move)\n            b.push(move)\n    \n        self.pseudo_legal_moves = list(self.board.pseudo_legal_moves)\n        self.epd_string = self.board.epd()",
+        "min_run_count": 2,
+        "name": "BoardSuite.time_can_claim_fifty_moves",
+        "number": 0,
+        "param_names": [],
+        "params": [],
+        "repeat": 0,
+        "rounds": 2,
+        "sample_time": 0.01,
+        "type": "time",
+        "unit": "seconds",
+        "version": "54d72d2ce87e703170a9a6edab3eccf60803f46a9f03c5a6fdacfdff32d4bdc3",
+        "warmup_time": -1
+    },
+    "BoardSuite.time_can_claim_threefold_repetition": {
+        "code": "class BoardSuite:\n    def time_can_claim_threefold_repetition(self):\n        self.board.can_claim_threefold_repetition()\n\n    def setup(self):\n        self.board = chess.Board(chess.STARTING_FEN)\n        self.midgame_fen = (\n            \"r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1\"\n        )\n        self.midgame_board = chess.Board(self.midgame_fen)\n        self.checkmate_fen = (\n            \"rnb1kbnr/pppp1ppp/4p3/8/6Pq/5P2/PPPPP2P/RNBQKBNR w KQkq - 1 3\"\n        )\n        self.checkmate_board = chess.Board(self.checkmate_fen)\n        self.stalemate_fen = \"k7/8/1Q6/8/8/8/8/7K b - - 0 1\"\n        self.stalemate_board = chess.Board(self.stalemate_fen)\n        self.legal_moves = list(self.board.legal_moves)\n    \n        self.push_pop_board = chess.Board()\n        self.push_pop_moves = list(self.push_pop_board.legal_moves)[:5]\n    \n        self.variation_moves = []\n        b = chess.Board()\n        for _ in range(5):\n            move = list(b.legal_moves)[0]\n            self.variation_moves.append(move)\n            b.push(move)\n    \n        self.pseudo_legal_moves = list(self.board.pseudo_legal_moves)\n        self.epd_string = self.board.epd()",
+        "min_run_count": 2,
+        "name": "BoardSuite.time_can_claim_threefold_repetition",
+        "number": 0,
+        "param_names": [],
+        "params": [],
+        "repeat": 0,
+        "rounds": 2,
+        "sample_time": 0.01,
+        "type": "time",
+        "unit": "seconds",
+        "version": "ef1d1278dd74aa8d6d0a52363bdfd1fead7f9e3ee1a6fb505a426da55aa889ff",
+        "warmup_time": -1
+    },
+    "BoardSuite.time_castling_shredder_fen": {
+        "code": "class BoardSuite:\n    def time_castling_shredder_fen(self):\n        self.board.castling_shredder_fen()\n        self.board_chess960.castling_shredder_fen()\n\n    def setup(self):\n        self.board = chess.Board(chess.STARTING_FEN)\n        self.midgame_fen = (\n            \"r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1\"\n        )\n        self.midgame_board = chess.Board(self.midgame_fen)\n        self.checkmate_fen = (\n            \"rnb1kbnr/pppp1ppp/4p3/8/6Pq/5P2/PPPPP2P/RNBQKBNR w KQkq - 1 3\"\n        )\n        self.checkmate_board = chess.Board(self.checkmate_fen)\n        self.stalemate_fen = \"k7/8/1Q6/8/8/8/8/7K b - - 0 1\"\n        self.stalemate_board = chess.Board(self.stalemate_fen)\n        self.legal_moves = list(self.board.legal_moves)\n    \n        self.push_pop_board = chess.Board()\n        self.push_pop_moves = list(self.push_pop_board.legal_moves)[:5]\n    \n        self.variation_moves = []\n        b = chess.Board()\n        for _ in range(5):\n            move = list(b.legal_moves)[0]\n            self.variation_moves.append(move)\n            b.push(move)\n    \n        self.pseudo_legal_moves = list(self.board.pseudo_legal_moves)\n        self.epd_string = self.board.epd()",
+        "min_run_count": 2,
+        "name": "BoardSuite.time_castling_shredder_fen",
+        "number": 0,
+        "param_names": [],
+        "params": [],
+        "repeat": 0,
+        "rounds": 2,
+        "sample_time": 0.01,
+        "type": "time",
+        "unit": "seconds",
+        "version": "10d4b7d28669cdb7b058152050b7290286cfd9b8b0fb6c766375006deb4a0086",
         "warmup_time": -1
     },
     "BoardSuite.time_castling_xfen": {
-        "code": "class BoardSuite:\n    def time_castling_xfen(self):\n        self.board.castling_xfen()\n\n    def setup(self):\n        self.board = chess.Board(chess.STARTING_FEN)\n        self.midgame_fen = (\n            \"r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1\"\n        )\n        self.midgame_board = chess.Board(self.midgame_fen)\n        self.checkmate_fen = (\n            \"rnb1kbnr/pppp1ppp/4p3/8/6Pq/5P2/PPPPP2P/RNBQKBNR w KQkq - 1 3\"\n        )\n        self.checkmate_board = chess.Board(self.checkmate_fen)\n        self.stalemate_fen = \"k7/8/1Q6/8/8/8/8/7K b - - 0 1\"\n        self.stalemate_board = chess.Board(self.stalemate_fen)\n        self.legal_moves = list(self.board.legal_moves)\n    \n        self.push_pop_board = chess.Board()\n        self.push_pop_moves = list(self.push_pop_board.legal_moves)[:5]\n    \n        self.variation_moves = []\n        b = chess.Board()\n        for _ in range(5):\n            move = list(b.legal_moves)[0]\n            self.variation_moves.append(move)\n            b.push(move)\n    \n        self.pseudo_legal_moves = list(self.board.pseudo_legal_moves)\n        self.epd_string = self.board.epd()",
+        "code": "class BoardSuite:\n    def time_castling_xfen(self):\n        self.board.castling_xfen()\n        self.board_chess960.castling_xfen()\n        board_complex = chess.Board(\n            \"r3k2r/8/8/8/8/8/8/R3K2R w KQkq - 0 1\", chess960=True\n        )\n        board_complex.castling_xfen()\n\n    def setup(self):\n        self.board = chess.Board(chess.STARTING_FEN)\n        self.midgame_fen = (\n            \"r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1\"\n        )\n        self.midgame_board = chess.Board(self.midgame_fen)\n        self.checkmate_fen = (\n            \"rnb1kbnr/pppp1ppp/4p3/8/6Pq/5P2/PPPPP2P/RNBQKBNR w KQkq - 1 3\"\n        )\n        self.checkmate_board = chess.Board(self.checkmate_fen)\n        self.stalemate_fen = \"k7/8/1Q6/8/8/8/8/7K b - - 0 1\"\n        self.stalemate_board = chess.Board(self.stalemate_fen)\n        self.legal_moves = list(self.board.legal_moves)\n    \n        self.push_pop_board = chess.Board()\n        self.push_pop_moves = list(self.push_pop_board.legal_moves)[:5]\n    \n        self.variation_moves = []\n        b = chess.Board()\n        for _ in range(5):\n            move = list(b.legal_moves)[0]\n            self.variation_moves.append(move)\n            b.push(move)\n    \n        self.pseudo_legal_moves = list(self.board.pseudo_legal_moves)\n        self.epd_string = self.board.epd()",
         "min_run_count": 2,
         "name": "BoardSuite.time_castling_xfen",
         "number": 0,
@@ -746,7 +1016,7 @@
         "sample_time": 0.01,
         "type": "time",
         "unit": "seconds",
-        "version": "47bd2cf746cead8737a8b7c6c40484bde24ee0a1feda344ca32497177b0cf31e",
+        "version": "a15f5e6f7add058d3ace57ba8e96eb33c4244e2a4880ae8fa44f434e42249e5d",
         "warmup_time": -1
     },
     "BoardSuite.time_checkers_mask": {
@@ -762,6 +1032,36 @@
         "type": "time",
         "unit": "seconds",
         "version": "54ecb8e0f1477ff9614dfaf2e90e025befb5780e871f3687586c147f349417af",
+        "warmup_time": -1
+    },
+    "BoardSuite.time_chess960_pos_none": {
+        "code": "class BoardSuite:\n    def time_chess960_pos_none(self):\n        b = chess.Board()\n        b.push_san(\"e4\")\n        b.chess960_pos()\n        b = chess.Board(\"rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1\")\n        b.set_piece_at(chess.E2, None)\n        b.chess960_pos()\n\n    def setup(self):\n        self.board = chess.Board(chess.STARTING_FEN)\n        self.midgame_fen = (\n            \"r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1\"\n        )\n        self.midgame_board = chess.Board(self.midgame_fen)\n        self.checkmate_fen = (\n            \"rnb1kbnr/pppp1ppp/4p3/8/6Pq/5P2/PPPPP2P/RNBQKBNR w KQkq - 1 3\"\n        )\n        self.checkmate_board = chess.Board(self.checkmate_fen)\n        self.stalemate_fen = \"k7/8/1Q6/8/8/8/8/7K b - - 0 1\"\n        self.stalemate_board = chess.Board(self.stalemate_fen)\n        self.legal_moves = list(self.board.legal_moves)\n    \n        self.push_pop_board = chess.Board()\n        self.push_pop_moves = list(self.push_pop_board.legal_moves)[:5]\n    \n        self.variation_moves = []\n        b = chess.Board()\n        for _ in range(5):\n            move = list(b.legal_moves)[0]\n            self.variation_moves.append(move)\n            b.push(move)\n    \n        self.pseudo_legal_moves = list(self.board.pseudo_legal_moves)\n        self.epd_string = self.board.epd()",
+        "min_run_count": 2,
+        "name": "BoardSuite.time_chess960_pos_none",
+        "number": 0,
+        "param_names": [],
+        "params": [],
+        "repeat": 0,
+        "rounds": 2,
+        "sample_time": 0.01,
+        "type": "time",
+        "unit": "seconds",
+        "version": "d7f276a214b80a3f5faee3a40ae459279de4716d17b04616cd140c9cd048250b",
+        "warmup_time": -1
+    },
+    "BoardSuite.time_clean_castling_rights": {
+        "code": "class BoardSuite:\n    def time_clean_castling_rights(self):\n        self.board.clean_castling_rights()\n        self.board_chess960.clean_castling_rights()\n\n    def setup(self):\n        self.board = chess.Board(chess.STARTING_FEN)\n        self.midgame_fen = (\n            \"r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1\"\n        )\n        self.midgame_board = chess.Board(self.midgame_fen)\n        self.checkmate_fen = (\n            \"rnb1kbnr/pppp1ppp/4p3/8/6Pq/5P2/PPPPP2P/RNBQKBNR w KQkq - 1 3\"\n        )\n        self.checkmate_board = chess.Board(self.checkmate_fen)\n        self.stalemate_fen = \"k7/8/1Q6/8/8/8/8/7K b - - 0 1\"\n        self.stalemate_board = chess.Board(self.stalemate_fen)\n        self.legal_moves = list(self.board.legal_moves)\n    \n        self.push_pop_board = chess.Board()\n        self.push_pop_moves = list(self.push_pop_board.legal_moves)[:5]\n    \n        self.variation_moves = []\n        b = chess.Board()\n        for _ in range(5):\n            move = list(b.legal_moves)[0]\n            self.variation_moves.append(move)\n            b.push(move)\n    \n        self.pseudo_legal_moves = list(self.board.pseudo_legal_moves)\n        self.epd_string = self.board.epd()",
+        "min_run_count": 2,
+        "name": "BoardSuite.time_clean_castling_rights",
+        "number": 0,
+        "param_names": [],
+        "params": [],
+        "repeat": 0,
+        "rounds": 2,
+        "sample_time": 0.01,
+        "type": "time",
+        "unit": "seconds",
+        "version": "a09164109104f8a7ee38c3a2d762d29afb6cff59aab53e2ca243a333a0fe4129",
         "warmup_time": -1
     },
     "BoardSuite.time_clear": {
@@ -809,10 +1109,10 @@
         "version": "a2d7f3a88ba16f720119bcabc9a827901cb5f7598058a53461efa8f5eb1e367c",
         "warmup_time": -1
     },
-    "BoardSuite.time_epd": {
-        "code": "class BoardSuite:\n    def time_epd(self):\n        self.board.epd()\n\n    def setup(self):\n        self.board = chess.Board(chess.STARTING_FEN)\n        self.midgame_fen = (\n            \"r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1\"\n        )\n        self.midgame_board = chess.Board(self.midgame_fen)\n        self.checkmate_fen = (\n            \"rnb1kbnr/pppp1ppp/4p3/8/6Pq/5P2/PPPPP2P/RNBQKBNR w KQkq - 1 3\"\n        )\n        self.checkmate_board = chess.Board(self.checkmate_fen)\n        self.stalemate_fen = \"k7/8/1Q6/8/8/8/8/7K b - - 0 1\"\n        self.stalemate_board = chess.Board(self.stalemate_fen)\n        self.legal_moves = list(self.board.legal_moves)\n    \n        self.push_pop_board = chess.Board()\n        self.push_pop_moves = list(self.push_pop_board.legal_moves)[:5]\n    \n        self.variation_moves = []\n        b = chess.Board()\n        for _ in range(5):\n            move = list(b.legal_moves)[0]\n            self.variation_moves.append(move)\n            b.push(move)\n    \n        self.pseudo_legal_moves = list(self.board.pseudo_legal_moves)\n        self.epd_string = self.board.epd()",
+    "BoardSuite.time_epd_options": {
+        "code": "class BoardSuite:\n    def time_epd_options(self):\n        self.board.epd(hmvc=self.board.halfmove_clock, fmvn=self.board.fullmove_number)\n        self.board.epd(en_passant=\"fen\")\n        self.board.epd(en_passant=\"xfen\")\n        self.board.epd(pv=[chess.Move.from_uci(\"e2e4\")])\n        self.board.epd(am=list(self.board.legal_moves)[:2])\n\n    def setup(self):\n        self.board = chess.Board(chess.STARTING_FEN)\n        self.midgame_fen = (\n            \"r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1\"\n        )\n        self.midgame_board = chess.Board(self.midgame_fen)\n        self.checkmate_fen = (\n            \"rnb1kbnr/pppp1ppp/4p3/8/6Pq/5P2/PPPPP2P/RNBQKBNR w KQkq - 1 3\"\n        )\n        self.checkmate_board = chess.Board(self.checkmate_fen)\n        self.stalemate_fen = \"k7/8/1Q6/8/8/8/8/7K b - - 0 1\"\n        self.stalemate_board = chess.Board(self.stalemate_fen)\n        self.legal_moves = list(self.board.legal_moves)\n    \n        self.push_pop_board = chess.Board()\n        self.push_pop_moves = list(self.push_pop_board.legal_moves)[:5]\n    \n        self.variation_moves = []\n        b = chess.Board()\n        for _ in range(5):\n            move = list(b.legal_moves)[0]\n            self.variation_moves.append(move)\n            b.push(move)\n    \n        self.pseudo_legal_moves = list(self.board.pseudo_legal_moves)\n        self.epd_string = self.board.epd()",
         "min_run_count": 2,
-        "name": "BoardSuite.time_epd",
+        "name": "BoardSuite.time_epd_options",
         "number": 0,
         "param_names": [],
         "params": [],
@@ -821,13 +1121,13 @@
         "sample_time": 0.01,
         "type": "time",
         "unit": "seconds",
-        "version": "da7881850e9a09f21522bb45919a055a3ed426d7c2e0b4afffff2f4fb96cd5ac",
+        "version": "9a2e9a03c2af5a7cdd22197efc21bdfd41fd14e37b49887e897723515f6367c6",
         "warmup_time": -1
     },
-    "BoardSuite.time_fen": {
-        "code": "class BoardSuite:\n    def time_fen(self):\n        self.board.fen()\n\n    def setup(self):\n        self.board = chess.Board(chess.STARTING_FEN)\n        self.midgame_fen = (\n            \"r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1\"\n        )\n        self.midgame_board = chess.Board(self.midgame_fen)\n        self.checkmate_fen = (\n            \"rnb1kbnr/pppp1ppp/4p3/8/6Pq/5P2/PPPPP2P/RNBQKBNR w KQkq - 1 3\"\n        )\n        self.checkmate_board = chess.Board(self.checkmate_fen)\n        self.stalemate_fen = \"k7/8/1Q6/8/8/8/8/7K b - - 0 1\"\n        self.stalemate_board = chess.Board(self.stalemate_fen)\n        self.legal_moves = list(self.board.legal_moves)\n    \n        self.push_pop_board = chess.Board()\n        self.push_pop_moves = list(self.push_pop_board.legal_moves)[:5]\n    \n        self.variation_moves = []\n        b = chess.Board()\n        for _ in range(5):\n            move = list(b.legal_moves)[0]\n            self.variation_moves.append(move)\n            b.push(move)\n    \n        self.pseudo_legal_moves = list(self.board.pseudo_legal_moves)\n        self.epd_string = self.board.epd()",
+    "BoardSuite.time_eq_not_implemented": {
+        "code": "class BoardSuite:\n    def time_eq_not_implemented(self):\n        return self.board == 1\n\n    def setup(self):\n        self.board = chess.Board(chess.STARTING_FEN)\n        self.midgame_fen = (\n            \"r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1\"\n        )\n        self.midgame_board = chess.Board(self.midgame_fen)\n        self.checkmate_fen = (\n            \"rnb1kbnr/pppp1ppp/4p3/8/6Pq/5P2/PPPPP2P/RNBQKBNR w KQkq - 1 3\"\n        )\n        self.checkmate_board = chess.Board(self.checkmate_fen)\n        self.stalemate_fen = \"k7/8/1Q6/8/8/8/8/7K b - - 0 1\"\n        self.stalemate_board = chess.Board(self.stalemate_fen)\n        self.legal_moves = list(self.board.legal_moves)\n    \n        self.push_pop_board = chess.Board()\n        self.push_pop_moves = list(self.push_pop_board.legal_moves)[:5]\n    \n        self.variation_moves = []\n        b = chess.Board()\n        for _ in range(5):\n            move = list(b.legal_moves)[0]\n            self.variation_moves.append(move)\n            b.push(move)\n    \n        self.pseudo_legal_moves = list(self.board.pseudo_legal_moves)\n        self.epd_string = self.board.epd()",
         "min_run_count": 2,
-        "name": "BoardSuite.time_fen",
+        "name": "BoardSuite.time_eq_not_implemented",
         "number": 0,
         "param_names": [],
         "params": [],
@@ -836,7 +1136,22 @@
         "sample_time": 0.01,
         "type": "time",
         "unit": "seconds",
-        "version": "9b43125c4d29fed34e7d4257836b7103169d1fabadb8e3f9bd819035dd45c851",
+        "version": "ad82bb58b25f87af28998f3138e017494322696eff8bc591ce14ddba8d50096c",
+        "warmup_time": -1
+    },
+    "BoardSuite.time_fen_options": {
+        "code": "class BoardSuite:\n    def time_fen_options(self):\n        self.board.fen(en_passant=\"fen\")\n        self.board.fen(en_passant=\"xfen\")\n        self.board.fen(promoted=True)\n\n    def setup(self):\n        self.board = chess.Board(chess.STARTING_FEN)\n        self.midgame_fen = (\n            \"r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1\"\n        )\n        self.midgame_board = chess.Board(self.midgame_fen)\n        self.checkmate_fen = (\n            \"rnb1kbnr/pppp1ppp/4p3/8/6Pq/5P2/PPPPP2P/RNBQKBNR w KQkq - 1 3\"\n        )\n        self.checkmate_board = chess.Board(self.checkmate_fen)\n        self.stalemate_fen = \"k7/8/1Q6/8/8/8/8/7K b - - 0 1\"\n        self.stalemate_board = chess.Board(self.stalemate_fen)\n        self.legal_moves = list(self.board.legal_moves)\n    \n        self.push_pop_board = chess.Board()\n        self.push_pop_moves = list(self.push_pop_board.legal_moves)[:5]\n    \n        self.variation_moves = []\n        b = chess.Board()\n        for _ in range(5):\n            move = list(b.legal_moves)[0]\n            self.variation_moves.append(move)\n            b.push(move)\n    \n        self.pseudo_legal_moves = list(self.board.pseudo_legal_moves)\n        self.epd_string = self.board.epd()",
+        "min_run_count": 2,
+        "name": "BoardSuite.time_fen_options",
+        "number": 0,
+        "param_names": [],
+        "params": [],
+        "repeat": 0,
+        "rounds": 2,
+        "sample_time": 0.01,
+        "type": "time",
+        "unit": "seconds",
+        "version": "47be07ffb5e0aa879ac5add23b8022a4b3730988c894de6f8906d16c9e192f16",
         "warmup_time": -1
     },
     "BoardSuite.time_find_move": {
@@ -854,6 +1169,21 @@
         "version": "ee73698e65a87e3905718b5ae362e4d605781327c2febf171709fe6510dd095b",
         "warmup_time": -1
     },
+    "BoardSuite.time_find_move_promotion": {
+        "code": "class BoardSuite:\n    def time_find_move_promotion(self):\n        board = chess.Board(\"8/P7/8/8/8/8/8/8 w - - 0 1\")\n        board.find_move(chess.A7, chess.A8)\n\n    def setup(self):\n        self.board = chess.Board(chess.STARTING_FEN)\n        self.midgame_fen = (\n            \"r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1\"\n        )\n        self.midgame_board = chess.Board(self.midgame_fen)\n        self.checkmate_fen = (\n            \"rnb1kbnr/pppp1ppp/4p3/8/6Pq/5P2/PPPPP2P/RNBQKBNR w KQkq - 1 3\"\n        )\n        self.checkmate_board = chess.Board(self.checkmate_fen)\n        self.stalemate_fen = \"k7/8/1Q6/8/8/8/8/7K b - - 0 1\"\n        self.stalemate_board = chess.Board(self.stalemate_fen)\n        self.legal_moves = list(self.board.legal_moves)\n    \n        self.push_pop_board = chess.Board()\n        self.push_pop_moves = list(self.push_pop_board.legal_moves)[:5]\n    \n        self.variation_moves = []\n        b = chess.Board()\n        for _ in range(5):\n            move = list(b.legal_moves)[0]\n            self.variation_moves.append(move)\n            b.push(move)\n    \n        self.pseudo_legal_moves = list(self.board.pseudo_legal_moves)\n        self.epd_string = self.board.epd()",
+        "min_run_count": 2,
+        "name": "BoardSuite.time_find_move_promotion",
+        "number": 0,
+        "param_names": [],
+        "params": [],
+        "repeat": 0,
+        "rounds": 2,
+        "sample_time": 0.01,
+        "type": "time",
+        "unit": "seconds",
+        "version": "bb3e02173bc042bfdcde9ace3cb4aac8a5050417929b1525a3977361359e1159",
+        "warmup_time": -1
+    },
     "BoardSuite.time_generate_castling_moves": {
         "code": "class BoardSuite:\n    def time_generate_castling_moves(self):\n        list(self.midgame_board.generate_castling_moves())\n\n    def setup(self):\n        self.board = chess.Board(chess.STARTING_FEN)\n        self.midgame_fen = (\n            \"r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1\"\n        )\n        self.midgame_board = chess.Board(self.midgame_fen)\n        self.checkmate_fen = (\n            \"rnb1kbnr/pppp1ppp/4p3/8/6Pq/5P2/PPPPP2P/RNBQKBNR w KQkq - 1 3\"\n        )\n        self.checkmate_board = chess.Board(self.checkmate_fen)\n        self.stalemate_fen = \"k7/8/1Q6/8/8/8/8/7K b - - 0 1\"\n        self.stalemate_board = chess.Board(self.stalemate_fen)\n        self.legal_moves = list(self.board.legal_moves)\n    \n        self.push_pop_board = chess.Board()\n        self.push_pop_moves = list(self.push_pop_board.legal_moves)[:5]\n    \n        self.variation_moves = []\n        b = chess.Board()\n        for _ in range(5):\n            move = list(b.legal_moves)[0]\n            self.variation_moves.append(move)\n            b.push(move)\n    \n        self.pseudo_legal_moves = list(self.board.pseudo_legal_moves)\n        self.epd_string = self.board.epd()",
         "min_run_count": 2,
@@ -867,6 +1197,21 @@
         "type": "time",
         "unit": "seconds",
         "version": "a2eca9544675cb2d45db17eb8b259accf08d17ab48a0fdfb122f0743d6166481",
+        "warmup_time": -1
+    },
+    "BoardSuite.time_generate_ep_blocked": {
+        "code": "class BoardSuite:\n    def time_generate_ep_blocked(self):\n        b = chess.Board(\"8/8/8/3pP3/8/8/8/8 w - d6 0 1\")\n        b.set_piece_at(\n            chess.D6, chess.Piece(chess.KNIGHT, chess.WHITE)\n        )  # Block the ep square\n        list(b.generate_pseudo_legal_moves())\n\n    def setup(self):\n        self.board = chess.Board(chess.STARTING_FEN)\n        self.midgame_fen = (\n            \"r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1\"\n        )\n        self.midgame_board = chess.Board(self.midgame_fen)\n        self.checkmate_fen = (\n            \"rnb1kbnr/pppp1ppp/4p3/8/6Pq/5P2/PPPPP2P/RNBQKBNR w KQkq - 1 3\"\n        )\n        self.checkmate_board = chess.Board(self.checkmate_fen)\n        self.stalemate_fen = \"k7/8/1Q6/8/8/8/8/7K b - - 0 1\"\n        self.stalemate_board = chess.Board(self.stalemate_fen)\n        self.legal_moves = list(self.board.legal_moves)\n    \n        self.push_pop_board = chess.Board()\n        self.push_pop_moves = list(self.push_pop_board.legal_moves)[:5]\n    \n        self.variation_moves = []\n        b = chess.Board()\n        for _ in range(5):\n            move = list(b.legal_moves)[0]\n            self.variation_moves.append(move)\n            b.push(move)\n    \n        self.pseudo_legal_moves = list(self.board.pseudo_legal_moves)\n        self.epd_string = self.board.epd()",
+        "min_run_count": 2,
+        "name": "BoardSuite.time_generate_ep_blocked",
+        "number": 0,
+        "param_names": [],
+        "params": [],
+        "repeat": 0,
+        "rounds": 2,
+        "sample_time": 0.01,
+        "type": "time",
+        "unit": "seconds",
+        "version": "a997fd18a56e7d13c95471278b334aba2faa02f0d3872119acb82dd84c59b205",
         "warmup_time": -1
     },
     "BoardSuite.time_generate_legal_captures": {
@@ -899,6 +1244,21 @@
         "version": "f679c86d83903dc51c8c288510583d8003a178648ac94af31e47099d8c2b1f2c",
         "warmup_time": -1
     },
+    "BoardSuite.time_generate_promotions": {
+        "code": "class BoardSuite:\n    def time_generate_promotions(self):\n        b = chess.Board(\"8/P7/8/8/8/8/8/8 w - - 0 1\")\n        list(b.generate_pseudo_legal_moves())\n        b = chess.Board(\"8/8/8/8/8/8/p7/8 b - - 0 1\")\n        list(b.generate_pseudo_legal_moves())\n\n    def setup(self):\n        self.board = chess.Board(chess.STARTING_FEN)\n        self.midgame_fen = (\n            \"r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1\"\n        )\n        self.midgame_board = chess.Board(self.midgame_fen)\n        self.checkmate_fen = (\n            \"rnb1kbnr/pppp1ppp/4p3/8/6Pq/5P2/PPPPP2P/RNBQKBNR w KQkq - 1 3\"\n        )\n        self.checkmate_board = chess.Board(self.checkmate_fen)\n        self.stalemate_fen = \"k7/8/1Q6/8/8/8/8/7K b - - 0 1\"\n        self.stalemate_board = chess.Board(self.stalemate_fen)\n        self.legal_moves = list(self.board.legal_moves)\n    \n        self.push_pop_board = chess.Board()\n        self.push_pop_moves = list(self.push_pop_board.legal_moves)[:5]\n    \n        self.variation_moves = []\n        b = chess.Board()\n        for _ in range(5):\n            move = list(b.legal_moves)[0]\n            self.variation_moves.append(move)\n            b.push(move)\n    \n        self.pseudo_legal_moves = list(self.board.pseudo_legal_moves)\n        self.epd_string = self.board.epd()",
+        "min_run_count": 2,
+        "name": "BoardSuite.time_generate_promotions",
+        "number": 0,
+        "param_names": [],
+        "params": [],
+        "repeat": 0,
+        "rounds": 2,
+        "sample_time": 0.01,
+        "type": "time",
+        "unit": "seconds",
+        "version": "f6e3b824635fa52cfa8fe17349c49f7a029b44e77ca9ebcf54c633bf5fcd98f7",
+        "warmup_time": -1
+    },
     "BoardSuite.time_generate_pseudo_legal_captures": {
         "code": "class BoardSuite:\n    def time_generate_pseudo_legal_captures(self):\n        list(self.board.generate_pseudo_legal_captures())\n\n    def setup(self):\n        self.board = chess.Board(chess.STARTING_FEN)\n        self.midgame_fen = (\n            \"r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1\"\n        )\n        self.midgame_board = chess.Board(self.midgame_fen)\n        self.checkmate_fen = (\n            \"rnb1kbnr/pppp1ppp/4p3/8/6Pq/5P2/PPPPP2P/RNBQKBNR w KQkq - 1 3\"\n        )\n        self.checkmate_board = chess.Board(self.checkmate_fen)\n        self.stalemate_fen = \"k7/8/1Q6/8/8/8/8/7K b - - 0 1\"\n        self.stalemate_board = chess.Board(self.stalemate_fen)\n        self.legal_moves = list(self.board.legal_moves)\n    \n        self.push_pop_board = chess.Board()\n        self.push_pop_moves = list(self.push_pop_board.legal_moves)[:5]\n    \n        self.variation_moves = []\n        b = chess.Board()\n        for _ in range(5):\n            move = list(b.legal_moves)[0]\n            self.variation_moves.append(move)\n            b.push(move)\n    \n        self.pseudo_legal_moves = list(self.board.pseudo_legal_moves)\n        self.epd_string = self.board.epd()",
         "min_run_count": 2,
@@ -912,6 +1272,21 @@
         "type": "time",
         "unit": "seconds",
         "version": "14777381632669f60889a7f42ec821422b66e74fbed31b20369bbf16443b1168",
+        "warmup_time": -1
+    },
+    "BoardSuite.time_generate_pseudo_legal_moves_masks": {
+        "code": "class BoardSuite:\n    def time_generate_pseudo_legal_moves_masks(self):\n        list(\n            self.board.generate_pseudo_legal_moves(\n                chess.BB_A2 | chess.BB_B2, chess.BB_A3 | chess.BB_A4\n            )\n        )\n        list(\n            self.midgame_board.generate_pseudo_legal_captures(chess.BB_E4, chess.BB_D5)\n        )\n        list(\n            self.board.generate_legal_moves(\n                chess.BB_A2 | chess.BB_B2, chess.BB_A3 | chess.BB_A4\n            )\n        )\n        list(self.midgame_board.generate_legal_captures(chess.BB_E4, chess.BB_D5))\n\n    def setup(self):\n        self.board = chess.Board(chess.STARTING_FEN)\n        self.midgame_fen = (\n            \"r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1\"\n        )\n        self.midgame_board = chess.Board(self.midgame_fen)\n        self.checkmate_fen = (\n            \"rnb1kbnr/pppp1ppp/4p3/8/6Pq/5P2/PPPPP2P/RNBQKBNR w KQkq - 1 3\"\n        )\n        self.checkmate_board = chess.Board(self.checkmate_fen)\n        self.stalemate_fen = \"k7/8/1Q6/8/8/8/8/7K b - - 0 1\"\n        self.stalemate_board = chess.Board(self.stalemate_fen)\n        self.legal_moves = list(self.board.legal_moves)\n    \n        self.push_pop_board = chess.Board()\n        self.push_pop_moves = list(self.push_pop_board.legal_moves)[:5]\n    \n        self.variation_moves = []\n        b = chess.Board()\n        for _ in range(5):\n            move = list(b.legal_moves)[0]\n            self.variation_moves.append(move)\n            b.push(move)\n    \n        self.pseudo_legal_moves = list(self.board.pseudo_legal_moves)\n        self.epd_string = self.board.epd()",
+        "min_run_count": 2,
+        "name": "BoardSuite.time_generate_pseudo_legal_moves_masks",
+        "number": 0,
+        "param_names": [],
+        "params": [],
+        "repeat": 0,
+        "rounds": 2,
+        "sample_time": 0.01,
+        "type": "time",
+        "unit": "seconds",
+        "version": "004908158aedc2a5f6f842a4e0f30a75474c961383c0f1d75b1060e92b200d2e",
         "warmup_time": -1
     },
     "BoardSuite.time_gives_check": {
@@ -929,6 +1304,36 @@
         "version": "53a8696fe9009721f57dfa846f59c89ed411b5d362db5120caa9fbd4fa6c4b0c",
         "warmup_time": -1
     },
+    "BoardSuite.time_gives_checkmate": {
+        "code": "class BoardSuite:\n    def time_gives_checkmate(self):\n        m = self.checkmate_board.legal_moves\n        if m:\n            self.checkmate_board.gives_checkmate(list(m)[0])\n\n    def setup(self):\n        self.board = chess.Board(chess.STARTING_FEN)\n        self.midgame_fen = (\n            \"r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1\"\n        )\n        self.midgame_board = chess.Board(self.midgame_fen)\n        self.checkmate_fen = (\n            \"rnb1kbnr/pppp1ppp/4p3/8/6Pq/5P2/PPPPP2P/RNBQKBNR w KQkq - 1 3\"\n        )\n        self.checkmate_board = chess.Board(self.checkmate_fen)\n        self.stalemate_fen = \"k7/8/1Q6/8/8/8/8/7K b - - 0 1\"\n        self.stalemate_board = chess.Board(self.stalemate_fen)\n        self.legal_moves = list(self.board.legal_moves)\n    \n        self.push_pop_board = chess.Board()\n        self.push_pop_moves = list(self.push_pop_board.legal_moves)[:5]\n    \n        self.variation_moves = []\n        b = chess.Board()\n        for _ in range(5):\n            move = list(b.legal_moves)[0]\n            self.variation_moves.append(move)\n            b.push(move)\n    \n        self.pseudo_legal_moves = list(self.board.pseudo_legal_moves)\n        self.epd_string = self.board.epd()",
+        "min_run_count": 2,
+        "name": "BoardSuite.time_gives_checkmate",
+        "number": 0,
+        "param_names": [],
+        "params": [],
+        "repeat": 0,
+        "rounds": 2,
+        "sample_time": 0.01,
+        "type": "time",
+        "unit": "seconds",
+        "version": "a3ecea495f282920d2666ac88595c21f63663ba6d51f832595b0ef85e3f5b231",
+        "warmup_time": -1
+    },
+    "BoardSuite.time_has_chess960_castling_rights": {
+        "code": "class BoardSuite:\n    def time_has_chess960_castling_rights(self):\n        self.board.has_chess960_castling_rights()\n        self.board_chess960.has_chess960_castling_rights()\n\n    def setup(self):\n        self.board = chess.Board(chess.STARTING_FEN)\n        self.midgame_fen = (\n            \"r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1\"\n        )\n        self.midgame_board = chess.Board(self.midgame_fen)\n        self.checkmate_fen = (\n            \"rnb1kbnr/pppp1ppp/4p3/8/6Pq/5P2/PPPPP2P/RNBQKBNR w KQkq - 1 3\"\n        )\n        self.checkmate_board = chess.Board(self.checkmate_fen)\n        self.stalemate_fen = \"k7/8/1Q6/8/8/8/8/7K b - - 0 1\"\n        self.stalemate_board = chess.Board(self.stalemate_fen)\n        self.legal_moves = list(self.board.legal_moves)\n    \n        self.push_pop_board = chess.Board()\n        self.push_pop_moves = list(self.push_pop_board.legal_moves)[:5]\n    \n        self.variation_moves = []\n        b = chess.Board()\n        for _ in range(5):\n            move = list(b.legal_moves)[0]\n            self.variation_moves.append(move)\n            b.push(move)\n    \n        self.pseudo_legal_moves = list(self.board.pseudo_legal_moves)\n        self.epd_string = self.board.epd()",
+        "min_run_count": 2,
+        "name": "BoardSuite.time_has_chess960_castling_rights",
+        "number": 0,
+        "param_names": [],
+        "params": [],
+        "repeat": 0,
+        "rounds": 2,
+        "sample_time": 0.01,
+        "type": "time",
+        "unit": "seconds",
+        "version": "f07b392d57a1eaa2c3dc542f05da4573f261fceb4e2952b55f74edf70d612c57",
+        "warmup_time": -1
+    },
     "BoardSuite.time_has_insufficient_material": {
         "code": "class BoardSuite:\n    def time_has_insufficient_material(self):\n        self.board.has_insufficient_material(chess.WHITE)\n\n    def setup(self):\n        self.board = chess.Board(chess.STARTING_FEN)\n        self.midgame_fen = (\n            \"r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1\"\n        )\n        self.midgame_board = chess.Board(self.midgame_fen)\n        self.checkmate_fen = (\n            \"rnb1kbnr/pppp1ppp/4p3/8/6Pq/5P2/PPPPP2P/RNBQKBNR w KQkq - 1 3\"\n        )\n        self.checkmate_board = chess.Board(self.checkmate_fen)\n        self.stalemate_fen = \"k7/8/1Q6/8/8/8/8/7K b - - 0 1\"\n        self.stalemate_board = chess.Board(self.stalemate_fen)\n        self.legal_moves = list(self.board.legal_moves)\n    \n        self.push_pop_board = chess.Board()\n        self.push_pop_moves = list(self.push_pop_board.legal_moves)[:5]\n    \n        self.variation_moves = []\n        b = chess.Board()\n        for _ in range(5):\n            move = list(b.legal_moves)[0]\n            self.variation_moves.append(move)\n            b.push(move)\n    \n        self.pseudo_legal_moves = list(self.board.pseudo_legal_moves)\n        self.epd_string = self.board.epd()",
         "min_run_count": 2,
@@ -942,6 +1347,51 @@
         "type": "time",
         "unit": "seconds",
         "version": "4019e8c7f3d1238837bae9ad45026660186c510a6ff11c048e442ef472f4097b",
+        "warmup_time": -1
+    },
+    "BoardSuite.time_has_legal_en_passant": {
+        "code": "class BoardSuite:\n    def time_has_legal_en_passant(self):\n        self.board.has_legal_en_passant()\n\n    def setup(self):\n        self.board = chess.Board(chess.STARTING_FEN)\n        self.midgame_fen = (\n            \"r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1\"\n        )\n        self.midgame_board = chess.Board(self.midgame_fen)\n        self.checkmate_fen = (\n            \"rnb1kbnr/pppp1ppp/4p3/8/6Pq/5P2/PPPPP2P/RNBQKBNR w KQkq - 1 3\"\n        )\n        self.checkmate_board = chess.Board(self.checkmate_fen)\n        self.stalemate_fen = \"k7/8/1Q6/8/8/8/8/7K b - - 0 1\"\n        self.stalemate_board = chess.Board(self.stalemate_fen)\n        self.legal_moves = list(self.board.legal_moves)\n    \n        self.push_pop_board = chess.Board()\n        self.push_pop_moves = list(self.push_pop_board.legal_moves)[:5]\n    \n        self.variation_moves = []\n        b = chess.Board()\n        for _ in range(5):\n            move = list(b.legal_moves)[0]\n            self.variation_moves.append(move)\n            b.push(move)\n    \n        self.pseudo_legal_moves = list(self.board.pseudo_legal_moves)\n        self.epd_string = self.board.epd()",
+        "min_run_count": 2,
+        "name": "BoardSuite.time_has_legal_en_passant",
+        "number": 0,
+        "param_names": [],
+        "params": [],
+        "repeat": 0,
+        "rounds": 2,
+        "sample_time": 0.01,
+        "type": "time",
+        "unit": "seconds",
+        "version": "a616e660ff806ebb88de1c50c44e73792d41021e3408ed2ce5301353d0da526d",
+        "warmup_time": -1
+    },
+    "BoardSuite.time_has_pseudo_legal_en_passant": {
+        "code": "class BoardSuite:\n    def time_has_pseudo_legal_en_passant(self):\n        self.board.has_pseudo_legal_en_passant()\n\n    def setup(self):\n        self.board = chess.Board(chess.STARTING_FEN)\n        self.midgame_fen = (\n            \"r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1\"\n        )\n        self.midgame_board = chess.Board(self.midgame_fen)\n        self.checkmate_fen = (\n            \"rnb1kbnr/pppp1ppp/4p3/8/6Pq/5P2/PPPPP2P/RNBQKBNR w KQkq - 1 3\"\n        )\n        self.checkmate_board = chess.Board(self.checkmate_fen)\n        self.stalemate_fen = \"k7/8/1Q6/8/8/8/8/7K b - - 0 1\"\n        self.stalemate_board = chess.Board(self.stalemate_fen)\n        self.legal_moves = list(self.board.legal_moves)\n    \n        self.push_pop_board = chess.Board()\n        self.push_pop_moves = list(self.push_pop_board.legal_moves)[:5]\n    \n        self.variation_moves = []\n        b = chess.Board()\n        for _ in range(5):\n            move = list(b.legal_moves)[0]\n            self.variation_moves.append(move)\n            b.push(move)\n    \n        self.pseudo_legal_moves = list(self.board.pseudo_legal_moves)\n        self.epd_string = self.board.epd()",
+        "min_run_count": 2,
+        "name": "BoardSuite.time_has_pseudo_legal_en_passant",
+        "number": 0,
+        "param_names": [],
+        "params": [],
+        "repeat": 0,
+        "rounds": 2,
+        "sample_time": 0.01,
+        "type": "time",
+        "unit": "seconds",
+        "version": "5e53a064d567c1d557ee49aab0cb5c7896c944e46b9a05afc86291d3bcb5aafd",
+        "warmup_time": -1
+    },
+    "BoardSuite.time_invalid_char_fen": {
+        "code": "class BoardSuite:\n    def time_invalid_char_fen(self):\n        try:\n            chess.BaseBoard().set_board_fen(\"Z7/8/8/8/8/8/8/8\")\n        except ValueError:\n            pass\n\n    def setup(self):\n        self.board = chess.Board(chess.STARTING_FEN)\n        self.midgame_fen = (\n            \"r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1\"\n        )\n        self.midgame_board = chess.Board(self.midgame_fen)\n        self.checkmate_fen = (\n            \"rnb1kbnr/pppp1ppp/4p3/8/6Pq/5P2/PPPPP2P/RNBQKBNR w KQkq - 1 3\"\n        )\n        self.checkmate_board = chess.Board(self.checkmate_fen)\n        self.stalemate_fen = \"k7/8/1Q6/8/8/8/8/7K b - - 0 1\"\n        self.stalemate_board = chess.Board(self.stalemate_fen)\n        self.legal_moves = list(self.board.legal_moves)\n    \n        self.push_pop_board = chess.Board()\n        self.push_pop_moves = list(self.push_pop_board.legal_moves)[:5]\n    \n        self.variation_moves = []\n        b = chess.Board()\n        for _ in range(5):\n            move = list(b.legal_moves)[0]\n            self.variation_moves.append(move)\n            b.push(move)\n    \n        self.pseudo_legal_moves = list(self.board.pseudo_legal_moves)\n        self.epd_string = self.board.epd()",
+        "min_run_count": 2,
+        "name": "BoardSuite.time_invalid_char_fen",
+        "number": 0,
+        "param_names": [],
+        "params": [],
+        "repeat": 0,
+        "rounds": 2,
+        "sample_time": 0.01,
+        "type": "time",
+        "unit": "seconds",
+        "version": "2954e83377930f1f7e4153386127d57f9e67d6c94f282a30104d64e7cde53fb6",
         "warmup_time": -1
     },
     "BoardSuite.time_is_capture": {
@@ -1019,6 +1469,36 @@
         "version": "5b49fd7775e1205878a433dca018fbbdd6054743a4ecf56d5fe8b77a49e86ae9",
         "warmup_time": -1
     },
+    "BoardSuite.time_is_fifty_moves": {
+        "code": "class BoardSuite:\n    def time_is_fifty_moves(self):\n        self.board.is_fifty_moves()\n\n    def setup(self):\n        self.board = chess.Board(chess.STARTING_FEN)\n        self.midgame_fen = (\n            \"r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1\"\n        )\n        self.midgame_board = chess.Board(self.midgame_fen)\n        self.checkmate_fen = (\n            \"rnb1kbnr/pppp1ppp/4p3/8/6Pq/5P2/PPPPP2P/RNBQKBNR w KQkq - 1 3\"\n        )\n        self.checkmate_board = chess.Board(self.checkmate_fen)\n        self.stalemate_fen = \"k7/8/1Q6/8/8/8/8/7K b - - 0 1\"\n        self.stalemate_board = chess.Board(self.stalemate_fen)\n        self.legal_moves = list(self.board.legal_moves)\n    \n        self.push_pop_board = chess.Board()\n        self.push_pop_moves = list(self.push_pop_board.legal_moves)[:5]\n    \n        self.variation_moves = []\n        b = chess.Board()\n        for _ in range(5):\n            move = list(b.legal_moves)[0]\n            self.variation_moves.append(move)\n            b.push(move)\n    \n        self.pseudo_legal_moves = list(self.board.pseudo_legal_moves)\n        self.epd_string = self.board.epd()",
+        "min_run_count": 2,
+        "name": "BoardSuite.time_is_fifty_moves",
+        "number": 0,
+        "param_names": [],
+        "params": [],
+        "repeat": 0,
+        "rounds": 2,
+        "sample_time": 0.01,
+        "type": "time",
+        "unit": "seconds",
+        "version": "44ac735487e2023a1ba941a098bde7047f486ae4a8fca19fcd9a4c9220703ecd",
+        "warmup_time": -1
+    },
+    "BoardSuite.time_is_fivefold_repetition": {
+        "code": "class BoardSuite:\n    def time_is_fivefold_repetition(self):\n        self.board.is_fivefold_repetition()\n\n    def setup(self):\n        self.board = chess.Board(chess.STARTING_FEN)\n        self.midgame_fen = (\n            \"r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1\"\n        )\n        self.midgame_board = chess.Board(self.midgame_fen)\n        self.checkmate_fen = (\n            \"rnb1kbnr/pppp1ppp/4p3/8/6Pq/5P2/PPPPP2P/RNBQKBNR w KQkq - 1 3\"\n        )\n        self.checkmate_board = chess.Board(self.checkmate_fen)\n        self.stalemate_fen = \"k7/8/1Q6/8/8/8/8/7K b - - 0 1\"\n        self.stalemate_board = chess.Board(self.stalemate_fen)\n        self.legal_moves = list(self.board.legal_moves)\n    \n        self.push_pop_board = chess.Board()\n        self.push_pop_moves = list(self.push_pop_board.legal_moves)[:5]\n    \n        self.variation_moves = []\n        b = chess.Board()\n        for _ in range(5):\n            move = list(b.legal_moves)[0]\n            self.variation_moves.append(move)\n            b.push(move)\n    \n        self.pseudo_legal_moves = list(self.board.pseudo_legal_moves)\n        self.epd_string = self.board.epd()",
+        "min_run_count": 2,
+        "name": "BoardSuite.time_is_fivefold_repetition",
+        "number": 0,
+        "param_names": [],
+        "params": [],
+        "repeat": 0,
+        "rounds": 2,
+        "sample_time": 0.01,
+        "type": "time",
+        "unit": "seconds",
+        "version": "79e22a4dca7b3840052ce8258e5ed7e27b072b91d127c18a84d08c09c61b5de2",
+        "warmup_time": -1
+    },
     "BoardSuite.time_is_game_over": {
         "code": "class BoardSuite:\n    def time_is_game_over(self):\n        self.board.is_game_over()\n\n    def setup(self):\n        self.board = chess.Board(chess.STARTING_FEN)\n        self.midgame_fen = (\n            \"r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1\"\n        )\n        self.midgame_board = chess.Board(self.midgame_fen)\n        self.checkmate_fen = (\n            \"rnb1kbnr/pppp1ppp/4p3/8/6Pq/5P2/PPPPP2P/RNBQKBNR w KQkq - 1 3\"\n        )\n        self.checkmate_board = chess.Board(self.checkmate_fen)\n        self.stalemate_fen = \"k7/8/1Q6/8/8/8/8/7K b - - 0 1\"\n        self.stalemate_board = chess.Board(self.stalemate_fen)\n        self.legal_moves = list(self.board.legal_moves)\n    \n        self.push_pop_board = chess.Board()\n        self.push_pop_moves = list(self.push_pop_board.legal_moves)[:5]\n    \n        self.variation_moves = []\n        b = chess.Board()\n        for _ in range(5):\n            move = list(b.legal_moves)[0]\n            self.variation_moves.append(move)\n            b.push(move)\n    \n        self.pseudo_legal_moves = list(self.board.pseudo_legal_moves)\n        self.epd_string = self.board.epd()",
         "min_run_count": 2,
@@ -1047,6 +1527,51 @@
         "type": "time",
         "unit": "seconds",
         "version": "6bfb1260412c9f5b6c3aa417634fd21bed8c950f892b32a3deb633b6a1909a5d",
+        "warmup_time": -1
+    },
+    "BoardSuite.time_is_into_check": {
+        "code": "class BoardSuite:\n    def time_is_into_check(self):\n        for move in self.pseudo_legal_moves:\n            self.board.is_into_check(move)\n\n    def setup(self):\n        self.board = chess.Board(chess.STARTING_FEN)\n        self.midgame_fen = (\n            \"r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1\"\n        )\n        self.midgame_board = chess.Board(self.midgame_fen)\n        self.checkmate_fen = (\n            \"rnb1kbnr/pppp1ppp/4p3/8/6Pq/5P2/PPPPP2P/RNBQKBNR w KQkq - 1 3\"\n        )\n        self.checkmate_board = chess.Board(self.checkmate_fen)\n        self.stalemate_fen = \"k7/8/1Q6/8/8/8/8/7K b - - 0 1\"\n        self.stalemate_board = chess.Board(self.stalemate_fen)\n        self.legal_moves = list(self.board.legal_moves)\n    \n        self.push_pop_board = chess.Board()\n        self.push_pop_moves = list(self.push_pop_board.legal_moves)[:5]\n    \n        self.variation_moves = []\n        b = chess.Board()\n        for _ in range(5):\n            move = list(b.legal_moves)[0]\n            self.variation_moves.append(move)\n            b.push(move)\n    \n        self.pseudo_legal_moves = list(self.board.pseudo_legal_moves)\n        self.epd_string = self.board.epd()",
+        "min_run_count": 2,
+        "name": "BoardSuite.time_is_into_check",
+        "number": 0,
+        "param_names": [],
+        "params": [],
+        "repeat": 0,
+        "rounds": 2,
+        "sample_time": 0.01,
+        "type": "time",
+        "unit": "seconds",
+        "version": "3c13b96169f154676aa1ac3ad2c7519ab9692b98a59c1d4c0b77a33aee6e364c",
+        "warmup_time": -1
+    },
+    "BoardSuite.time_is_irreversible": {
+        "code": "class BoardSuite:\n    def time_is_irreversible(self):\n        for move in self.pseudo_legal_moves:\n            self.board.is_irreversible(move)\n\n    def setup(self):\n        self.board = chess.Board(chess.STARTING_FEN)\n        self.midgame_fen = (\n            \"r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1\"\n        )\n        self.midgame_board = chess.Board(self.midgame_fen)\n        self.checkmate_fen = (\n            \"rnb1kbnr/pppp1ppp/4p3/8/6Pq/5P2/PPPPP2P/RNBQKBNR w KQkq - 1 3\"\n        )\n        self.checkmate_board = chess.Board(self.checkmate_fen)\n        self.stalemate_fen = \"k7/8/1Q6/8/8/8/8/7K b - - 0 1\"\n        self.stalemate_board = chess.Board(self.stalemate_fen)\n        self.legal_moves = list(self.board.legal_moves)\n    \n        self.push_pop_board = chess.Board()\n        self.push_pop_moves = list(self.push_pop_board.legal_moves)[:5]\n    \n        self.variation_moves = []\n        b = chess.Board()\n        for _ in range(5):\n            move = list(b.legal_moves)[0]\n            self.variation_moves.append(move)\n            b.push(move)\n    \n        self.pseudo_legal_moves = list(self.board.pseudo_legal_moves)\n        self.epd_string = self.board.epd()",
+        "min_run_count": 2,
+        "name": "BoardSuite.time_is_irreversible",
+        "number": 0,
+        "param_names": [],
+        "params": [],
+        "repeat": 0,
+        "rounds": 2,
+        "sample_time": 0.01,
+        "type": "time",
+        "unit": "seconds",
+        "version": "4f9655c5102a7ca6ab096a829094ddf9e23788e67c4d6521d72e0dc061cb0d3e",
+        "warmup_time": -1
+    },
+    "BoardSuite.time_is_kingside_castling": {
+        "code": "class BoardSuite:\n    def time_is_kingside_castling(self):\n        for move in self.midgame_board.pseudo_legal_moves:\n            self.midgame_board.is_kingside_castling(move)\n\n    def setup(self):\n        self.board = chess.Board(chess.STARTING_FEN)\n        self.midgame_fen = (\n            \"r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1\"\n        )\n        self.midgame_board = chess.Board(self.midgame_fen)\n        self.checkmate_fen = (\n            \"rnb1kbnr/pppp1ppp/4p3/8/6Pq/5P2/PPPPP2P/RNBQKBNR w KQkq - 1 3\"\n        )\n        self.checkmate_board = chess.Board(self.checkmate_fen)\n        self.stalemate_fen = \"k7/8/1Q6/8/8/8/8/7K b - - 0 1\"\n        self.stalemate_board = chess.Board(self.stalemate_fen)\n        self.legal_moves = list(self.board.legal_moves)\n    \n        self.push_pop_board = chess.Board()\n        self.push_pop_moves = list(self.push_pop_board.legal_moves)[:5]\n    \n        self.variation_moves = []\n        b = chess.Board()\n        for _ in range(5):\n            move = list(b.legal_moves)[0]\n            self.variation_moves.append(move)\n            b.push(move)\n    \n        self.pseudo_legal_moves = list(self.board.pseudo_legal_moves)\n        self.epd_string = self.board.epd()",
+        "min_run_count": 2,
+        "name": "BoardSuite.time_is_kingside_castling",
+        "number": 0,
+        "param_names": [],
+        "params": [],
+        "repeat": 0,
+        "rounds": 2,
+        "sample_time": 0.01,
+        "type": "time",
+        "unit": "seconds",
+        "version": "20396873dde507ecf2d06f89edf87230409e82a490322787a342c3020109462a",
         "warmup_time": -1
     },
     "BoardSuite.time_is_legal": {
@@ -1079,6 +1604,21 @@
         "version": "4448de0ce4fa3a97e1aa324ce819b6d397f71deab87529e89caf09df2a2416af",
         "warmup_time": -1
     },
+    "BoardSuite.time_is_queenside_castling": {
+        "code": "class BoardSuite:\n    def time_is_queenside_castling(self):\n        for move in self.midgame_board.pseudo_legal_moves:\n            self.midgame_board.is_queenside_castling(move)\n\n    def setup(self):\n        self.board = chess.Board(chess.STARTING_FEN)\n        self.midgame_fen = (\n            \"r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1\"\n        )\n        self.midgame_board = chess.Board(self.midgame_fen)\n        self.checkmate_fen = (\n            \"rnb1kbnr/pppp1ppp/4p3/8/6Pq/5P2/PPPPP2P/RNBQKBNR w KQkq - 1 3\"\n        )\n        self.checkmate_board = chess.Board(self.checkmate_fen)\n        self.stalemate_fen = \"k7/8/1Q6/8/8/8/8/7K b - - 0 1\"\n        self.stalemate_board = chess.Board(self.stalemate_fen)\n        self.legal_moves = list(self.board.legal_moves)\n    \n        self.push_pop_board = chess.Board()\n        self.push_pop_moves = list(self.push_pop_board.legal_moves)[:5]\n    \n        self.variation_moves = []\n        b = chess.Board()\n        for _ in range(5):\n            move = list(b.legal_moves)[0]\n            self.variation_moves.append(move)\n            b.push(move)\n    \n        self.pseudo_legal_moves = list(self.board.pseudo_legal_moves)\n        self.epd_string = self.board.epd()",
+        "min_run_count": 2,
+        "name": "BoardSuite.time_is_queenside_castling",
+        "number": 0,
+        "param_names": [],
+        "params": [],
+        "repeat": 0,
+        "rounds": 2,
+        "sample_time": 0.01,
+        "type": "time",
+        "unit": "seconds",
+        "version": "f7db7c85a5fb30e8144deaf12e93418e8fcbc6bfed67e5d5e471e3e84ca165fa",
+        "warmup_time": -1
+    },
     "BoardSuite.time_is_repetition": {
         "code": "class BoardSuite:\n    def time_is_repetition(self):\n        self.push_pop_board.is_repetition()\n\n    def setup(self):\n        self.board = chess.Board(chess.STARTING_FEN)\n        self.midgame_fen = (\n            \"r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1\"\n        )\n        self.midgame_board = chess.Board(self.midgame_fen)\n        self.checkmate_fen = (\n            \"rnb1kbnr/pppp1ppp/4p3/8/6Pq/5P2/PPPPP2P/RNBQKBNR w KQkq - 1 3\"\n        )\n        self.checkmate_board = chess.Board(self.checkmate_fen)\n        self.stalemate_fen = \"k7/8/1Q6/8/8/8/8/7K b - - 0 1\"\n        self.stalemate_board = chess.Board(self.stalemate_fen)\n        self.legal_moves = list(self.board.legal_moves)\n    \n        self.push_pop_board = chess.Board()\n        self.push_pop_moves = list(self.push_pop_board.legal_moves)[:5]\n    \n        self.variation_moves = []\n        b = chess.Board()\n        for _ in range(5):\n            move = list(b.legal_moves)[0]\n            self.variation_moves.append(move)\n            b.push(move)\n    \n        self.pseudo_legal_moves = list(self.board.pseudo_legal_moves)\n        self.epd_string = self.board.epd()",
         "min_run_count": 2,
@@ -1092,6 +1632,51 @@
         "type": "time",
         "unit": "seconds",
         "version": "733d73177f55541f978d9196ca0c32a93c76b701ecd85c43f12ecbc90dd3f076",
+        "warmup_time": -1
+    },
+    "BoardSuite.time_is_repetition_cache": {
+        "code": "class BoardSuite:\n    def time_is_repetition_cache(self):\n        b = chess.Board()\n        for san in [\"Nf3\", \"Nf6\", \"Ng1\", \"Ng8\", \"Nf3\", \"Nf6\"]:\n            b.push_san(san)\n        b.is_repetition(3)\n\n    def setup(self):\n        self.board = chess.Board(chess.STARTING_FEN)\n        self.midgame_fen = (\n            \"r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1\"\n        )\n        self.midgame_board = chess.Board(self.midgame_fen)\n        self.checkmate_fen = (\n            \"rnb1kbnr/pppp1ppp/4p3/8/6Pq/5P2/PPPPP2P/RNBQKBNR w KQkq - 1 3\"\n        )\n        self.checkmate_board = chess.Board(self.checkmate_fen)\n        self.stalemate_fen = \"k7/8/1Q6/8/8/8/8/7K b - - 0 1\"\n        self.stalemate_board = chess.Board(self.stalemate_fen)\n        self.legal_moves = list(self.board.legal_moves)\n    \n        self.push_pop_board = chess.Board()\n        self.push_pop_moves = list(self.push_pop_board.legal_moves)[:5]\n    \n        self.variation_moves = []\n        b = chess.Board()\n        for _ in range(5):\n            move = list(b.legal_moves)[0]\n            self.variation_moves.append(move)\n            b.push(move)\n    \n        self.pseudo_legal_moves = list(self.board.pseudo_legal_moves)\n        self.epd_string = self.board.epd()",
+        "min_run_count": 2,
+        "name": "BoardSuite.time_is_repetition_cache",
+        "number": 0,
+        "param_names": [],
+        "params": [],
+        "repeat": 0,
+        "rounds": 2,
+        "sample_time": 0.01,
+        "type": "time",
+        "unit": "seconds",
+        "version": "c79f86fff00f9ab72337983fde7d53974981c7c200aeb3b615d25fcb3ce44194",
+        "warmup_time": -1
+    },
+    "BoardSuite.time_is_repetition_count": {
+        "code": "class BoardSuite:\n    def time_is_repetition_count(self):\n        self.board.is_repetition(2)\n        self.midgame_board.is_repetition(3)\n\n    def setup(self):\n        self.board = chess.Board(chess.STARTING_FEN)\n        self.midgame_fen = (\n            \"r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1\"\n        )\n        self.midgame_board = chess.Board(self.midgame_fen)\n        self.checkmate_fen = (\n            \"rnb1kbnr/pppp1ppp/4p3/8/6Pq/5P2/PPPPP2P/RNBQKBNR w KQkq - 1 3\"\n        )\n        self.checkmate_board = chess.Board(self.checkmate_fen)\n        self.stalemate_fen = \"k7/8/1Q6/8/8/8/8/7K b - - 0 1\"\n        self.stalemate_board = chess.Board(self.stalemate_fen)\n        self.legal_moves = list(self.board.legal_moves)\n    \n        self.push_pop_board = chess.Board()\n        self.push_pop_moves = list(self.push_pop_board.legal_moves)[:5]\n    \n        self.variation_moves = []\n        b = chess.Board()\n        for _ in range(5):\n            move = list(b.legal_moves)[0]\n            self.variation_moves.append(move)\n            b.push(move)\n    \n        self.pseudo_legal_moves = list(self.board.pseudo_legal_moves)\n        self.epd_string = self.board.epd()",
+        "min_run_count": 2,
+        "name": "BoardSuite.time_is_repetition_count",
+        "number": 0,
+        "param_names": [],
+        "params": [],
+        "repeat": 0,
+        "rounds": 2,
+        "sample_time": 0.01,
+        "type": "time",
+        "unit": "seconds",
+        "version": "51b7d810c668ed3dde140f0295b1b79c5d9a5240c83810dd50ea280b7fd9b752",
+        "warmup_time": -1
+    },
+    "BoardSuite.time_is_seventyfive_moves": {
+        "code": "class BoardSuite:\n    def time_is_seventyfive_moves(self):\n        self.board.is_seventyfive_moves()\n\n    def setup(self):\n        self.board = chess.Board(chess.STARTING_FEN)\n        self.midgame_fen = (\n            \"r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1\"\n        )\n        self.midgame_board = chess.Board(self.midgame_fen)\n        self.checkmate_fen = (\n            \"rnb1kbnr/pppp1ppp/4p3/8/6Pq/5P2/PPPPP2P/RNBQKBNR w KQkq - 1 3\"\n        )\n        self.checkmate_board = chess.Board(self.checkmate_fen)\n        self.stalemate_fen = \"k7/8/1Q6/8/8/8/8/7K b - - 0 1\"\n        self.stalemate_board = chess.Board(self.stalemate_fen)\n        self.legal_moves = list(self.board.legal_moves)\n    \n        self.push_pop_board = chess.Board()\n        self.push_pop_moves = list(self.push_pop_board.legal_moves)[:5]\n    \n        self.variation_moves = []\n        b = chess.Board()\n        for _ in range(5):\n            move = list(b.legal_moves)[0]\n            self.variation_moves.append(move)\n            b.push(move)\n    \n        self.pseudo_legal_moves = list(self.board.pseudo_legal_moves)\n        self.epd_string = self.board.epd()",
+        "min_run_count": 2,
+        "name": "BoardSuite.time_is_seventyfive_moves",
+        "number": 0,
+        "param_names": [],
+        "params": [],
+        "repeat": 0,
+        "rounds": 2,
+        "sample_time": 0.01,
+        "type": "time",
+        "unit": "seconds",
+        "version": "7a8614758514bc2b45a6f610c00fd0a0d708453a47f62fea33a5013442a327d1",
         "warmup_time": -1
     },
     "BoardSuite.time_is_stalemate": {
@@ -1122,6 +1707,51 @@
         "type": "time",
         "unit": "seconds",
         "version": "94611600ae6f4c50b2fc38d697f7e80d765f758e4875d97b74847c22e04db103",
+        "warmup_time": -1
+    },
+    "BoardSuite.time_is_variant_end_etc": {
+        "code": "class BoardSuite:\n    def time_is_variant_end_etc(self):\n        self.board.is_variant_end()\n        self.board.is_variant_loss()\n        self.board.is_variant_win()\n        self.board.is_variant_draw()\n\n    def setup(self):\n        self.board = chess.Board(chess.STARTING_FEN)\n        self.midgame_fen = (\n            \"r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1\"\n        )\n        self.midgame_board = chess.Board(self.midgame_fen)\n        self.checkmate_fen = (\n            \"rnb1kbnr/pppp1ppp/4p3/8/6Pq/5P2/PPPPP2P/RNBQKBNR w KQkq - 1 3\"\n        )\n        self.checkmate_board = chess.Board(self.checkmate_fen)\n        self.stalemate_fen = \"k7/8/1Q6/8/8/8/8/7K b - - 0 1\"\n        self.stalemate_board = chess.Board(self.stalemate_fen)\n        self.legal_moves = list(self.board.legal_moves)\n    \n        self.push_pop_board = chess.Board()\n        self.push_pop_moves = list(self.push_pop_board.legal_moves)[:5]\n    \n        self.variation_moves = []\n        b = chess.Board()\n        for _ in range(5):\n            move = list(b.legal_moves)[0]\n            self.variation_moves.append(move)\n            b.push(move)\n    \n        self.pseudo_legal_moves = list(self.board.pseudo_legal_moves)\n        self.epd_string = self.board.epd()",
+        "min_run_count": 2,
+        "name": "BoardSuite.time_is_variant_end_etc",
+        "number": 0,
+        "param_names": [],
+        "params": [],
+        "repeat": 0,
+        "rounds": 2,
+        "sample_time": 0.01,
+        "type": "time",
+        "unit": "seconds",
+        "version": "c0d52b6ae37d621ed4d2428fe01b0d79bdd390441ba07b2a8fd08a0cbebff99e",
+        "warmup_time": -1
+    },
+    "BoardSuite.time_is_zeroing": {
+        "code": "class BoardSuite:\n    def time_is_zeroing(self):\n        for move in self.pseudo_legal_moves:\n            self.board.is_zeroing(move)\n\n    def setup(self):\n        self.board = chess.Board(chess.STARTING_FEN)\n        self.midgame_fen = (\n            \"r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1\"\n        )\n        self.midgame_board = chess.Board(self.midgame_fen)\n        self.checkmate_fen = (\n            \"rnb1kbnr/pppp1ppp/4p3/8/6Pq/5P2/PPPPP2P/RNBQKBNR w KQkq - 1 3\"\n        )\n        self.checkmate_board = chess.Board(self.checkmate_fen)\n        self.stalemate_fen = \"k7/8/1Q6/8/8/8/8/7K b - - 0 1\"\n        self.stalemate_board = chess.Board(self.stalemate_fen)\n        self.legal_moves = list(self.board.legal_moves)\n    \n        self.push_pop_board = chess.Board()\n        self.push_pop_moves = list(self.push_pop_board.legal_moves)[:5]\n    \n        self.variation_moves = []\n        b = chess.Board()\n        for _ in range(5):\n            move = list(b.legal_moves)[0]\n            self.variation_moves.append(move)\n            b.push(move)\n    \n        self.pseudo_legal_moves = list(self.board.pseudo_legal_moves)\n        self.epd_string = self.board.epd()",
+        "min_run_count": 2,
+        "name": "BoardSuite.time_is_zeroing",
+        "number": 0,
+        "param_names": [],
+        "params": [],
+        "repeat": 0,
+        "rounds": 2,
+        "sample_time": 0.01,
+        "type": "time",
+        "unit": "seconds",
+        "version": "1916f6b112130f0f3c372c454e94434c69c50239507d4c51cfb30857a8ae31c9",
+        "warmup_time": -1
+    },
+    "BoardSuite.time_lan": {
+        "code": "class BoardSuite:\n    def time_lan(self):\n        for move in self.legal_moves:\n            self.board.lan(move)\n\n    def setup(self):\n        self.board = chess.Board(chess.STARTING_FEN)\n        self.midgame_fen = (\n            \"r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1\"\n        )\n        self.midgame_board = chess.Board(self.midgame_fen)\n        self.checkmate_fen = (\n            \"rnb1kbnr/pppp1ppp/4p3/8/6Pq/5P2/PPPPP2P/RNBQKBNR w KQkq - 1 3\"\n        )\n        self.checkmate_board = chess.Board(self.checkmate_fen)\n        self.stalemate_fen = \"k7/8/1Q6/8/8/8/8/7K b - - 0 1\"\n        self.stalemate_board = chess.Board(self.stalemate_fen)\n        self.legal_moves = list(self.board.legal_moves)\n    \n        self.push_pop_board = chess.Board()\n        self.push_pop_moves = list(self.push_pop_board.legal_moves)[:5]\n    \n        self.variation_moves = []\n        b = chess.Board()\n        for _ in range(5):\n            move = list(b.legal_moves)[0]\n            self.variation_moves.append(move)\n            b.push(move)\n    \n        self.pseudo_legal_moves = list(self.board.pseudo_legal_moves)\n        self.epd_string = self.board.epd()",
+        "min_run_count": 2,
+        "name": "BoardSuite.time_lan",
+        "number": 0,
+        "param_names": [],
+        "params": [],
+        "repeat": 0,
+        "rounds": 2,
+        "sample_time": 0.01,
+        "type": "time",
+        "unit": "seconds",
+        "version": "e9413f7001a1a99913afc86cb9852f0fc79d74e0243d6520d7af10beaa80068f",
         "warmup_time": -1
     },
     "BoardSuite.time_legal_moves_count": {
@@ -1184,10 +1814,10 @@
         "version": "f4a38bf6a4548c342b8a9c26dd66eaffcf14ad613a63cfa367a1b3318ce49ae1",
         "warmup_time": -1
     },
-    "BoardSuite.time_parse_san": {
-        "code": "class BoardSuite:\n    def time_parse_san(self):\n        for san in [\"e4\", \"Nf3\", \"d4\"]:\n            self.board.parse_san(san)\n\n    def setup(self):\n        self.board = chess.Board(chess.STARTING_FEN)\n        self.midgame_fen = (\n            \"r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1\"\n        )\n        self.midgame_board = chess.Board(self.midgame_fen)\n        self.checkmate_fen = (\n            \"rnb1kbnr/pppp1ppp/4p3/8/6Pq/5P2/PPPPP2P/RNBQKBNR w KQkq - 1 3\"\n        )\n        self.checkmate_board = chess.Board(self.checkmate_fen)\n        self.stalemate_fen = \"k7/8/1Q6/8/8/8/8/7K b - - 0 1\"\n        self.stalemate_board = chess.Board(self.stalemate_fen)\n        self.legal_moves = list(self.board.legal_moves)\n    \n        self.push_pop_board = chess.Board()\n        self.push_pop_moves = list(self.push_pop_board.legal_moves)[:5]\n    \n        self.variation_moves = []\n        b = chess.Board()\n        for _ in range(5):\n            move = list(b.legal_moves)[0]\n            self.variation_moves.append(move)\n            b.push(move)\n    \n        self.pseudo_legal_moves = list(self.board.pseudo_legal_moves)\n        self.epd_string = self.board.epd()",
+    "BoardSuite.time_parse_san_castling": {
+        "code": "class BoardSuite:\n    def time_parse_san_castling(self):\n        b = chess.Board(\"r3k2r/8/8/8/8/8/8/R3K2R w KQkq - 0 1\")\n        b.parse_san(\"O-O\")\n        b.parse_san(\"O-O-O\")\n        try:\n            b.parse_san(\"O-O-O-O\")\n        except ValueError:\n            pass\n\n    def setup(self):\n        self.board = chess.Board(chess.STARTING_FEN)\n        self.midgame_fen = (\n            \"r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1\"\n        )\n        self.midgame_board = chess.Board(self.midgame_fen)\n        self.checkmate_fen = (\n            \"rnb1kbnr/pppp1ppp/4p3/8/6Pq/5P2/PPPPP2P/RNBQKBNR w KQkq - 1 3\"\n        )\n        self.checkmate_board = chess.Board(self.checkmate_fen)\n        self.stalemate_fen = \"k7/8/1Q6/8/8/8/8/7K b - - 0 1\"\n        self.stalemate_board = chess.Board(self.stalemate_fen)\n        self.legal_moves = list(self.board.legal_moves)\n    \n        self.push_pop_board = chess.Board()\n        self.push_pop_moves = list(self.push_pop_board.legal_moves)[:5]\n    \n        self.variation_moves = []\n        b = chess.Board()\n        for _ in range(5):\n            move = list(b.legal_moves)[0]\n            self.variation_moves.append(move)\n            b.push(move)\n    \n        self.pseudo_legal_moves = list(self.board.pseudo_legal_moves)\n        self.epd_string = self.board.epd()",
         "min_run_count": 2,
-        "name": "BoardSuite.time_parse_san",
+        "name": "BoardSuite.time_parse_san_castling",
         "number": 0,
         "param_names": [],
         "params": [],
@@ -1196,13 +1826,13 @@
         "sample_time": 0.01,
         "type": "time",
         "unit": "seconds",
-        "version": "bf08327509df7d7f68aebc4bf77d205c5338aca0eabf0ba1ca8f72bfc9aecd50",
+        "version": "65ad1b07d42cbb082c3e16979770f3404bff293855f8a02593b9f7e22a6a9a7a",
         "warmup_time": -1
     },
-    "BoardSuite.time_parse_uci": {
-        "code": "class BoardSuite:\n    def time_parse_uci(self):\n        for uci in [\"e2e4\", \"g1f3\", \"d2d4\"]:\n            self.board.parse_uci(uci)\n\n    def setup(self):\n        self.board = chess.Board(chess.STARTING_FEN)\n        self.midgame_fen = (\n            \"r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1\"\n        )\n        self.midgame_board = chess.Board(self.midgame_fen)\n        self.checkmate_fen = (\n            \"rnb1kbnr/pppp1ppp/4p3/8/6Pq/5P2/PPPPP2P/RNBQKBNR w KQkq - 1 3\"\n        )\n        self.checkmate_board = chess.Board(self.checkmate_fen)\n        self.stalemate_fen = \"k7/8/1Q6/8/8/8/8/7K b - - 0 1\"\n        self.stalemate_board = chess.Board(self.stalemate_fen)\n        self.legal_moves = list(self.board.legal_moves)\n    \n        self.push_pop_board = chess.Board()\n        self.push_pop_moves = list(self.push_pop_board.legal_moves)[:5]\n    \n        self.variation_moves = []\n        b = chess.Board()\n        for _ in range(5):\n            move = list(b.legal_moves)[0]\n            self.variation_moves.append(move)\n            b.push(move)\n    \n        self.pseudo_legal_moves = list(self.board.pseudo_legal_moves)\n        self.epd_string = self.board.epd()",
+    "BoardSuite.time_parse_san_disambiguation": {
+        "code": "class BoardSuite:\n    def time_parse_san_disambiguation(self):\n        b = chess.Board(\"4k3/8/8/8/8/8/N1N5/4K3 w - - 0 1\")\n        b.parse_san(\"Nac3\")\n        b.parse_san(\"Ncc3\")\n        try:\n            b.parse_san(\"Nc3\")\n        except ValueError:\n            pass\n\n    def setup(self):\n        self.board = chess.Board(chess.STARTING_FEN)\n        self.midgame_fen = (\n            \"r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1\"\n        )\n        self.midgame_board = chess.Board(self.midgame_fen)\n        self.checkmate_fen = (\n            \"rnb1kbnr/pppp1ppp/4p3/8/6Pq/5P2/PPPPP2P/RNBQKBNR w KQkq - 1 3\"\n        )\n        self.checkmate_board = chess.Board(self.checkmate_fen)\n        self.stalemate_fen = \"k7/8/1Q6/8/8/8/8/7K b - - 0 1\"\n        self.stalemate_board = chess.Board(self.stalemate_fen)\n        self.legal_moves = list(self.board.legal_moves)\n    \n        self.push_pop_board = chess.Board()\n        self.push_pop_moves = list(self.push_pop_board.legal_moves)[:5]\n    \n        self.variation_moves = []\n        b = chess.Board()\n        for _ in range(5):\n            move = list(b.legal_moves)[0]\n            self.variation_moves.append(move)\n            b.push(move)\n    \n        self.pseudo_legal_moves = list(self.board.pseudo_legal_moves)\n        self.epd_string = self.board.epd()",
         "min_run_count": 2,
-        "name": "BoardSuite.time_parse_uci",
+        "name": "BoardSuite.time_parse_san_disambiguation",
         "number": 0,
         "param_names": [],
         "params": [],
@@ -1211,7 +1841,37 @@
         "sample_time": 0.01,
         "type": "time",
         "unit": "seconds",
-        "version": "b2b3181dab03cea4e945ecde151a0f694b0542830f5908997e1504a06e4ab904",
+        "version": "9920519a3ca9d6f0dd4d68975a041a5a4b5ea7e1d306f64541c108222f7432b7",
+        "warmup_time": -1
+    },
+    "BoardSuite.time_parse_xboard": {
+        "code": "class BoardSuite:\n    def time_parse_xboard(self):\n        self.board.parse_xboard(\"e4\")\n\n    def setup(self):\n        self.board = chess.Board(chess.STARTING_FEN)\n        self.midgame_fen = (\n            \"r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1\"\n        )\n        self.midgame_board = chess.Board(self.midgame_fen)\n        self.checkmate_fen = (\n            \"rnb1kbnr/pppp1ppp/4p3/8/6Pq/5P2/PPPPP2P/RNBQKBNR w KQkq - 1 3\"\n        )\n        self.checkmate_board = chess.Board(self.checkmate_fen)\n        self.stalemate_fen = \"k7/8/1Q6/8/8/8/8/7K b - - 0 1\"\n        self.stalemate_board = chess.Board(self.stalemate_fen)\n        self.legal_moves = list(self.board.legal_moves)\n    \n        self.push_pop_board = chess.Board()\n        self.push_pop_moves = list(self.push_pop_board.legal_moves)[:5]\n    \n        self.variation_moves = []\n        b = chess.Board()\n        for _ in range(5):\n            move = list(b.legal_moves)[0]\n            self.variation_moves.append(move)\n            b.push(move)\n    \n        self.pseudo_legal_moves = list(self.board.pseudo_legal_moves)\n        self.epd_string = self.board.epd()",
+        "min_run_count": 2,
+        "name": "BoardSuite.time_parse_xboard",
+        "number": 0,
+        "param_names": [],
+        "params": [],
+        "repeat": 0,
+        "rounds": 2,
+        "sample_time": 0.01,
+        "type": "time",
+        "unit": "seconds",
+        "version": "7f1e9569b3bddbd094a929e301b0f2ff2e1d44213822eea9c9e0ae9b8056afeb",
+        "warmup_time": -1
+    },
+    "BoardSuite.time_peek": {
+        "code": "class BoardSuite:\n    def time_peek(self):\n        self.board.push(chess.Move.from_uci(\"e2e4\"))\n        self.board.peek()\n\n    def setup(self):\n        self.board = chess.Board(chess.STARTING_FEN)\n        self.midgame_fen = (\n            \"r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1\"\n        )\n        self.midgame_board = chess.Board(self.midgame_fen)\n        self.checkmate_fen = (\n            \"rnb1kbnr/pppp1ppp/4p3/8/6Pq/5P2/PPPPP2P/RNBQKBNR w KQkq - 1 3\"\n        )\n        self.checkmate_board = chess.Board(self.checkmate_fen)\n        self.stalemate_fen = \"k7/8/1Q6/8/8/8/8/7K b - - 0 1\"\n        self.stalemate_board = chess.Board(self.stalemate_fen)\n        self.legal_moves = list(self.board.legal_moves)\n    \n        self.push_pop_board = chess.Board()\n        self.push_pop_moves = list(self.push_pop_board.legal_moves)[:5]\n    \n        self.variation_moves = []\n        b = chess.Board()\n        for _ in range(5):\n            move = list(b.legal_moves)[0]\n            self.variation_moves.append(move)\n            b.push(move)\n    \n        self.pseudo_legal_moves = list(self.board.pseudo_legal_moves)\n        self.epd_string = self.board.epd()",
+        "min_run_count": 2,
+        "name": "BoardSuite.time_peek",
+        "number": 0,
+        "param_names": [],
+        "params": [],
+        "repeat": 0,
+        "rounds": 2,
+        "sample_time": 0.01,
+        "type": "time",
+        "unit": "seconds",
+        "version": "834bec34ec576e30ea98d94f7bae760fd09aa8ad5ae7eaacc8dc6c371b481299",
         "warmup_time": -1
     },
     "BoardSuite.time_ply": {
@@ -1244,6 +1904,51 @@
         "version": "ed34ab017249febe035d2545deba0cf5d91f5ec5d2e0bd596fed499ff1437d0b",
         "warmup_time": -1
     },
+    "BoardSuite.time_push_castling": {
+        "code": "class BoardSuite:\n    def time_push_castling(self):\n        b = chess.Board(\"r3k2r/8/8/8/8/8/8/R3K2R w KQkq - 0 1\")\n        b.push_san(\"O-O\")\n        b = chess.Board(\"r3k2r/8/8/8/8/8/8/R3K2R b KQkq - 0 1\")\n        b.push_san(\"O-O-O\")\n\n    def setup(self):\n        self.board = chess.Board(chess.STARTING_FEN)\n        self.midgame_fen = (\n            \"r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1\"\n        )\n        self.midgame_board = chess.Board(self.midgame_fen)\n        self.checkmate_fen = (\n            \"rnb1kbnr/pppp1ppp/4p3/8/6Pq/5P2/PPPPP2P/RNBQKBNR w KQkq - 1 3\"\n        )\n        self.checkmate_board = chess.Board(self.checkmate_fen)\n        self.stalemate_fen = \"k7/8/1Q6/8/8/8/8/7K b - - 0 1\"\n        self.stalemate_board = chess.Board(self.stalemate_fen)\n        self.legal_moves = list(self.board.legal_moves)\n    \n        self.push_pop_board = chess.Board()\n        self.push_pop_moves = list(self.push_pop_board.legal_moves)[:5]\n    \n        self.variation_moves = []\n        b = chess.Board()\n        for _ in range(5):\n            move = list(b.legal_moves)[0]\n            self.variation_moves.append(move)\n            b.push(move)\n    \n        self.pseudo_legal_moves = list(self.board.pseudo_legal_moves)\n        self.epd_string = self.board.epd()",
+        "min_run_count": 2,
+        "name": "BoardSuite.time_push_castling",
+        "number": 0,
+        "param_names": [],
+        "params": [],
+        "repeat": 0,
+        "rounds": 2,
+        "sample_time": 0.01,
+        "type": "time",
+        "unit": "seconds",
+        "version": "2dca600884e5ed3e5f8f4a4015b89831a907ecaf6b94b5117e039f006fc967e5",
+        "warmup_time": -1
+    },
+    "BoardSuite.time_push_castling_rights": {
+        "code": "class BoardSuite:\n    def time_push_castling_rights(self):\n        b = chess.Board()\n        b.push(chess.Move.from_uci(\"e2e4\"))\n        b.push(chess.Move.from_uci(\"h8h7\"))\n        b.push(chess.Move.from_uci(\"a1a2\"))\n        b.push(chess.Move.from_uci(\"e8e7\"))\n\n    def setup(self):\n        self.board = chess.Board(chess.STARTING_FEN)\n        self.midgame_fen = (\n            \"r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1\"\n        )\n        self.midgame_board = chess.Board(self.midgame_fen)\n        self.checkmate_fen = (\n            \"rnb1kbnr/pppp1ppp/4p3/8/6Pq/5P2/PPPPP2P/RNBQKBNR w KQkq - 1 3\"\n        )\n        self.checkmate_board = chess.Board(self.checkmate_fen)\n        self.stalemate_fen = \"k7/8/1Q6/8/8/8/8/7K b - - 0 1\"\n        self.stalemate_board = chess.Board(self.stalemate_fen)\n        self.legal_moves = list(self.board.legal_moves)\n    \n        self.push_pop_board = chess.Board()\n        self.push_pop_moves = list(self.push_pop_board.legal_moves)[:5]\n    \n        self.variation_moves = []\n        b = chess.Board()\n        for _ in range(5):\n            move = list(b.legal_moves)[0]\n            self.variation_moves.append(move)\n            b.push(move)\n    \n        self.pseudo_legal_moves = list(self.board.pseudo_legal_moves)\n        self.epd_string = self.board.epd()",
+        "min_run_count": 2,
+        "name": "BoardSuite.time_push_castling_rights",
+        "number": 0,
+        "param_names": [],
+        "params": [],
+        "repeat": 0,
+        "rounds": 2,
+        "sample_time": 0.01,
+        "type": "time",
+        "unit": "seconds",
+        "version": "c17a5f0c63696efa66b27ca84d29018d661bf287db62290079d48d0b22734383",
+        "warmup_time": -1
+    },
+    "BoardSuite.time_push_null_drop_promote": {
+        "code": "class BoardSuite:\n    def time_push_null_drop_promote(self):\n        b = chess.Board(\"8/P7/8/8/8/8/8/8 w - - 0 1\")\n        b.push(chess.Move.null())\n        b.push(chess.Move.from_uci(\"P@a5\"))\n        b = chess.Board(\"8/P7/8/8/8/8/8/8 w - - 0 1\")\n        b.push(chess.Move.from_uci(\"a7a8q\"))\n\n    def setup(self):\n        self.board = chess.Board(chess.STARTING_FEN)\n        self.midgame_fen = (\n            \"r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1\"\n        )\n        self.midgame_board = chess.Board(self.midgame_fen)\n        self.checkmate_fen = (\n            \"rnb1kbnr/pppp1ppp/4p3/8/6Pq/5P2/PPPPP2P/RNBQKBNR w KQkq - 1 3\"\n        )\n        self.checkmate_board = chess.Board(self.checkmate_fen)\n        self.stalemate_fen = \"k7/8/1Q6/8/8/8/8/7K b - - 0 1\"\n        self.stalemate_board = chess.Board(self.stalemate_fen)\n        self.legal_moves = list(self.board.legal_moves)\n    \n        self.push_pop_board = chess.Board()\n        self.push_pop_moves = list(self.push_pop_board.legal_moves)[:5]\n    \n        self.variation_moves = []\n        b = chess.Board()\n        for _ in range(5):\n            move = list(b.legal_moves)[0]\n            self.variation_moves.append(move)\n            b.push(move)\n    \n        self.pseudo_legal_moves = list(self.board.pseudo_legal_moves)\n        self.epd_string = self.board.epd()",
+        "min_run_count": 2,
+        "name": "BoardSuite.time_push_null_drop_promote",
+        "number": 0,
+        "param_names": [],
+        "params": [],
+        "repeat": 0,
+        "rounds": 2,
+        "sample_time": 0.01,
+        "type": "time",
+        "unit": "seconds",
+        "version": "8017131a3c257fbbdd349b21468aa348524facdf2c0e6b1835fdd9312226e942",
+        "warmup_time": -1
+    },
     "BoardSuite.time_push_pop": {
         "code": "class BoardSuite:\n    def time_push_pop(self):\n        for move in self.push_pop_moves:\n            self.push_pop_board.push(move)\n            self.push_pop_board.pop()\n\n    def setup(self):\n        self.board = chess.Board(chess.STARTING_FEN)\n        self.midgame_fen = (\n            \"r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1\"\n        )\n        self.midgame_board = chess.Board(self.midgame_fen)\n        self.checkmate_fen = (\n            \"rnb1kbnr/pppp1ppp/4p3/8/6Pq/5P2/PPPPP2P/RNBQKBNR w KQkq - 1 3\"\n        )\n        self.checkmate_board = chess.Board(self.checkmate_fen)\n        self.stalemate_fen = \"k7/8/1Q6/8/8/8/8/7K b - - 0 1\"\n        self.stalemate_board = chess.Board(self.stalemate_fen)\n        self.legal_moves = list(self.board.legal_moves)\n    \n        self.push_pop_board = chess.Board()\n        self.push_pop_moves = list(self.push_pop_board.legal_moves)[:5]\n    \n        self.variation_moves = []\n        b = chess.Board()\n        for _ in range(5):\n            move = list(b.legal_moves)[0]\n            self.variation_moves.append(move)\n            b.push(move)\n    \n        self.pseudo_legal_moves = list(self.board.pseudo_legal_moves)\n        self.epd_string = self.board.epd()",
         "min_run_count": 2,
@@ -1257,6 +1962,66 @@
         "type": "time",
         "unit": "seconds",
         "version": "5c010c2aa37c4a44f51f987cc1c51475ddbfb3e67465600a67f7645c4ea4d769",
+        "warmup_time": -1
+    },
+    "BoardSuite.time_push_san": {
+        "code": "class BoardSuite:\n    def time_push_san(self):\n        b = chess.Board()\n        b.push_san(\"e4\")\n\n    def setup(self):\n        self.board = chess.Board(chess.STARTING_FEN)\n        self.midgame_fen = (\n            \"r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1\"\n        )\n        self.midgame_board = chess.Board(self.midgame_fen)\n        self.checkmate_fen = (\n            \"rnb1kbnr/pppp1ppp/4p3/8/6Pq/5P2/PPPPP2P/RNBQKBNR w KQkq - 1 3\"\n        )\n        self.checkmate_board = chess.Board(self.checkmate_fen)\n        self.stalemate_fen = \"k7/8/1Q6/8/8/8/8/7K b - - 0 1\"\n        self.stalemate_board = chess.Board(self.stalemate_fen)\n        self.legal_moves = list(self.board.legal_moves)\n    \n        self.push_pop_board = chess.Board()\n        self.push_pop_moves = list(self.push_pop_board.legal_moves)[:5]\n    \n        self.variation_moves = []\n        b = chess.Board()\n        for _ in range(5):\n            move = list(b.legal_moves)[0]\n            self.variation_moves.append(move)\n            b.push(move)\n    \n        self.pseudo_legal_moves = list(self.board.pseudo_legal_moves)\n        self.epd_string = self.board.epd()",
+        "min_run_count": 2,
+        "name": "BoardSuite.time_push_san",
+        "number": 0,
+        "param_names": [],
+        "params": [],
+        "repeat": 0,
+        "rounds": 2,
+        "sample_time": 0.01,
+        "type": "time",
+        "unit": "seconds",
+        "version": "59997a5aef95735dcb9ef44e0165f6ead301b8533dc1776ca3860e3405f86fa1",
+        "warmup_time": -1
+    },
+    "BoardSuite.time_push_uci": {
+        "code": "class BoardSuite:\n    def time_push_uci(self):\n        b = chess.Board()\n        b.push_uci(\"e2e4\")\n\n    def setup(self):\n        self.board = chess.Board(chess.STARTING_FEN)\n        self.midgame_fen = (\n            \"r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1\"\n        )\n        self.midgame_board = chess.Board(self.midgame_fen)\n        self.checkmate_fen = (\n            \"rnb1kbnr/pppp1ppp/4p3/8/6Pq/5P2/PPPPP2P/RNBQKBNR w KQkq - 1 3\"\n        )\n        self.checkmate_board = chess.Board(self.checkmate_fen)\n        self.stalemate_fen = \"k7/8/1Q6/8/8/8/8/7K b - - 0 1\"\n        self.stalemate_board = chess.Board(self.stalemate_fen)\n        self.legal_moves = list(self.board.legal_moves)\n    \n        self.push_pop_board = chess.Board()\n        self.push_pop_moves = list(self.push_pop_board.legal_moves)[:5]\n    \n        self.variation_moves = []\n        b = chess.Board()\n        for _ in range(5):\n            move = list(b.legal_moves)[0]\n            self.variation_moves.append(move)\n            b.push(move)\n    \n        self.pseudo_legal_moves = list(self.board.pseudo_legal_moves)\n        self.epd_string = self.board.epd()",
+        "min_run_count": 2,
+        "name": "BoardSuite.time_push_uci",
+        "number": 0,
+        "param_names": [],
+        "params": [],
+        "repeat": 0,
+        "rounds": 2,
+        "sample_time": 0.01,
+        "type": "time",
+        "unit": "seconds",
+        "version": "60e6d131974c6a2b0e69bc40d761066d07bca9e8cdb9dceda55359e865870bd7",
+        "warmup_time": -1
+    },
+    "BoardSuite.time_push_xboard": {
+        "code": "class BoardSuite:\n    def time_push_xboard(self):\n        b = chess.Board()\n        b.push_xboard(\"e4\")\n\n    def setup(self):\n        self.board = chess.Board(chess.STARTING_FEN)\n        self.midgame_fen = (\n            \"r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1\"\n        )\n        self.midgame_board = chess.Board(self.midgame_fen)\n        self.checkmate_fen = (\n            \"rnb1kbnr/pppp1ppp/4p3/8/6Pq/5P2/PPPPP2P/RNBQKBNR w KQkq - 1 3\"\n        )\n        self.checkmate_board = chess.Board(self.checkmate_fen)\n        self.stalemate_fen = \"k7/8/1Q6/8/8/8/8/7K b - - 0 1\"\n        self.stalemate_board = chess.Board(self.stalemate_fen)\n        self.legal_moves = list(self.board.legal_moves)\n    \n        self.push_pop_board = chess.Board()\n        self.push_pop_moves = list(self.push_pop_board.legal_moves)[:5]\n    \n        self.variation_moves = []\n        b = chess.Board()\n        for _ in range(5):\n            move = list(b.legal_moves)[0]\n            self.variation_moves.append(move)\n            b.push(move)\n    \n        self.pseudo_legal_moves = list(self.board.pseudo_legal_moves)\n        self.epd_string = self.board.epd()",
+        "min_run_count": 2,
+        "name": "BoardSuite.time_push_xboard",
+        "number": 0,
+        "param_names": [],
+        "params": [],
+        "repeat": 0,
+        "rounds": 2,
+        "sample_time": 0.01,
+        "type": "time",
+        "unit": "seconds",
+        "version": "b7c0c91880044508286051721e1e2adebc00844b180694ae17bacc7a4a074a2e",
+        "warmup_time": -1
+    },
+    "BoardSuite.time_remove_empty": {
+        "code": "class BoardSuite:\n    def time_remove_empty(self):\n        self.board.remove_piece_at(chess.A3)\n\n    def setup(self):\n        self.board = chess.Board(chess.STARTING_FEN)\n        self.midgame_fen = (\n            \"r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1\"\n        )\n        self.midgame_board = chess.Board(self.midgame_fen)\n        self.checkmate_fen = (\n            \"rnb1kbnr/pppp1ppp/4p3/8/6Pq/5P2/PPPPP2P/RNBQKBNR w KQkq - 1 3\"\n        )\n        self.checkmate_board = chess.Board(self.checkmate_fen)\n        self.stalemate_fen = \"k7/8/1Q6/8/8/8/8/7K b - - 0 1\"\n        self.stalemate_board = chess.Board(self.stalemate_fen)\n        self.legal_moves = list(self.board.legal_moves)\n    \n        self.push_pop_board = chess.Board()\n        self.push_pop_moves = list(self.push_pop_board.legal_moves)[:5]\n    \n        self.variation_moves = []\n        b = chess.Board()\n        for _ in range(5):\n            move = list(b.legal_moves)[0]\n            self.variation_moves.append(move)\n            b.push(move)\n    \n        self.pseudo_legal_moves = list(self.board.pseudo_legal_moves)\n        self.epd_string = self.board.epd()",
+        "min_run_count": 2,
+        "name": "BoardSuite.time_remove_empty",
+        "number": 0,
+        "param_names": [],
+        "params": [],
+        "repeat": 0,
+        "rounds": 2,
+        "sample_time": 0.01,
+        "type": "time",
+        "unit": "seconds",
+        "version": "7163cacfbaf57feb0a35f14a8185667f8bdae229be8ed65dabf013a589813171",
         "warmup_time": -1
     },
     "BoardSuite.time_reset": {
@@ -1274,6 +2039,21 @@
         "version": "8220a40f78611c6275482ad0496a7070f5c1821c1d3ec3193e91d34e257136de",
         "warmup_time": -1
     },
+    "BoardSuite.time_result": {
+        "code": "class BoardSuite:\n    def time_result(self):\n        self.checkmate_board.result()\n\n    def setup(self):\n        self.board = chess.Board(chess.STARTING_FEN)\n        self.midgame_fen = (\n            \"r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1\"\n        )\n        self.midgame_board = chess.Board(self.midgame_fen)\n        self.checkmate_fen = (\n            \"rnb1kbnr/pppp1ppp/4p3/8/6Pq/5P2/PPPPP2P/RNBQKBNR w KQkq - 1 3\"\n        )\n        self.checkmate_board = chess.Board(self.checkmate_fen)\n        self.stalemate_fen = \"k7/8/1Q6/8/8/8/8/7K b - - 0 1\"\n        self.stalemate_board = chess.Board(self.stalemate_fen)\n        self.legal_moves = list(self.board.legal_moves)\n    \n        self.push_pop_board = chess.Board()\n        self.push_pop_moves = list(self.push_pop_board.legal_moves)[:5]\n    \n        self.variation_moves = []\n        b = chess.Board()\n        for _ in range(5):\n            move = list(b.legal_moves)[0]\n            self.variation_moves.append(move)\n            b.push(move)\n    \n        self.pseudo_legal_moves = list(self.board.pseudo_legal_moves)\n        self.epd_string = self.board.epd()",
+        "min_run_count": 2,
+        "name": "BoardSuite.time_result",
+        "number": 0,
+        "param_names": [],
+        "params": [],
+        "repeat": 0,
+        "rounds": 2,
+        "sample_time": 0.01,
+        "type": "time",
+        "unit": "seconds",
+        "version": "03e93b5fbe0962e83ac25d8181cbaf92f0d37bcfddecd7a250d0f6abc0adf80a",
+        "warmup_time": -1
+    },
     "BoardSuite.time_root": {
         "code": "class BoardSuite:\n    def time_root(self):\n        self.board.root()\n\n    def setup(self):\n        self.board = chess.Board(chess.STARTING_FEN)\n        self.midgame_fen = (\n            \"r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1\"\n        )\n        self.midgame_board = chess.Board(self.midgame_fen)\n        self.checkmate_fen = (\n            \"rnb1kbnr/pppp1ppp/4p3/8/6Pq/5P2/PPPPP2P/RNBQKBNR w KQkq - 1 3\"\n        )\n        self.checkmate_board = chess.Board(self.checkmate_fen)\n        self.stalemate_fen = \"k7/8/1Q6/8/8/8/8/7K b - - 0 1\"\n        self.stalemate_board = chess.Board(self.stalemate_fen)\n        self.legal_moves = list(self.board.legal_moves)\n    \n        self.push_pop_board = chess.Board()\n        self.push_pop_moves = list(self.push_pop_board.legal_moves)[:5]\n    \n        self.variation_moves = []\n        b = chess.Board()\n        for _ in range(5):\n            move = list(b.legal_moves)[0]\n            self.variation_moves.append(move)\n            b.push(move)\n    \n        self.pseudo_legal_moves = list(self.board.pseudo_legal_moves)\n        self.epd_string = self.board.epd()",
         "min_run_count": 2,
@@ -1289,10 +2069,10 @@
         "version": "c7bf4ac0945f2f6c5c7cc9d727a020b3dffba408ecd12e9c9b17e52b0d2e6252",
         "warmup_time": -1
     },
-    "BoardSuite.time_san": {
-        "code": "class BoardSuite:\n    def time_san(self):\n        for move in self.legal_moves:\n            self.board.san(move)\n\n    def setup(self):\n        self.board = chess.Board(chess.STARTING_FEN)\n        self.midgame_fen = (\n            \"r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1\"\n        )\n        self.midgame_board = chess.Board(self.midgame_fen)\n        self.checkmate_fen = (\n            \"rnb1kbnr/pppp1ppp/4p3/8/6Pq/5P2/PPPPP2P/RNBQKBNR w KQkq - 1 3\"\n        )\n        self.checkmate_board = chess.Board(self.checkmate_fen)\n        self.stalemate_fen = \"k7/8/1Q6/8/8/8/8/7K b - - 0 1\"\n        self.stalemate_board = chess.Board(self.stalemate_fen)\n        self.legal_moves = list(self.board.legal_moves)\n    \n        self.push_pop_board = chess.Board()\n        self.push_pop_moves = list(self.push_pop_board.legal_moves)[:5]\n    \n        self.variation_moves = []\n        b = chess.Board()\n        for _ in range(5):\n            move = list(b.legal_moves)[0]\n            self.variation_moves.append(move)\n            b.push(move)\n    \n        self.pseudo_legal_moves = list(self.board.pseudo_legal_moves)\n        self.epd_string = self.board.epd()",
+    "BoardSuite.time_root_no_stack": {
+        "code": "class BoardSuite:\n    def time_root_no_stack(self):\n        chess.Board().root()\n\n    def setup(self):\n        self.board = chess.Board(chess.STARTING_FEN)\n        self.midgame_fen = (\n            \"r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1\"\n        )\n        self.midgame_board = chess.Board(self.midgame_fen)\n        self.checkmate_fen = (\n            \"rnb1kbnr/pppp1ppp/4p3/8/6Pq/5P2/PPPPP2P/RNBQKBNR w KQkq - 1 3\"\n        )\n        self.checkmate_board = chess.Board(self.checkmate_fen)\n        self.stalemate_fen = \"k7/8/1Q6/8/8/8/8/7K b - - 0 1\"\n        self.stalemate_board = chess.Board(self.stalemate_fen)\n        self.legal_moves = list(self.board.legal_moves)\n    \n        self.push_pop_board = chess.Board()\n        self.push_pop_moves = list(self.push_pop_board.legal_moves)[:5]\n    \n        self.variation_moves = []\n        b = chess.Board()\n        for _ in range(5):\n            move = list(b.legal_moves)[0]\n            self.variation_moves.append(move)\n            b.push(move)\n    \n        self.pseudo_legal_moves = list(self.board.pseudo_legal_moves)\n        self.epd_string = self.board.epd()",
         "min_run_count": 2,
-        "name": "BoardSuite.time_san",
+        "name": "BoardSuite.time_root_no_stack",
         "number": 0,
         "param_names": [],
         "params": [],
@@ -1301,11 +2081,26 @@
         "sample_time": 0.01,
         "type": "time",
         "unit": "seconds",
-        "version": "c2ec347075b7b3c73f19b8c1c86a71e33c562cb3612025c53c1ba50450aa0d15",
+        "version": "477a4b35e375d242a02175c825bfb94eb7cfee9834db57ad4848579c236dab05",
+        "warmup_time": -1
+    },
+    "BoardSuite.time_san_and_push": {
+        "code": "class BoardSuite:\n    def time_san_and_push(self):\n        b = chess.Board()\n        for _ in range(5):\n            move = list(b.legal_moves)[0]\n            b.san_and_push(move)\n\n    def setup(self):\n        self.board = chess.Board(chess.STARTING_FEN)\n        self.midgame_fen = (\n            \"r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1\"\n        )\n        self.midgame_board = chess.Board(self.midgame_fen)\n        self.checkmate_fen = (\n            \"rnb1kbnr/pppp1ppp/4p3/8/6Pq/5P2/PPPPP2P/RNBQKBNR w KQkq - 1 3\"\n        )\n        self.checkmate_board = chess.Board(self.checkmate_fen)\n        self.stalemate_fen = \"k7/8/1Q6/8/8/8/8/7K b - - 0 1\"\n        self.stalemate_board = chess.Board(self.stalemate_fen)\n        self.legal_moves = list(self.board.legal_moves)\n    \n        self.push_pop_board = chess.Board()\n        self.push_pop_moves = list(self.push_pop_board.legal_moves)[:5]\n    \n        self.variation_moves = []\n        b = chess.Board()\n        for _ in range(5):\n            move = list(b.legal_moves)[0]\n            self.variation_moves.append(move)\n            b.push(move)\n    \n        self.pseudo_legal_moves = list(self.board.pseudo_legal_moves)\n        self.epd_string = self.board.epd()",
+        "min_run_count": 2,
+        "name": "BoardSuite.time_san_and_push",
+        "number": 0,
+        "param_names": [],
+        "params": [],
+        "repeat": 0,
+        "rounds": 2,
+        "sample_time": 0.01,
+        "type": "time",
+        "unit": "seconds",
+        "version": "aba4bc430ed8170a16b93fa49603553073f8e2766ff75257e12d7cb25595bfe0",
         "warmup_time": -1
     },
     "BoardSuite.time_set_epd": {
-        "code": "class BoardSuite:\n    def time_set_epd(self):\n        self.board.set_epd(self.epd_string)\n\n    def setup(self):\n        self.board = chess.Board(chess.STARTING_FEN)\n        self.midgame_fen = (\n            \"r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1\"\n        )\n        self.midgame_board = chess.Board(self.midgame_fen)\n        self.checkmate_fen = (\n            \"rnb1kbnr/pppp1ppp/4p3/8/6Pq/5P2/PPPPP2P/RNBQKBNR w KQkq - 1 3\"\n        )\n        self.checkmate_board = chess.Board(self.checkmate_fen)\n        self.stalemate_fen = \"k7/8/1Q6/8/8/8/8/7K b - - 0 1\"\n        self.stalemate_board = chess.Board(self.stalemate_fen)\n        self.legal_moves = list(self.board.legal_moves)\n    \n        self.push_pop_board = chess.Board()\n        self.push_pop_moves = list(self.push_pop_board.legal_moves)[:5]\n    \n        self.variation_moves = []\n        b = chess.Board()\n        for _ in range(5):\n            move = list(b.legal_moves)[0]\n            self.variation_moves.append(move)\n            b.push(move)\n    \n        self.pseudo_legal_moves = list(self.board.pseudo_legal_moves)\n        self.epd_string = self.board.epd()",
+        "code": "class BoardSuite:\n    def time_set_epd(self):\n        self.board.set_epd(\n            'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - hmvc 0; fmvn 1; id \"test\"; c0 \"escaped\\\\nstring\"; v 0.5; pv e2e4 e7e5; bm e2e4;'\n        )\n\n    def setup(self):\n        self.board = chess.Board(chess.STARTING_FEN)\n        self.midgame_fen = (\n            \"r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1\"\n        )\n        self.midgame_board = chess.Board(self.midgame_fen)\n        self.checkmate_fen = (\n            \"rnb1kbnr/pppp1ppp/4p3/8/6Pq/5P2/PPPPP2P/RNBQKBNR w KQkq - 1 3\"\n        )\n        self.checkmate_board = chess.Board(self.checkmate_fen)\n        self.stalemate_fen = \"k7/8/1Q6/8/8/8/8/7K b - - 0 1\"\n        self.stalemate_board = chess.Board(self.stalemate_fen)\n        self.legal_moves = list(self.board.legal_moves)\n    \n        self.push_pop_board = chess.Board()\n        self.push_pop_moves = list(self.push_pop_board.legal_moves)[:5]\n    \n        self.variation_moves = []\n        b = chess.Board()\n        for _ in range(5):\n            move = list(b.legal_moves)[0]\n            self.variation_moves.append(move)\n            b.push(move)\n    \n        self.pseudo_legal_moves = list(self.board.pseudo_legal_moves)\n        self.epd_string = self.board.epd()",
         "min_run_count": 2,
         "name": "BoardSuite.time_set_epd",
         "number": 0,
@@ -1316,13 +2111,13 @@
         "sample_time": 0.01,
         "type": "time",
         "unit": "seconds",
-        "version": "ca627d2533d5f62a5749a2c74d2b12e9573eb49db8f75b72a529c5ada4b00821",
+        "version": "f643dbbe5ceb2e08dc48dcac443c0af40d6a354bfb3c67257a84e5711c3e6bc9",
         "warmup_time": -1
     },
-    "BoardSuite.time_set_fen": {
-        "code": "class BoardSuite:\n    def time_set_fen(self):\n        self.board.set_fen(chess.STARTING_FEN)\n\n    def setup(self):\n        self.board = chess.Board(chess.STARTING_FEN)\n        self.midgame_fen = (\n            \"r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1\"\n        )\n        self.midgame_board = chess.Board(self.midgame_fen)\n        self.checkmate_fen = (\n            \"rnb1kbnr/pppp1ppp/4p3/8/6Pq/5P2/PPPPP2P/RNBQKBNR w KQkq - 1 3\"\n        )\n        self.checkmate_board = chess.Board(self.checkmate_fen)\n        self.stalemate_fen = \"k7/8/1Q6/8/8/8/8/7K b - - 0 1\"\n        self.stalemate_board = chess.Board(self.stalemate_fen)\n        self.legal_moves = list(self.board.legal_moves)\n    \n        self.push_pop_board = chess.Board()\n        self.push_pop_moves = list(self.push_pop_board.legal_moves)[:5]\n    \n        self.variation_moves = []\n        b = chess.Board()\n        for _ in range(5):\n            move = list(b.legal_moves)[0]\n            self.variation_moves.append(move)\n            b.push(move)\n    \n        self.pseudo_legal_moves = list(self.board.pseudo_legal_moves)\n        self.epd_string = self.board.epd()",
+    "BoardSuite.time_set_fen_errors": {
+        "code": "class BoardSuite:\n    def time_set_fen_errors(self):\n        for f in [\n            \"8/8/8/8/8/8/8/8 x\",\n            \"8/8/8/8/8/8/8/8 w x\",\n            \"8/8/8/8/8/8/8/8 w - - x\",\n            \"8/8/8/8/8/8/8/8 w - - 0 x\",\n        ]:\n            try:\n                self.board.set_fen(f)\n            except ValueError:\n                pass\n\n    def setup(self):\n        self.board = chess.Board(chess.STARTING_FEN)\n        self.midgame_fen = (\n            \"r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1\"\n        )\n        self.midgame_board = chess.Board(self.midgame_fen)\n        self.checkmate_fen = (\n            \"rnb1kbnr/pppp1ppp/4p3/8/6Pq/5P2/PPPPP2P/RNBQKBNR w KQkq - 1 3\"\n        )\n        self.checkmate_board = chess.Board(self.checkmate_fen)\n        self.stalemate_fen = \"k7/8/1Q6/8/8/8/8/7K b - - 0 1\"\n        self.stalemate_board = chess.Board(self.stalemate_fen)\n        self.legal_moves = list(self.board.legal_moves)\n    \n        self.push_pop_board = chess.Board()\n        self.push_pop_moves = list(self.push_pop_board.legal_moves)[:5]\n    \n        self.variation_moves = []\n        b = chess.Board()\n        for _ in range(5):\n            move = list(b.legal_moves)[0]\n            self.variation_moves.append(move)\n            b.push(move)\n    \n        self.pseudo_legal_moves = list(self.board.pseudo_legal_moves)\n        self.epd_string = self.board.epd()",
         "min_run_count": 2,
-        "name": "BoardSuite.time_set_fen",
+        "name": "BoardSuite.time_set_fen_errors",
         "number": 0,
         "param_names": [],
         "params": [],
@@ -1331,13 +2126,13 @@
         "sample_time": 0.01,
         "type": "time",
         "unit": "seconds",
-        "version": "cde42196b3c1b57c347c9900eedf7ea565c1dac4e8d45009026ae03e3f1aa7be",
+        "version": "e12872a331673c5c5e49982b1accb88395e44d13507177b5bfc7c310097930d9",
         "warmup_time": -1
     },
-    "BoardSuite.time_shredder_fen": {
-        "code": "class BoardSuite:\n    def time_shredder_fen(self):\n        self.board.shredder_fen()\n\n    def setup(self):\n        self.board = chess.Board(chess.STARTING_FEN)\n        self.midgame_fen = (\n            \"r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1\"\n        )\n        self.midgame_board = chess.Board(self.midgame_fen)\n        self.checkmate_fen = (\n            \"rnb1kbnr/pppp1ppp/4p3/8/6Pq/5P2/PPPPP2P/RNBQKBNR w KQkq - 1 3\"\n        )\n        self.checkmate_board = chess.Board(self.checkmate_fen)\n        self.stalemate_fen = \"k7/8/1Q6/8/8/8/8/7K b - - 0 1\"\n        self.stalemate_board = chess.Board(self.stalemate_fen)\n        self.legal_moves = list(self.board.legal_moves)\n    \n        self.push_pop_board = chess.Board()\n        self.push_pop_moves = list(self.push_pop_board.legal_moves)[:5]\n    \n        self.variation_moves = []\n        b = chess.Board()\n        for _ in range(5):\n            move = list(b.legal_moves)[0]\n            self.variation_moves.append(move)\n            b.push(move)\n    \n        self.pseudo_legal_moves = list(self.board.pseudo_legal_moves)\n        self.epd_string = self.board.epd()",
+    "BoardSuite.time_set_piece_at": {
+        "code": "class BoardSuite:\n    def time_set_piece_at(self):\n        self.board.set_piece_at(chess.A3, chess.Piece(chess.PAWN, chess.WHITE))\n        self.board._set_piece_at(chess.A3, 99, chess.WHITE)  # Invalid piece type\n\n    def setup(self):\n        self.board = chess.Board(chess.STARTING_FEN)\n        self.midgame_fen = (\n            \"r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1\"\n        )\n        self.midgame_board = chess.Board(self.midgame_fen)\n        self.checkmate_fen = (\n            \"rnb1kbnr/pppp1ppp/4p3/8/6Pq/5P2/PPPPP2P/RNBQKBNR w KQkq - 1 3\"\n        )\n        self.checkmate_board = chess.Board(self.checkmate_fen)\n        self.stalemate_fen = \"k7/8/1Q6/8/8/8/8/7K b - - 0 1\"\n        self.stalemate_board = chess.Board(self.stalemate_fen)\n        self.legal_moves = list(self.board.legal_moves)\n    \n        self.push_pop_board = chess.Board()\n        self.push_pop_moves = list(self.push_pop_board.legal_moves)[:5]\n    \n        self.variation_moves = []\n        b = chess.Board()\n        for _ in range(5):\n            move = list(b.legal_moves)[0]\n            self.variation_moves.append(move)\n            b.push(move)\n    \n        self.pseudo_legal_moves = list(self.board.pseudo_legal_moves)\n        self.epd_string = self.board.epd()",
         "min_run_count": 2,
-        "name": "BoardSuite.time_shredder_fen",
+        "name": "BoardSuite.time_set_piece_at",
         "number": 0,
         "param_names": [],
         "params": [],
@@ -1346,7 +2141,7 @@
         "sample_time": 0.01,
         "type": "time",
         "unit": "seconds",
-        "version": "9348bfe091a447f9745fe6252dae46dd6300a8750dec92b15cd7871593412abb",
+        "version": "4fefef3151846c14e18a8b0ea5edd73063ff33a531c133f3971684c0a645de1d",
         "warmup_time": -1
     },
     "BoardSuite.time_status": {
@@ -1364,10 +2159,10 @@
         "version": "f6417011086f6d5a5b5c27ec0a6b6903e7df34fb8661e706b5d18f23fbf73300",
         "warmup_time": -1
     },
-    "BoardSuite.time_uci": {
-        "code": "class BoardSuite:\n    def time_uci(self):\n        for move in self.legal_moves:\n            self.board.uci(move)\n\n    def setup(self):\n        self.board = chess.Board(chess.STARTING_FEN)\n        self.midgame_fen = (\n            \"r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1\"\n        )\n        self.midgame_board = chess.Board(self.midgame_fen)\n        self.checkmate_fen = (\n            \"rnb1kbnr/pppp1ppp/4p3/8/6Pq/5P2/PPPPP2P/RNBQKBNR w KQkq - 1 3\"\n        )\n        self.checkmate_board = chess.Board(self.checkmate_fen)\n        self.stalemate_fen = \"k7/8/1Q6/8/8/8/8/7K b - - 0 1\"\n        self.stalemate_board = chess.Board(self.stalemate_fen)\n        self.legal_moves = list(self.board.legal_moves)\n    \n        self.push_pop_board = chess.Board()\n        self.push_pop_moves = list(self.push_pop_board.legal_moves)[:5]\n    \n        self.variation_moves = []\n        b = chess.Board()\n        for _ in range(5):\n            move = list(b.legal_moves)[0]\n            self.variation_moves.append(move)\n            b.push(move)\n    \n        self.pseudo_legal_moves = list(self.board.pseudo_legal_moves)\n        self.epd_string = self.board.epd()",
+    "BoardSuite.time_variant_checks": {
+        "code": "class BoardSuite:\n    def time_variant_checks(self):\n        self.board.is_variant_end()\n        self.board.is_variant_loss()\n        self.board.is_variant_win()\n        self.board.is_variant_draw()\n\n    def setup(self):\n        self.board = chess.Board(chess.STARTING_FEN)\n        self.midgame_fen = (\n            \"r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1\"\n        )\n        self.midgame_board = chess.Board(self.midgame_fen)\n        self.checkmate_fen = (\n            \"rnb1kbnr/pppp1ppp/4p3/8/6Pq/5P2/PPPPP2P/RNBQKBNR w KQkq - 1 3\"\n        )\n        self.checkmate_board = chess.Board(self.checkmate_fen)\n        self.stalemate_fen = \"k7/8/1Q6/8/8/8/8/7K b - - 0 1\"\n        self.stalemate_board = chess.Board(self.stalemate_fen)\n        self.legal_moves = list(self.board.legal_moves)\n    \n        self.push_pop_board = chess.Board()\n        self.push_pop_moves = list(self.push_pop_board.legal_moves)[:5]\n    \n        self.variation_moves = []\n        b = chess.Board()\n        for _ in range(5):\n            move = list(b.legal_moves)[0]\n            self.variation_moves.append(move)\n            b.push(move)\n    \n        self.pseudo_legal_moves = list(self.board.pseudo_legal_moves)\n        self.epd_string = self.board.epd()",
         "min_run_count": 2,
-        "name": "BoardSuite.time_uci",
+        "name": "BoardSuite.time_variant_checks",
         "number": 0,
         "param_names": [],
         "params": [],
@@ -1376,13 +2171,13 @@
         "sample_time": 0.01,
         "type": "time",
         "unit": "seconds",
-        "version": "32f722016115373524cd23150f6ef29ea2dfd53a3f53e7560a74c626129c90eb",
+        "version": "132baebe94eb4725ba0557e88c8bca786e543254e32cf08334d228c7cd694c56",
         "warmup_time": -1
     },
-    "BoardSuite.time_variation_san": {
-        "code": "class BoardSuite:\n    def time_variation_san(self):\n        self.board.variation_san(self.variation_moves)\n\n    def setup(self):\n        self.board = chess.Board(chess.STARTING_FEN)\n        self.midgame_fen = (\n            \"r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1\"\n        )\n        self.midgame_board = chess.Board(self.midgame_fen)\n        self.checkmate_fen = (\n            \"rnb1kbnr/pppp1ppp/4p3/8/6Pq/5P2/PPPPP2P/RNBQKBNR w KQkq - 1 3\"\n        )\n        self.checkmate_board = chess.Board(self.checkmate_fen)\n        self.stalemate_fen = \"k7/8/1Q6/8/8/8/8/7K b - - 0 1\"\n        self.stalemate_board = chess.Board(self.stalemate_fen)\n        self.legal_moves = list(self.board.legal_moves)\n    \n        self.push_pop_board = chess.Board()\n        self.push_pop_moves = list(self.push_pop_board.legal_moves)[:5]\n    \n        self.variation_moves = []\n        b = chess.Board()\n        for _ in range(5):\n            move = list(b.legal_moves)[0]\n            self.variation_moves.append(move)\n            b.push(move)\n    \n        self.pseudo_legal_moves = list(self.board.pseudo_legal_moves)\n        self.epd_string = self.board.epd()",
+    "BoardSuite.time_was_into_check": {
+        "code": "class BoardSuite:\n    def time_was_into_check(self):\n        self.board.was_into_check()\n\n    def setup(self):\n        self.board = chess.Board(chess.STARTING_FEN)\n        self.midgame_fen = (\n            \"r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1\"\n        )\n        self.midgame_board = chess.Board(self.midgame_fen)\n        self.checkmate_fen = (\n            \"rnb1kbnr/pppp1ppp/4p3/8/6Pq/5P2/PPPPP2P/RNBQKBNR w KQkq - 1 3\"\n        )\n        self.checkmate_board = chess.Board(self.checkmate_fen)\n        self.stalemate_fen = \"k7/8/1Q6/8/8/8/8/7K b - - 0 1\"\n        self.stalemate_board = chess.Board(self.stalemate_fen)\n        self.legal_moves = list(self.board.legal_moves)\n    \n        self.push_pop_board = chess.Board()\n        self.push_pop_moves = list(self.push_pop_board.legal_moves)[:5]\n    \n        self.variation_moves = []\n        b = chess.Board()\n        for _ in range(5):\n            move = list(b.legal_moves)[0]\n            self.variation_moves.append(move)\n            b.push(move)\n    \n        self.pseudo_legal_moves = list(self.board.pseudo_legal_moves)\n        self.epd_string = self.board.epd()",
         "min_run_count": 2,
-        "name": "BoardSuite.time_variation_san",
+        "name": "BoardSuite.time_was_into_check",
         "number": 0,
         "param_names": [],
         "params": [],
@@ -1391,7 +2186,22 @@
         "sample_time": 0.01,
         "type": "time",
         "unit": "seconds",
-        "version": "fb00d98a93d8baa91e097dd330bffc21c310d39b9ed49303e88ae8b9b919a9cf",
+        "version": "17f078e008522cd59296db5146b3d1f3b532812b08989bbe0d18d081d83a1e19",
+        "warmup_time": -1
+    },
+    "BoardSuite.time_xboard": {
+        "code": "class BoardSuite:\n    def time_xboard(self):\n        for move in self.legal_moves:\n            self.board.xboard(move)\n\n    def setup(self):\n        self.board = chess.Board(chess.STARTING_FEN)\n        self.midgame_fen = (\n            \"r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1\"\n        )\n        self.midgame_board = chess.Board(self.midgame_fen)\n        self.checkmate_fen = (\n            \"rnb1kbnr/pppp1ppp/4p3/8/6Pq/5P2/PPPPP2P/RNBQKBNR w KQkq - 1 3\"\n        )\n        self.checkmate_board = chess.Board(self.checkmate_fen)\n        self.stalemate_fen = \"k7/8/1Q6/8/8/8/8/7K b - - 0 1\"\n        self.stalemate_board = chess.Board(self.stalemate_fen)\n        self.legal_moves = list(self.board.legal_moves)\n    \n        self.push_pop_board = chess.Board()\n        self.push_pop_moves = list(self.push_pop_board.legal_moves)[:5]\n    \n        self.variation_moves = []\n        b = chess.Board()\n        for _ in range(5):\n            move = list(b.legal_moves)[0]\n            self.variation_moves.append(move)\n            b.push(move)\n    \n        self.pseudo_legal_moves = list(self.board.pseudo_legal_moves)\n        self.epd_string = self.board.epd()",
+        "min_run_count": 2,
+        "name": "BoardSuite.time_xboard",
+        "number": 0,
+        "param_names": [],
+        "params": [],
+        "repeat": 0,
+        "rounds": 2,
+        "sample_time": 0.01,
+        "type": "time",
+        "unit": "seconds",
+        "version": "ab5c85d57a4ba3e63eddf4c3aebb752e27444587862e5a42297488a21f28ef01",
         "warmup_time": -1
     },
     "GlobalFunctionSuite.time_file_name": {
@@ -1709,6 +2519,21 @@
         "version": "ade5c51db421916d94e037eee16c00aa918747402a3557468e40afba25aff4e1",
         "warmup_time": -1
     },
+    "MoveSuite.time_from_uci_invalid": {
+        "code": "class MoveSuite:\n    def time_from_uci_invalid(self):\n        for uci in [\"e2e9\", \"e\", \"a2a2\", \"Z@e4\"]:\n            try:\n                chess.Move.from_uci(uci)\n            except ValueError:\n                pass\n\n    def setup(self):\n        self.uci_strings = [\"e2e4\", \"a7a8q\", \"0000\", \"N@b3\"]\n        self.moves = [chess.Move.from_uci(uci) for uci in self.uci_strings]",
+        "min_run_count": 2,
+        "name": "MoveSuite.time_from_uci_invalid",
+        "number": 0,
+        "param_names": [],
+        "params": [],
+        "repeat": 0,
+        "rounds": 2,
+        "sample_time": 0.01,
+        "type": "time",
+        "unit": "seconds",
+        "version": "2626977d224f010046b552d021a7f94506bc40fbf767d8d23aa243a6359ac5f8",
+        "warmup_time": -1
+    },
     "MoveSuite.time_from_uci_normal": {
         "code": "class MoveSuite:\n    def time_from_uci_normal(self):\n        chess.Move.from_uci(\"e2e4\")\n\n    def setup(self):\n        self.uci_strings = [\"e2e4\", \"a7a8q\", \"0000\", \"N@b3\"]\n        self.moves = [chess.Move.from_uci(uci) for uci in self.uci_strings]",
         "min_run_count": 2,
@@ -1767,6 +2592,21 @@
         "type": "time",
         "unit": "seconds",
         "version": "6273eb9c15420332911d1205bf1786a82610c04ec580f47913bcc0470f1c35e1",
+        "warmup_time": -1
+    },
+    "MoveSuite.time_str_repr": {
+        "code": "class MoveSuite:\n    def time_str_repr(self):\n        for m in self.moves:\n            str(m)\n            repr(m)\n\n    def setup(self):\n        self.uci_strings = [\"e2e4\", \"a7a8q\", \"0000\", \"N@b3\"]\n        self.moves = [chess.Move.from_uci(uci) for uci in self.uci_strings]",
+        "min_run_count": 2,
+        "name": "MoveSuite.time_str_repr",
+        "number": 0,
+        "param_names": [],
+        "params": [],
+        "repeat": 0,
+        "rounds": 2,
+        "sample_time": 0.01,
+        "type": "time",
+        "unit": "seconds",
+        "version": "9b2fea1d450c86ffbe8380624dd5b8058e54d625500fc0d24cb09acbe0d83f21",
         "warmup_time": -1
     },
     "MoveSuite.time_uci": {
@@ -1872,6 +2712,21 @@
         "type": "time",
         "unit": "seconds",
         "version": "b1654a3e7b0c00cfc7d648b9d7f6ad9499bf55649ac6420bbbccefbc0187d4e3",
+        "warmup_time": -1
+    },
+    "PieceSuite.time_repr_svg": {
+        "code": "class PieceSuite:\n    def time_repr_svg(self):\n        for p in self.pieces:\n            p._repr_svg_()\n\n    def setup(self):\n        self.pieces = [\n            chess.Piece(pt, color) for pt in chess.PIECE_TYPES for color in chess.COLORS\n        ]\n        self.symbols = [p.symbol() for p in self.pieces]",
+        "min_run_count": 2,
+        "name": "PieceSuite.time_repr_svg",
+        "number": 0,
+        "param_names": [],
+        "params": [],
+        "repeat": 0,
+        "rounds": 2,
+        "sample_time": 0.01,
+        "type": "time",
+        "unit": "seconds",
+        "version": "442c1a2dd532cbe6083df2a2ed5f2167ad6912a8b555a135cf8afdb57c680087",
         "warmup_time": -1
     },
     "PieceSuite.time_symbol": {
@@ -1994,6 +2849,36 @@
         "version": "641539bf7614e47f68649e96a27211feb99df0a51eb4b6519e0490d6869ad896",
         "warmup_time": -1
     },
+    "RustCHessTestSuite.time_sum_as_str_py": {
+        "code": "class RustCHessTestSuite:\n    def time_sum_as_str_py(self):\n        sum_as_string_py(5, 20)",
+        "min_run_count": 2,
+        "name": "RustCHessTestSuite.time_sum_as_str_py",
+        "number": 0,
+        "param_names": [],
+        "params": [],
+        "repeat": 0,
+        "rounds": 2,
+        "sample_time": 0.01,
+        "type": "time",
+        "unit": "seconds",
+        "version": "cebaed61dab196c284ed18efd518d250fab474f8fbdc764bb4551d79b3820d7d",
+        "warmup_time": -1
+    },
+    "RustCHessTestSuite.time_sum_as_str_rust": {
+        "code": "class RustCHessTestSuite:\n    def time_sum_as_str_rust(self):\n        sum_as_string(5, 20)",
+        "min_run_count": 2,
+        "name": "RustCHessTestSuite.time_sum_as_str_rust",
+        "number": 0,
+        "param_names": [],
+        "params": [],
+        "repeat": 0,
+        "rounds": 2,
+        "sample_time": 0.01,
+        "type": "time",
+        "unit": "seconds",
+        "version": "b921c002b3ab5e9a9855c8eab951122c1f251ff659b8df737db72a60f1c2d20a",
+        "warmup_time": -1
+    },
     "SquareSetSuite.time_add": {
         "code": "class SquareSetSuite:\n    def time_add(self):\n        s = chess.SquareSet()\n        for sq in self.squares:\n            s.add(sq)\n\n    def setup(self):\n        self.empty = chess.SquareSet(chess.BB_EMPTY)\n        self.full = chess.SquareSet(chess.BB_ALL)\n        self.rank = chess.SquareSet.ray(chess.A1, chess.H1)\n        self.file_ = chess.SquareSet.ray(chess.A1, chess.A8)\n        self.diagonal = chess.SquareSet.ray(chess.A1, chess.H8)\n        self.sparse = chess.SquareSet(0x10204081020408)\n        self.squares = list(chess.SQUARES)\n        self.A1 = chess.A1\n        self.H8 = chess.H8\n        self.E4 = chess.E4",
         "min_run_count": 2,
@@ -2024,6 +2909,21 @@
         "version": "7045d36272a45384f524fc040e5eefcb87390df379f0d7fd1869c97c9fa1e02a",
         "warmup_time": -1
     },
+    "SquareSetSuite.time_bool": {
+        "code": "class SquareSetSuite:\n    def time_bool(self):\n        bool(self.sparse)\n\n    def setup(self):\n        self.empty = chess.SquareSet(chess.BB_EMPTY)\n        self.full = chess.SquareSet(chess.BB_ALL)\n        self.rank = chess.SquareSet.ray(chess.A1, chess.H1)\n        self.file_ = chess.SquareSet.ray(chess.A1, chess.A8)\n        self.diagonal = chess.SquareSet.ray(chess.A1, chess.H8)\n        self.sparse = chess.SquareSet(0x10204081020408)\n        self.squares = list(chess.SQUARES)\n        self.A1 = chess.A1\n        self.H8 = chess.H8\n        self.E4 = chess.E4",
+        "min_run_count": 2,
+        "name": "SquareSetSuite.time_bool",
+        "number": 0,
+        "param_names": [],
+        "params": [],
+        "repeat": 0,
+        "rounds": 2,
+        "sample_time": 0.01,
+        "type": "time",
+        "unit": "seconds",
+        "version": "3ff621d61c7d19175f88e30f892b232cdcc72e2aae79b0ce9bc1137e1ed7159f",
+        "warmup_time": -1
+    },
     "SquareSetSuite.time_carry_rippler": {
         "code": "class SquareSetSuite:\n    def time_carry_rippler(self):\n        list(self.sparse.carry_rippler())\n\n    def setup(self):\n        self.empty = chess.SquareSet(chess.BB_EMPTY)\n        self.full = chess.SquareSet(chess.BB_ALL)\n        self.rank = chess.SquareSet.ray(chess.A1, chess.H1)\n        self.file_ = chess.SquareSet.ray(chess.A1, chess.A8)\n        self.diagonal = chess.SquareSet.ray(chess.A1, chess.H8)\n        self.sparse = chess.SquareSet(0x10204081020408)\n        self.squares = list(chess.SQUARES)\n        self.A1 = chess.A1\n        self.H8 = chess.H8\n        self.E4 = chess.E4",
         "min_run_count": 2,
@@ -2037,6 +2937,21 @@
         "type": "time",
         "unit": "seconds",
         "version": "2c087429e71bd5c5098bdf9b7230333219688c5f17720518c826489fbae482a6",
+        "warmup_time": -1
+    },
+    "SquareSetSuite.time_clear": {
+        "code": "class SquareSetSuite:\n    def time_clear(self):\n        s = self.sparse.copy()\n        s.clear()\n\n    def setup(self):\n        self.empty = chess.SquareSet(chess.BB_EMPTY)\n        self.full = chess.SquareSet(chess.BB_ALL)\n        self.rank = chess.SquareSet.ray(chess.A1, chess.H1)\n        self.file_ = chess.SquareSet.ray(chess.A1, chess.A8)\n        self.diagonal = chess.SquareSet.ray(chess.A1, chess.H8)\n        self.sparse = chess.SquareSet(0x10204081020408)\n        self.squares = list(chess.SQUARES)\n        self.A1 = chess.A1\n        self.H8 = chess.H8\n        self.E4 = chess.E4",
+        "min_run_count": 2,
+        "name": "SquareSetSuite.time_clear",
+        "number": 0,
+        "param_names": [],
+        "params": [],
+        "repeat": 0,
+        "rounds": 2,
+        "sample_time": 0.01,
+        "type": "time",
+        "unit": "seconds",
+        "version": "4c5e66cb43ca9442bfc76c47770977b8f31c19d4bc36805c4f4229fbe9e90971",
         "warmup_time": -1
     },
     "SquareSetSuite.time_contains": {
@@ -2084,6 +2999,21 @@
         "version": "f1673df19bea1cacce36a8f4a0286ae6a0fa1e61d599de41de075c608ab2adf0",
         "warmup_time": -1
     },
+    "SquareSetSuite.time_eq": {
+        "code": "class SquareSetSuite:\n    def time_eq(self):\n        return self.sparse == self.full\n\n    def setup(self):\n        self.empty = chess.SquareSet(chess.BB_EMPTY)\n        self.full = chess.SquareSet(chess.BB_ALL)\n        self.rank = chess.SquareSet.ray(chess.A1, chess.H1)\n        self.file_ = chess.SquareSet.ray(chess.A1, chess.A8)\n        self.diagonal = chess.SquareSet.ray(chess.A1, chess.H8)\n        self.sparse = chess.SquareSet(0x10204081020408)\n        self.squares = list(chess.SQUARES)\n        self.A1 = chess.A1\n        self.H8 = chess.H8\n        self.E4 = chess.E4",
+        "min_run_count": 2,
+        "name": "SquareSetSuite.time_eq",
+        "number": 0,
+        "param_names": [],
+        "params": [],
+        "repeat": 0,
+        "rounds": 2,
+        "sample_time": 0.01,
+        "type": "time",
+        "unit": "seconds",
+        "version": "a364e7634f6cb46e0b8e496d6975f41c3b63a92ff7b89b756857dfa09e54d3b0",
+        "warmup_time": -1
+    },
     "SquareSetSuite.time_from_square": {
         "code": "class SquareSetSuite:\n    def time_from_square(self):\n        chess.SquareSet.from_square(self.E4)\n\n    def setup(self):\n        self.empty = chess.SquareSet(chess.BB_EMPTY)\n        self.full = chess.SquareSet(chess.BB_ALL)\n        self.rank = chess.SquareSet.ray(chess.A1, chess.H1)\n        self.file_ = chess.SquareSet.ray(chess.A1, chess.A8)\n        self.diagonal = chess.SquareSet.ray(chess.A1, chess.H8)\n        self.sparse = chess.SquareSet(0x10204081020408)\n        self.squares = list(chess.SQUARES)\n        self.A1 = chess.A1\n        self.H8 = chess.H8\n        self.E4 = chess.E4",
         "min_run_count": 2,
@@ -2097,6 +3027,36 @@
         "type": "time",
         "unit": "seconds",
         "version": "c70a47eedb20258549eb52183bc8a07daac983aec24ebd8bac1ecd7d1f52f54c",
+        "warmup_time": -1
+    },
+    "SquareSetSuite.time_i_methods": {
+        "code": "class SquareSetSuite:\n    def time_i_methods(self):\n        s = self.sparse.copy()\n        s |= self.rank\n        s &= self.rank\n        s -= self.rank\n        s ^= self.rank\n        s <<= 1\n        s >>= 1\n\n    def setup(self):\n        self.empty = chess.SquareSet(chess.BB_EMPTY)\n        self.full = chess.SquareSet(chess.BB_ALL)\n        self.rank = chess.SquareSet.ray(chess.A1, chess.H1)\n        self.file_ = chess.SquareSet.ray(chess.A1, chess.A8)\n        self.diagonal = chess.SquareSet.ray(chess.A1, chess.H8)\n        self.sparse = chess.SquareSet(0x10204081020408)\n        self.squares = list(chess.SQUARES)\n        self.A1 = chess.A1\n        self.H8 = chess.H8\n        self.E4 = chess.E4",
+        "min_run_count": 2,
+        "name": "SquareSetSuite.time_i_methods",
+        "number": 0,
+        "param_names": [],
+        "params": [],
+        "repeat": 0,
+        "rounds": 2,
+        "sample_time": 0.01,
+        "type": "time",
+        "unit": "seconds",
+        "version": "4bfba3ade2299eac15292f3737e5e7896c33ba50216e653c298b1e591524e0c4",
+        "warmup_time": -1
+    },
+    "SquareSetSuite.time_index": {
+        "code": "class SquareSetSuite:\n    def time_index(self):\n        import operator\n    \n        operator.index(self.sparse)\n\n    def setup(self):\n        self.empty = chess.SquareSet(chess.BB_EMPTY)\n        self.full = chess.SquareSet(chess.BB_ALL)\n        self.rank = chess.SquareSet.ray(chess.A1, chess.H1)\n        self.file_ = chess.SquareSet.ray(chess.A1, chess.A8)\n        self.diagonal = chess.SquareSet.ray(chess.A1, chess.H8)\n        self.sparse = chess.SquareSet(0x10204081020408)\n        self.squares = list(chess.SQUARES)\n        self.A1 = chess.A1\n        self.H8 = chess.H8\n        self.E4 = chess.E4",
+        "min_run_count": 2,
+        "name": "SquareSetSuite.time_index",
+        "number": 0,
+        "param_names": [],
+        "params": [],
+        "repeat": 0,
+        "rounds": 2,
+        "sample_time": 0.01,
+        "type": "time",
+        "unit": "seconds",
+        "version": "0c6281992c34f8d7b32b72d0e1a429e4319571895551ef6f634d85b10bec71ef",
         "warmup_time": -1
     },
     "SquareSetSuite.time_int": {
@@ -2249,6 +3209,21 @@
         "version": "01a366e5f10b56bcd92bfe06fccd1c6af295acc84a3ff470b830650a765248f3",
         "warmup_time": -1
     },
+    "SquareSetSuite.time_pop": {
+        "code": "class SquareSetSuite:\n    def time_pop(self):\n        s = self.sparse.copy()\n        while s:\n            s.pop()\n\n    def setup(self):\n        self.empty = chess.SquareSet(chess.BB_EMPTY)\n        self.full = chess.SquareSet(chess.BB_ALL)\n        self.rank = chess.SquareSet.ray(chess.A1, chess.H1)\n        self.file_ = chess.SquareSet.ray(chess.A1, chess.A8)\n        self.diagonal = chess.SquareSet.ray(chess.A1, chess.H8)\n        self.sparse = chess.SquareSet(0x10204081020408)\n        self.squares = list(chess.SQUARES)\n        self.A1 = chess.A1\n        self.H8 = chess.H8\n        self.E4 = chess.E4",
+        "min_run_count": 2,
+        "name": "SquareSetSuite.time_pop",
+        "number": 0,
+        "param_names": [],
+        "params": [],
+        "repeat": 0,
+        "rounds": 2,
+        "sample_time": 0.01,
+        "type": "time",
+        "unit": "seconds",
+        "version": "c9e211df586624ca6934b0b9e1ca214d3f2effaf8d9812d7836d96fdd440730c",
+        "warmup_time": -1
+    },
     "SquareSetSuite.time_ray": {
         "code": "class SquareSetSuite:\n    def time_ray(self):\n        chess.SquareSet.ray(self.A1, self.H8)\n\n    def setup(self):\n        self.empty = chess.SquareSet(chess.BB_EMPTY)\n        self.full = chess.SquareSet(chess.BB_ALL)\n        self.rank = chess.SquareSet.ray(chess.A1, chess.H1)\n        self.file_ = chess.SquareSet.ray(chess.A1, chess.A8)\n        self.diagonal = chess.SquareSet.ray(chess.A1, chess.H8)\n        self.sparse = chess.SquareSet(0x10204081020408)\n        self.squares = list(chess.SQUARES)\n        self.A1 = chess.A1\n        self.H8 = chess.H8\n        self.E4 = chess.E4",
         "min_run_count": 2,
@@ -2264,6 +3239,21 @@
         "version": "044e5f967a6cccc91c7941bdd75b8a747f9a95ceec779ab808a6f8da88a0c665",
         "warmup_time": -1
     },
+    "SquareSetSuite.time_remove": {
+        "code": "class SquareSetSuite:\n    def time_remove(self):\n        s = self.sparse.copy()\n        for sq in list(s):\n            s.remove(sq)\n\n    def setup(self):\n        self.empty = chess.SquareSet(chess.BB_EMPTY)\n        self.full = chess.SquareSet(chess.BB_ALL)\n        self.rank = chess.SquareSet.ray(chess.A1, chess.H1)\n        self.file_ = chess.SquareSet.ray(chess.A1, chess.A8)\n        self.diagonal = chess.SquareSet.ray(chess.A1, chess.H8)\n        self.sparse = chess.SquareSet(0x10204081020408)\n        self.squares = list(chess.SQUARES)\n        self.A1 = chess.A1\n        self.H8 = chess.H8\n        self.E4 = chess.E4",
+        "min_run_count": 2,
+        "name": "SquareSetSuite.time_remove",
+        "number": 0,
+        "param_names": [],
+        "params": [],
+        "repeat": 0,
+        "rounds": 2,
+        "sample_time": 0.01,
+        "type": "time",
+        "unit": "seconds",
+        "version": "13753685f0ba0bac008ddf099d35ac335572a3bcb04f6e0ff590562b43553fff",
+        "warmup_time": -1
+    },
     "SquareSetSuite.time_rshift": {
         "code": "class SquareSetSuite:\n    def time_rshift(self):\n        self.sparse >> 8\n\n    def setup(self):\n        self.empty = chess.SquareSet(chess.BB_EMPTY)\n        self.full = chess.SquareSet(chess.BB_ALL)\n        self.rank = chess.SquareSet.ray(chess.A1, chess.H1)\n        self.file_ = chess.SquareSet.ray(chess.A1, chess.A8)\n        self.diagonal = chess.SquareSet.ray(chess.A1, chess.H8)\n        self.sparse = chess.SquareSet(0x10204081020408)\n        self.squares = list(chess.SQUARES)\n        self.A1 = chess.A1\n        self.H8 = chess.H8\n        self.E4 = chess.E4",
         "min_run_count": 2,
@@ -2277,6 +3267,21 @@
         "type": "time",
         "unit": "seconds",
         "version": "3bd7633c85b9392150d809dc3d6a2a08a0e934b4d73b57405600ce87b623627d",
+        "warmup_time": -1
+    },
+    "SquareSetSuite.time_str_repr": {
+        "code": "class SquareSetSuite:\n    def time_str_repr(self):\n        str(self.sparse)\n        repr(self.sparse)\n\n    def setup(self):\n        self.empty = chess.SquareSet(chess.BB_EMPTY)\n        self.full = chess.SquareSet(chess.BB_ALL)\n        self.rank = chess.SquareSet.ray(chess.A1, chess.H1)\n        self.file_ = chess.SquareSet.ray(chess.A1, chess.A8)\n        self.diagonal = chess.SquareSet.ray(chess.A1, chess.H8)\n        self.sparse = chess.SquareSet(0x10204081020408)\n        self.squares = list(chess.SQUARES)\n        self.A1 = chess.A1\n        self.H8 = chess.H8\n        self.E4 = chess.E4",
+        "min_run_count": 2,
+        "name": "SquareSetSuite.time_str_repr",
+        "number": 0,
+        "param_names": [],
+        "params": [],
+        "repeat": 0,
+        "rounds": 2,
+        "sample_time": 0.01,
+        "type": "time",
+        "unit": "seconds",
+        "version": "87a3ba9ae48c0057d60c4abc15f3cfd34e139a1ef34df4ece7335480be221a6d",
         "warmup_time": -1
     },
     "SquareSetSuite.time_symmetric_difference": {
@@ -2322,6 +3327,21 @@
         "type": "time",
         "unit": "seconds",
         "version": "72e181baa94f4fdecd7ed78fc98349ba2725d8eee8bed6d85cd664e9b2a902fc",
+        "warmup_time": -1
+    },
+    "SquareSetSuite.time_update_methods": {
+        "code": "class SquareSetSuite:\n    def time_update_methods(self):\n        s = self.sparse.copy()\n        s.update(self.rank)\n        s.intersection_update(self.rank)\n        s.difference_update(self.rank)\n        s.symmetric_difference_update(self.rank)\n\n    def setup(self):\n        self.empty = chess.SquareSet(chess.BB_EMPTY)\n        self.full = chess.SquareSet(chess.BB_ALL)\n        self.rank = chess.SquareSet.ray(chess.A1, chess.H1)\n        self.file_ = chess.SquareSet.ray(chess.A1, chess.A8)\n        self.diagonal = chess.SquareSet.ray(chess.A1, chess.H8)\n        self.sparse = chess.SquareSet(0x10204081020408)\n        self.squares = list(chess.SQUARES)\n        self.A1 = chess.A1\n        self.H8 = chess.H8\n        self.E4 = chess.E4",
+        "min_run_count": 2,
+        "name": "SquareSetSuite.time_update_methods",
+        "number": 0,
+        "param_names": [],
+        "params": [],
+        "repeat": 0,
+        "rounds": 2,
+        "sample_time": 0.01,
+        "type": "time",
+        "unit": "seconds",
+        "version": "4853596949fc224de9d3515946859a047eb9c2d0908cf3edf73804925af63f8d",
         "warmup_time": -1
     },
     "version": 2

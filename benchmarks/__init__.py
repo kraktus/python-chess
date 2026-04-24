@@ -1,5 +1,19 @@
 import chess
+from rust_chess import sum_as_string
 
+
+
+def sum_as_string_py(a: int, b: int):
+    return str(a + b)
+
+
+class RustCHessTestSuite:
+
+    def time_sum_as_str_py(self):
+        sum_as_string_py(5, 20)
+
+    def time_sum_as_str_rust(self):
+        sum_as_string(5, 20)
 
 class OutcomeSuite:
     def setup(self):
