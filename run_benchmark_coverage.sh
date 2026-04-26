@@ -8,7 +8,7 @@ fi
 source myenv/bin/activate
 
 # Install requirements
-pip install -e . asv coverage
+pip install -e . asv coverage maturin && cd rust_chess && maturin develop && cd -
 
 # Configure coverage
 cat << 'EOF' > .coveragerc
