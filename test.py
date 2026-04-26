@@ -12,8 +12,6 @@ import textwrap
 import unittest
 import io
 
-import rust_chess
-
 import chess
 import chess.gaviota
 import chess.engine
@@ -1781,10 +1779,10 @@ class BaseBoardTestCase(unittest.TestCase):
 class SquareSetTestCase(unittest.TestCase):
 
     def test_equality(self):
-        a1 = rust_chess.SquareSet(chess.BB_RANK_4)
-        a2 = rust_chess.SquareSet(chess.BB_RANK_4)
-        b1 = rust_chess.SquareSet(chess.BB_RANK_5 | chess.BB_RANK_6)
-        b2 = rust_chess.SquareSet(chess.BB_RANK_5 | chess.BB_RANK_6)
+        a1 = chess.SquareSet(chess.BB_RANK_4)
+        a2 = chess.SquareSet(chess.BB_RANK_4)
+        b1 = chess.SquareSet(chess.BB_RANK_5 | chess.BB_RANK_6)
+        b2 = chess.SquareSet(chess.BB_RANK_5 | chess.BB_RANK_6)
 
         self.assertEqual(a1, a2)
         self.assertEqual(b1, b2)
@@ -1796,11 +1794,11 @@ class SquareSetTestCase(unittest.TestCase):
         self.assertFalse(a1 == b1)
         self.assertFalse(a2 == b2)
 
-        self.assertEqual(rust_chess.SquareSet(chess.BB_ALL), chess.BB_ALL)
-        self.assertEqual(chess.BB_ALL, rust_chess.SquareSet(chess.BB_ALL))
+        self.assertEqual(chess.SquareSet(chess.BB_ALL), chess.BB_ALL)
+        self.assertEqual(chess.BB_ALL, chess.SquareSet(chess.BB_ALL))
 
-        self.assertEqual(int(rust_chess.SquareSet(rust_chess.SquareSet(999))), 999)
-        self.assertEqual(rust_chess.SquareSet([chess.B8]), chess.BB_B8)
+        self.assertEqual(int(chess.SquareSet(chess.SquareSet(999))), 999)
+        self.assertEqual(chess.SquareSet([chess.B8]), chess.BB_B8)
 
     def test_string_conversion(self):
         expected = textwrap.dedent("""\
@@ -1813,23 +1811,23 @@ class SquareSetTestCase(unittest.TestCase):
             . . . . . . . .
             1 1 1 1 1 1 1 1""")
 
-        bb = rust_chess.SquareSet(chess.BB_H8 | chess.BB_B7 | chess.BB_RANK_1)
+        bb = chess.SquareSet(chess.BB_H8 | chess.BB_B7 | chess.BB_RANK_1)
         self.assertEqual(str(bb), expected)
 
     def test_iter(self):
-        bb = rust_chess.SquareSet(chess.BB_G7 | chess.BB_G8)
+        bb = chess.SquareSet(chess.BB_G7 | chess.BB_G8)
         self.assertEqual(list(bb), [chess.G7, chess.G8])
 
     def test_reversed(self):
-        bb = rust_chess.SquareSet(chess.BB_A1 | chess.BB_B1 | chess.BB_A7 | chess.BB_E1)
+        bb = chess.SquareSet(chess.BB_A1 | chess.BB_B1 | chess.BB_A7 | chess.BB_E1)
         self.assertEqual(list(reversed(bb)), [chess.A7, chess.E1, chess.B1, chess.A1])
 
     def test_arithmetic(self):
-        self.assertEqual(rust_chess.SquareSet(chess.BB_RANK_2) & chess.BB_FILE_D, chess.BB_D2)
-        self.assertEqual(rust_chess.SquareSet(chess.BB_ALL) ^ chess.BB_EMPTY, chess.BB_ALL)
-        self.assertEqual(rust_chess.SquareSet(chess.BB_C1) | chess.BB_FILE_C, chess.BB_FILE_C)
+        self.assertEqual(chess.SquareSet(chess.BB_RANK_2) & chess.BB_FILE_D, chess.BB_D2)
+        self.assertEqual(chess.SquareSet(chess.BB_ALL) ^ chess.BB_EMPTY, chess.BB_ALL)
+        self.assertEqual(chess.SquareSet(chess.BB_C1) | chess.BB_FILE_C, chess.BB_FILE_C)
 
-        bb = rust_chess.SquareSet(chess.BB_EMPTY)
+        bb = chess.SquareSet(chess.BB_EMPTY)
         bb ^= chess.BB_ALL
         self.assertEqual(bb, chess.BB_ALL)
         bb &= chess.BB_E4
@@ -1837,10 +1835,10 @@ class SquareSetTestCase(unittest.TestCase):
         bb |= chess.BB_RANK_4
         self.assertEqual(bb, chess.BB_RANK_4)
 
-        self.assertEqual(rust_chess.SquareSet(chess.BB_F3) << 1, chess.BB_G3)
-        self.assertEqual(rust_chess.SquareSet(chess.BB_C8) >> 2, chess.BB_A8)
+        self.assertEqual(chess.SquareSet(chess.BB_F3) << 1, chess.BB_G3)
+        self.assertEqual(chess.SquareSet(chess.BB_C8) >> 2, chess.BB_A8)
 
-        bb = rust_chess.SquareSet(chess.BB_D1)
+        bb = chess.SquareSet(chess.BB_D1)
         bb <<= 1
         self.assertEqual(bb, chess.BB_E1)
         bb >>= 2
@@ -1858,12 +1856,12 @@ class SquareSetTestCase(unittest.TestCase):
         ]
 
         for a in examples:
-            self.assertEqual(rust_chess.SquareSet(a).copy(), a)
+            self.assertEqual(chess.SquareSet(a).copy(), a)
 
         for a in examples:
-            a = rust_chess.SquareSet(a)
+            a = chess.SquareSet(a)
             for b in examples:
-                b = rust_chess.SquareSet(b)
+                b = chess.SquareSet(b)
                 self.assertEqual(set(a).isdisjoint(set(b)), a.isdisjoint(b))
                 self.assertEqual(set(a).issubset(set(b)), a.issubset(b))
                 self.assertEqual(set(a).issuperset(set(b)), a.issuperset(b))
@@ -1873,7 +1871,7 @@ class SquareSetTestCase(unittest.TestCase):
                 self.assertEqual(set(a).symmetric_difference(set(b)), set(a.symmetric_difference(b)))
 
     def test_mutable_set_operations(self):
-        squares = rust_chess.SquareSet(chess.BB_A1)
+        squares = chess.SquareSet(chess.BB_A1)
         squares.update(chess.BB_FILE_H)
         self.assertEqual(squares, chess.BB_A1 | chess.BB_FILE_H)
 
@@ -1911,16 +1909,16 @@ class SquareSetTestCase(unittest.TestCase):
         self.assertEqual(squares, chess.BB_EMPTY)
 
     def test_from_square(self):
-        self.assertEqual(rust_chess.SquareSet.from_square(chess.H5), chess.BB_H5)
-        self.assertEqual(rust_chess.SquareSet.from_square(chess.C2), chess.BB_C2)
+        self.assertEqual(chess.SquareSet.from_square(chess.H5), chess.BB_H5)
+        self.assertEqual(chess.SquareSet.from_square(chess.C2), chess.BB_C2)
 
     def test_carry_rippler(self):
-        self.assertEqual(sum(1 for _ in rust_chess.SquareSet(chess.BB_D1).carry_rippler()), 2 ** 1)
-        self.assertEqual(sum(1 for _ in rust_chess.SquareSet(chess.BB_FILE_B).carry_rippler()), 2 ** 8)
+        self.assertEqual(sum(1 for _ in chess.SquareSet(chess.BB_D1).carry_rippler()), 2 ** 1)
+        self.assertEqual(sum(1 for _ in chess.SquareSet(chess.BB_FILE_B).carry_rippler()), 2 ** 8)
 
     def test_mirror(self):
-        self.assertEqual(rust_chess.SquareSet(0x00a2_0900_0004_a600).mirror(), 0x00a6_0400_0009_a200)
-        self.assertEqual(rust_chess.SquareSet(0x1e22_2212_0e0a_1222).mirror(), 0x2212_0a0e_1222_221e)
+        self.assertEqual(chess.SquareSet(0x00a2_0900_0004_a600).mirror(), 0x00a6_0400_0009_a200)
+        self.assertEqual(chess.SquareSet(0x1e22_2212_0e0a_1222).mirror(), 0x2212_0a0e_1222_221e)
 
     def test_flip(self):
         self.assertEqual(chess.flip_vertical(chess.BB_ALL), chess.BB_ALL)
@@ -1928,30 +1926,30 @@ class SquareSetTestCase(unittest.TestCase):
         self.assertEqual(chess.flip_diagonal(chess.BB_ALL), chess.BB_ALL)
         self.assertEqual(chess.flip_anti_diagonal(chess.BB_ALL), chess.BB_ALL)
 
-        s = rust_chess.SquareSet(0x1e22_2212_0e0a_1222)  # Letter R
+        s = chess.SquareSet(0x1e22_2212_0e0a_1222)  # Letter R
         self.assertEqual(chess.flip_vertical(s), 0x2212_0a0e_1222_221e)
         self.assertEqual(chess.flip_horizontal(s), 0x7844_4448_7050_4844)
         self.assertEqual(chess.flip_diagonal(s), 0x0000_6192_8c88_ff00)
         self.assertEqual(chess.flip_anti_diagonal(s), 0x00ff_1131_4986_0000)
 
     def test_len_of_complenent(self):
-        squares = rust_chess.SquareSet(~chess.BB_ALL)
+        squares = chess.SquareSet(~chess.BB_ALL)
         self.assertEqual(len(squares), 0)
 
-        squares = ~rust_chess.SquareSet(chess.BB_BACKRANKS)
+        squares = ~chess.SquareSet(chess.BB_BACKRANKS)
         self.assertEqual(len(squares), 48)
 
     def test_int_conversion(self):
-        self.assertEqual(int(rust_chess.SquareSet(chess.BB_CENTER)), 0x0000_0018_1800_0000)
-        self.assertEqual(hex(rust_chess.SquareSet(chess.BB_CENTER)), "0x1818000000")
-        self.assertEqual(bin(rust_chess.SquareSet(chess.BB_CENTER)), "0b1100000011000000000000000000000000000")
+        self.assertEqual(int(chess.SquareSet(chess.BB_CENTER)), 0x0000_0018_1800_0000)
+        self.assertEqual(hex(chess.SquareSet(chess.BB_CENTER)), "0x1818000000")
+        self.assertEqual(bin(chess.SquareSet(chess.BB_CENTER)), "0b1100000011000000000000000000000000000")
 
     def test_tolist(self):
-        self.assertEqual(rust_chess.SquareSet(chess.BB_LIGHT_SQUARES).tolist().count(True), 32)
+        self.assertEqual(chess.SquareSet(chess.BB_LIGHT_SQUARES).tolist().count(True), 32)
 
     def test_flip_ducktyping(self):
         bb = 0x1e22_2212_0e0a_1222
-        squares = rust_chess.SquareSet(bb)
+        squares = chess.SquareSet(bb)
         for f in [chess.flip_vertical, chess.flip_horizontal, chess.flip_diagonal, chess.flip_anti_diagonal]:
             self.assertEqual(int(f(squares)), f(bb))
             self.assertEqual(int(squares), bb)  # Not mutated
