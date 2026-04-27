@@ -1,8 +1,21 @@
+use pyo3::IntoPyObjectExt;
 use pyo3::exceptions::{PyKeyError, PyTypeError, PyValueError};
 use pyo3::prelude::*;
 use pyo3::types::{PyAny, PyModule, PyTuple, PyType};
-use pyo3::IntoPyObjectExt;
 use shakmaty::{Bitboard, Square};
+
+struct PySquare(Square);
+
+impl FromPyObject<'_, '_> for PySquare {
+    type Error = PyErr;
+
+    fn extract(obj: Borrowed<'_, '_, PyAny>) -> Result<Self, Self::Error> {
+        let int: i32 = obj.extract()?;
+        Ok(PySquare(int.try_into().or_else(|_| {
+            Err(PyTypeError::new_err(format!("Square out of bounds: {int}")))
+        })?))
+    }
+}
 
 fn extract_mask(value: &Bound<'_, PyAny>) -> PyResult<Bitboard> {
     if let Ok(ss) = value.extract::<SquareSet>() {
@@ -11,19 +24,17 @@ fn extract_mask(value: &Bound<'_, PyAny>) -> PyResult<Bitboard> {
 
     if let Ok(val) = value.call_method0("__int__")
         && let Ok(masked) = val.call_method1("__and__", (Bitboard::FULL.0,))
-            && let Ok(mask) = masked.extract::<u64>() {
-                return Ok(Bitboard(mask));
-            }
+        && let Ok(mask) = masked.extract::<u64>()
+    {
+        return Ok(Bitboard(mask));
+    }
 
     let mut mask = Bitboard::EMPTY;
     if let Ok(iter) = value.try_iter() {
         for item in iter {
             let item = item?;
-            let square: u8 = item.extract()?;
-            if square >= 64 {
-                return Err(PyValueError::new_err("Square out of bounds"));
-            }
-            mask.add(Square::new(square as u32));
+            let square = item.extract::<PySquare>()?;
+            mask.add(square.0);
         }
         return Ok(mask);
     }
@@ -61,12 +72,8 @@ impl SquareSet {
         self.bb = Bitboard(value);
     }
 
-    fn __contains__(&self, square: u8) -> bool {
-        if square >= 64 {
-            false
-        } else {
-            self.bb.contains(Square::new(square as u32))
-        }
+    fn __contains__(&self, square: PySquare) -> bool {
+        self.bb.contains(square.0)
     }
 
     fn __iter__(&self) -> SquareSetIter {
@@ -81,33 +88,20 @@ impl SquareSet {
         self.bb.count()
     }
 
-    fn add(&mut self, square: u8) -> PyResult<()> {
-        if square >= 64 {
-            return Err(PyValueError::new_err("Square out of bounds"));
-        }
-        self.bb.add(Square::new(square as u32));
-        Ok(())
+    fn add(&mut self, square: PySquare) {
+        self.bb.add(square.0);
     }
 
-    fn discard(&mut self, square: u8) {
-        if square < 64 {
-            self.bb.toggle(Square::new(square as u32));
-            self.bb.0 &= !(1u64 << square); // actually toggle just flips, we want discard (clear bit)
-                                            // Wait, shakmaty Bitboard discard is not natively "discard", let's just do bitwise:
-            self.bb.0 &= !(1u64 << square);
-        }
+    fn discard(&mut self, square: PySquare) {
+        self.bb.discard(square.0);
     }
 
-    fn remove(&mut self, square: u8) -> PyResult<()> {
-        if square >= 64 {
-            return Err(PyKeyError::new_err(square));
-        }
-        let mask = 1u64 << square;
-        if (self.bb.0 & mask) != 0 {
-            self.bb.0 ^= mask;
+    fn remove(&mut self, square: PySquare) -> PyResult<()> {
+        if self.bb.contains(square.0) {
+            self.bb.discard(square.0);
             Ok(())
         } else {
-            Err(PyKeyError::new_err(square))
+            Err(PyKeyError::new_err::<i32>(square.0.into()))
         }
     }
 
@@ -278,11 +272,7 @@ impl SquareSet {
     }
 
     fn __lshift__(&self, shift: u32) -> SquareSet {
-        let mask = if shift >= 64 {
-            0
-        } else {
-            self.bb.0 << shift
-        };
+        let mask = if shift >= 64 { 0 } else { self.bb.0 << shift };
         SquareSet { bb: Bitboard(mask) }
     }
 
@@ -292,11 +282,7 @@ impl SquareSet {
     }
 
     fn __ilshift__(&mut self, shift: u32) {
-        self.bb.0 = if shift >= 64 {
-            0
-        } else {
-            self.bb.0 << shift
-        };
+        self.bb.0 = if shift >= 64 { 0 } else { self.bb.0 << shift };
     }
 
     fn __irshift__(&mut self, shift: u32) {
@@ -336,35 +322,24 @@ impl SquareSet {
     }
 
     #[classmethod]
-    fn ray(_cls: &Bound<'_, PyType>, a: u8, b: u8) -> PyResult<SquareSet> {
-        if a >= 64 || b >= 64 {
-            return Err(PyValueError::new_err("Square out of bounds"));
+    fn ray(_cls: &Bound<'_, PyType>, a: PySquare, b: PySquare) -> SquareSet {
+        SquareSet {
+            bb: shakmaty::attacks::ray(a.0, b.0),
         }
-        let sq_a = Square::new(a as u32);
-        let sq_b = Square::new(b as u32);
-        let ray = shakmaty::attacks::ray(sq_a, sq_b);
-        Ok(SquareSet { bb: ray })
     }
 
     #[classmethod]
-    fn between(_cls: &Bound<'_, PyType>, a: u8, b: u8) -> PyResult<SquareSet> {
-        if a >= 64 || b >= 64 {
-            return Err(PyValueError::new_err("Square out of bounds"));
+    fn between(_cls: &Bound<'_, PyType>, a: PySquare, b: PySquare) -> SquareSet {
+        SquareSet {
+            bb: shakmaty::attacks::between(a.0, b.0),
         }
-        let sq_a = Square::new(a as u32);
-        let sq_b = Square::new(b as u32);
-        let between = shakmaty::attacks::between(sq_a, sq_b);
-        Ok(SquareSet { bb: between })
     }
 
     #[classmethod]
-    fn from_square(_cls: &Bound<'_, PyType>, square: u8) -> PyResult<SquareSet> {
-        if square >= 64 {
-            return Err(PyValueError::new_err("Square out of bounds"));
+    fn from_square(_cls: &Bound<'_, PyType>, square: PySquare) -> SquareSet {
+        SquareSet {
+            bb: Bitboard::from_square(square.0),
         }
-        Ok(SquareSet {
-            bb: Bitboard(1u64 << square),
-        })
     }
 }
 

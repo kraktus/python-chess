@@ -1,4 +1,4 @@
-use shakmaty::{Bitboard, Square, Rank};
+use shakmaty::{Bitboard, Rank, Square};
 
 fn main() {
     let bb = Bitboard::from_square(Square::H8)
