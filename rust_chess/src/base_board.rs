@@ -46,11 +46,22 @@ impl OccupiedCo {
 }
 
 #[pyclass(subclass, dict, module = "rust_chess", name = "BaseBoard")]
-#[derive(Clone, Default, PartialEq, Eq)]
+#[derive(Clone, PartialEq, Eq)]
 pub struct BaseBoard {
     pub by_role: shakmaty::ByRole<Bitboard>,
     pub by_color: shakmaty::ByColor<Bitboard>,
     pub promoted: Bitboard,
+}
+
+impl Default for BaseBoard {
+    fn default() -> Self {
+        let (roles, colors) = Board::default().into_bitboards();
+        Self {
+            by_role: roles,
+            by_color: colors,
+            promoted: Bitboard::EMPTY,
+        }
+    }
 }
 
 impl BaseBoard {
