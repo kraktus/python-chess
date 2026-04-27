@@ -1,5 +1,9 @@
 
 
+
+## Guidelines
+
+
 - When porting API to rust, always use the highest-level of abstraction of shakmaty internal, do not fallback to constants.
 - Also use shakmaty constant every time it is possible, like for default board fen, full bitboard, etc.
 - Never implement private python API (starting with an underscore)
@@ -13,4 +17,8 @@ Exemple:
 
 - Never modify chess/__init__.py
 - Never modify test.py
-- All your temporary scripts/tests should be in a tmp folder- When deriving `Default` for board-like structures, ensure it returns the standard chess starting position (e.g. `shakmaty::Board::default()`), not an empty board, as PyO3 will use this for the Python `__new__` default without arguments.
+- All your temporary scripts/tests should be in a tmp folder.
+
+## testing 
+
+run ./bin/test.sh
