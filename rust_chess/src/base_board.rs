@@ -367,10 +367,8 @@ impl BaseBoard {
         let rm_piece = |b: &mut Board| {
             removed_piece = b.remove_piece_at(square.0).map(PyPiece);
         };
-    
-        let piece_promoted = |bb: Bitboard| -> Bitboard {
-            bb.without(square.0)
-        };
+
+        let piece_promoted = |bb: Bitboard| -> Bitboard { bb.without(square.0) };
         self.modify_board(rm_piece, piece_promoted)?;
         Ok(removed_piece)
     }
@@ -496,20 +494,10 @@ impl BaseBoard {
         Ok(board)
     }
 
-    fn mirror(&self) -> Self {
-        let mut board = self.clone();
-        if let Ok(mut b) = self.board() {
-            b.mirror();
-            let (roles, colors) = b.into_bitboards();
-            board.by_role = roles;
-            board.by_color = colors;
-        } else {
-            board.by_role.as_mut().for_each(|r| *r = r.flip_vertical());
-            board.by_color.as_mut().for_each(|c| *c = c.flip_vertical());
-            board.by_color.swap();
-        }
-        board.promoted = Bitboard(board.promoted.0.swap_bytes());
-        board
+    fn mirror(&self) -> PyResult<Self> {
+        let mut base_board = self.clone();
+        base_board.modify_board(Board::mirror, Bitboard::flip_vertical)?;
+        Ok(base_board)
     }
 }
 
