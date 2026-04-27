@@ -6,32 +6,6 @@ use shakmaty::{Bitboard, Square, Color, Role};
 
 use crate::square_set::SquareSet;
 
-#[macro_export]
-macro_rules! derive_deref_and_mut {
-    ($wrapper:ident, $inner:ty, $field:tt) => {
-        impl std::ops::Deref for $wrapper {
-            type Target = $inner;
-
-            #[inline]
-            fn deref(&self) -> &Self::Target {
-                &self.$field
-            }
-        }
-
-        impl std::ops::DerefMut for $wrapper {
-            #[inline]
-            fn deref_mut(&mut self) -> &mut Self::Target {
-                &mut self.$field
-            }
-        }
-    };
-    ($wrapper:ident, $inner:ty) => {
-        derive_deref_and_mut!($wrapper, $inner, 0);
-    };
-}
-
-use derive_deref_and_mut;
-
 pub fn extract_mask(value: &Bound<'_, PyAny>) -> PyResult<Bitboard> {
     if let Ok(ss) = value.extract::<SquareSet>() {
         return Ok(ss.bb);
@@ -60,8 +34,7 @@ pub fn extract_mask(value: &Bound<'_, PyAny>) -> PyResult<Bitboard> {
 }
 
 
-pub struct IntoSquareSet(Bitboard);
-derive_deref_and_mut!(IntoSquareSet, Bitboard);
+pub struct IntoSquareSet(pub Bitboard);
 
 impl FromPyObject<'_, '_> for IntoSquareSet {
     type Error = PyErr;
@@ -72,7 +45,6 @@ impl FromPyObject<'_, '_> for IntoSquareSet {
 }
 
 pub struct PySquare(pub Square);
-derive_deref_and_mut!(PySquare, Square);
 
 impl FromPyObject<'_, '_> for PySquare {
     type Error = PyErr;
@@ -86,7 +58,6 @@ impl FromPyObject<'_, '_> for PySquare {
 }
 
 pub struct PyRole(pub Role);
-derive_deref_and_mut!(PyRole, Role);
 
 impl FromPyObject<'_, '_> for PyRole {
     type Error = PyErr;
@@ -100,7 +71,6 @@ impl FromPyObject<'_, '_> for PyRole {
 }
 
 pub struct PyColor(pub Color);
-derive_deref_and_mut!(PyColor, Color);
 
 impl FromPyObject<'_, '_> for PyColor {
     type Error = PyErr;

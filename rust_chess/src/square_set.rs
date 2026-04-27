@@ -59,11 +59,11 @@ impl SquareSet {
     }
 
     fn remove(&mut self, square: PySquare) -> PyResult<()> {
-        if self.bb.contains(*square) {
-            self.bb.discard(*square);
+        if self.bb.contains(square.0) {
+            self.bb.discard(square.0);
             Ok(())
         } else {
-            Err(PyKeyError::new_err::<i32>(square.0.into()))
+            Err(PyKeyError::new_err(i32::from(square.0)))
         }
     }
 
@@ -89,7 +89,7 @@ impl SquareSet {
     }
 
     fn issuperset(&self, other: IntoSquareSet) -> PyResult<bool> {
-        Ok(other.without(self.bb).is_empty())
+        Ok(other.0.without(self.bb).is_empty())
     }
 
     fn union(&self, other: IntoSquareSet) -> PyResult<SquareSet> {
@@ -103,9 +103,8 @@ impl SquareSet {
     }
 
     fn intersection(&self, other: IntoSquareSet) -> PyResult<SquareSet> {
-        let other_mask = extract_mask(other)?;
         Ok(SquareSet {
-            bb: self.bb.intersect(other_mask),
+            bb: self.bb.intersect(other.0),
         })
     }
 
@@ -113,25 +112,23 @@ impl SquareSet {
         self.intersection(other)
     }
 
-    fn difference(&self, other: &Bound<'_, PyAny>) -> PyResult<SquareSet> {
-        let other_mask = extract_mask(other)?;
+    fn difference(&self, other: IntoSquareSet) -> PyResult<SquareSet> {
         Ok(SquareSet {
-            bb: self.bb.without(other_mask),
+            bb: self.bb.without(other.0),
         })
     }
 
-    fn __sub__(&self, other: &Bound<'_, PyAny>) -> PyResult<SquareSet> {
+    fn __sub__(&self, other: IntoSquareSet) -> PyResult<SquareSet> {
         self.difference(other)
     }
 
-    fn symmetric_difference(&self, other: &Bound<'_, PyAny>) -> PyResult<SquareSet> {
-        let other_mask = extract_mask(other)?;
+    fn symmetric_difference(&self, other: IntoSquareSet) -> PyResult<SquareSet> {
         Ok(SquareSet {
-            bb: self.bb.toggled(other_mask),
+            bb: self.bb.toggled(other.0),
         })
     }
 
-    fn __xor__(&self, other: &Bound<'_, PyAny>) -> PyResult<SquareSet> {
+    fn __xor__(&self, other: IntoSquareSet) -> PyResult<SquareSet> {
         self.symmetric_difference(other)
     }
 
@@ -147,8 +144,8 @@ impl SquareSet {
         Ok(())
     }
 
-    fn __ior__(&mut self, other: &Bound<'_, PyAny>) -> PyResult<()> {
-        self.bb = self.bb.with(extract_mask(other)?);
+    fn __ior__(&mut self, other: IntoSquareSet) -> PyResult<()> {
+        self.bb = self.bb.with(other.0);
         Ok(())
     }
 
@@ -160,8 +157,8 @@ impl SquareSet {
         Ok(())
     }
 
-    fn __iand__(&mut self, other: &Bound<'_, PyAny>) -> PyResult<()> {
-        self.bb = self.bb.intersect(extract_mask(other)?);
+    fn __iand__(&mut self, other: IntoSquareSet) -> PyResult<()> {
+        self.bb = self.bb.intersect(other.0);
         Ok(())
     }
 
@@ -173,8 +170,8 @@ impl SquareSet {
         Ok(())
     }
 
-    fn __isub__(&mut self, other: &Bound<'_, PyAny>) -> PyResult<()> {
-        self.bb = self.bb.without(extract_mask(other)?);
+    fn __isub__(&mut self, other: IntoSquareSet) -> PyResult<()> {
+        self.bb = self.bb.without(other.0);
         Ok(())
     }
 
@@ -186,8 +183,8 @@ impl SquareSet {
         Ok(())
     }
 
-    fn __ixor__(&mut self, other: &Bound<'_, PyAny>) -> PyResult<()> {
-        self.bb = self.bb.toggled(extract_mask(other)?);
+    fn __ixor__(&mut self, other: IntoSquareSet) -> PyResult<()> {
+        self.bb = self.bb.toggled(other.0);
         Ok(())
     }
 
