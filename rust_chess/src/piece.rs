@@ -6,14 +6,12 @@ use std::convert::TryFrom;
 
 #[pyclass(module = "rust_chess", from_py_object, eq, name = "Piece")]
 #[derive(Clone, Copy, PartialEq, Eq, Hash)]
-pub struct PyPiece {
-    pub inner: Piece,
-}
+pub struct PyPiece(pub Piece);
 
 impl From<Piece> for PyPiece {
     #[inline]
     fn from(inner: Piece) -> Self {
-        Self { inner }
+        Self(inner)
     }
 }
 
@@ -25,9 +23,7 @@ impl PyPiece {
         let role = Role::try_from(piece_type)
             .map_err(|_| PyValueError::new_err(format!("invalid piece type: {}", piece_type)))?;
         let color = if color { Color::White } else { Color::Black };
-        Ok(PyPiece {
-            inner: Piece { role, color },
-        })
+        Ok(PyPiece(Piece { role, color }))
     }
 
     #[classattr]
@@ -36,40 +32,40 @@ impl PyPiece {
 
     #[getter]
     fn piece_type(&self) -> u8 {
-        self.inner.role as u8
+        self.0.role as u8
     }
 
     #[setter]
     fn set_piece_type(&mut self, piece_type: u8) -> PyResult<()> {
         let role = Role::try_from(piece_type)
             .map_err(|_| PyValueError::new_err(format!("invalid piece type: {}", piece_type)))?;
-        self.inner.role = role;
+        self.0.role = role;
         Ok(())
     }
 
     #[getter]
     fn color(&self) -> bool {
-        self.inner.color.is_white()
+        self.0.color.is_white()
     }
 
     #[setter]
     fn set_color(&mut self, color: bool) {
-        self.inner.color = if color { Color::White } else { Color::Black };
+        self.0.color = if color { Color::White } else { Color::Black };
     }
 
     fn symbol(&self) -> char {
-        self.inner.char()
+        self.0.char()
     }
 
     #[pyo3(signature = (*, invert_color=false))]
     const fn unicode_symbol(&self, invert_color: bool) -> char {
         // xor not const yet
         let color = if invert_color {
-            self.inner.color.other()
+            self.0.color.other()
         } else {
-            self.inner.color
+            self.0.color
         };
-        match (color, self.inner.role) {
+        match (color, self.0.role) {
             (Color::White, Role::Rook) => '♖',
             (Color::Black, Role::Rook) => '♜',
             (Color::White, Role::Knight) => '♘',
@@ -110,7 +106,7 @@ impl PyPiece {
     #[classmethod]
     fn from_symbol(_cls: &Bound<'_, PyType>, ch: char) -> PyResult<Self> {
         match Piece::from_char(ch) {
-            Some(inner) => Ok(PyPiece { inner }),
+            Some(inner) => Ok(PyPiece(inner)),
             None => Err(PyValueError::new_err(format!(
                 "invalid piece symbol: '{ch}'"
             ))),

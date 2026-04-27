@@ -203,7 +203,12 @@ impl BaseBoard {
     }
 
     fn pieces_mask(&self, piece_type: PyRole, color: PyColor) -> u64 {
-        (self.board.by_role(piece_type.0) & self.board.by_color(color.0)).0
+        self.board
+            .by_piece(Piece {
+                color: color.0,
+                role: piece_type.0,
+            })
+            .0
     }
 
     fn pieces(&self, piece_type: PyRole, color: PyColor) -> SquareSet {
@@ -213,14 +218,7 @@ impl BaseBoard {
     }
 
     fn piece_type_at(&self, square: PySquare) -> Option<u8> {
-        self.board.role_at(square.0).map(|r| match r {
-            Role::Pawn => 1,
-            Role::Knight => 2,
-            Role::Bishop => 3,
-            Role::Rook => 4,
-            Role::Queen => 5,
-            Role::King => 6,
-        })
+        self.board.role_at(square.0).map(|r| r as u8)
     }
 
     fn color_at(&self, square: PySquare) -> Option<bool> {
@@ -228,20 +226,22 @@ impl BaseBoard {
     }
 
     fn piece_at(&self, square: PySquare) -> Option<PyPiece> {
-        self.board.piece_at(square.0).map(|p| PyPiece { inner: p })
+        self.board.piece_at(square.0).map(PyPiece)
     }
 
     fn king(&self, color: PyColor) -> Option<u8> {
-        let kings = self.board.by_role(Role::King) & self.board.by_color(color.0) & !self.promoted;
-        kings.first().map(|sq| sq as u8)
+        self.board
+            .king_of(color.0)
+            .filter(|sq| !self.promoted.contains(*sq))
+            .or_else(|| {
+                (self.board.by_role(Role::King) & self.board.by_color(color.0) & !self.promoted)
+                    .first()
+            })
+            .map(|sq| sq as u8)
     }
 
     fn attacks_mask(&self, square: PySquare) -> u64 {
-        if let Some(piece) = self.board.piece_at(square.0) {
-            shakmaty::attacks::attacks(square.0, piece, self.board.occupied()).0
-        } else {
-            0
-        }
+        self.board.attacks_from(square.0).0
     }
     fn attacks(&self, square: PySquare) -> SquareSet {
         SquareSet {
@@ -271,11 +271,7 @@ impl BaseBoard {
         } else {
             None
         };
-        Ok(self.attackers_mask(
-            color,
-            square,
-            occ,
-        ) != 0)
+        Ok(self.attackers_mask(color, square, occ) != 0)
     }
 
     #[pyo3(signature = (color, square, occupied=None))]
@@ -297,11 +293,7 @@ impl BaseBoard {
             None
         };
         Ok(SquareSet {
-            bb: Bitboard(self.attackers_mask(
-                color,
-                square,
-                occ,
-            )),
+            bb: Bitboard(self.attackers_mask(color, square, occ)),
         })
     }
 
@@ -346,10 +338,9 @@ impl BaseBoard {
     }
 
     fn remove_piece_at(&mut self, square: PySquare) -> Option<PyPiece> {
-        let piece = self.board.piece_at(square.0)?;
-        self.board.discard_piece_at(square.0);
+        let piece = self.board.remove_piece_at(square.0)?;
         self.promoted.discard(square.0);
-        PyPiece::py_new(piece.role as u8, piece.color.is_white()).ok()
+        Some(piece.into())
     }
 
     #[pyo3(signature = (square, piece, promoted=false))]
@@ -362,7 +353,7 @@ impl BaseBoard {
         if let Some(py_piece) = piece {
             let p = py_piece.extract::<PyRef<'_, PyPiece>>()?;
             self.board.discard_piece_at(square.0);
-            self.board.set_piece_at(square.0, p.inner);
+            self.board.set_piece_at(square.0, p.0);
             if promoted {
                 self.promoted.add(square.0);
             } else {
@@ -378,17 +369,12 @@ impl BaseBoard {
     #[pyo3(signature = (promoted=None))]
     fn board_fen(&self, promoted: Option<bool>) -> PyResult<String> {
         self.board
-            .board_fen_with_promoted(
-                promoted
-                    .is_some_and(|x| x)
-                    .then(|| self.promoted)
-                    .unwrap_or_default(),
-            )
-            .or_else(|e| {
-                Err(PyValueError::new_err(format!(
-                    "Couldn't produce FEN, error: {e:?}"
-                )))
+            .board_fen_with_promoted(if promoted.unwrap_or(false) {
+                self.promoted
+            } else {
+                Bitboard(0)
             })
+            .map_err(|e| PyValueError::new_err(format!("Couldn't produce FEN, error: {e:?}")))
             .map(|x| x.to_string())
     }
 
@@ -489,15 +475,8 @@ impl BaseBoard {
 
     fn mirror(&self) -> Self {
         let mut board = self.clone();
-        board.set_pawns(self.pawns().swap_bytes());
-        board.set_knights(self.knights().swap_bytes());
-        board.set_bishops(self.bishops().swap_bytes());
-        board.set_rooks(self.rooks().swap_bytes());
-        board.set_queens(self.queens().swap_bytes());
-        board.set_kings(self.kings().swap_bytes());
-        board.set_occupied_w(self.occupied_b().swap_bytes());
-        board.set_occupied_b(self.occupied_w().swap_bytes());
-        board.set_promoted(self.promoted().swap_bytes());
+        board.board.mirror();
+        board.promoted = Bitboard(board.promoted.0.swap_bytes());
         board
     }
 }
