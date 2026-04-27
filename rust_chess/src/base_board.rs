@@ -67,12 +67,12 @@ impl BaseBoard {
     fn __init__(&mut self, board_fen: Option<&str>) -> PyResult<()> {
         if let Some(fen) = board_fen {
             if fen == "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR" {
-                self._reset_board();
+                self.reset_board();
             } else {
-                self._set_board_fen(fen)?;
+                self.set_board_fen(fen)?;
             }
         } else {
-            self._clear_board();
+            self.clear_board();
         }
         Ok(())
     }
@@ -134,27 +134,21 @@ impl BaseBoard {
         Ok(())
     }
 
-    fn _clear_board(&mut self) {
+    fn clear_board(&mut self) {
         self.board = Board::empty();
         self.promoted = Bitboard(0);
     }
 
-    fn clear_board(slf: &Bound<'_, Self>) -> PyResult<()> {
-        slf.call_method0("_clear_board")?;
-        Ok(())
-    }
+    
 
-    fn _reset_board(&mut self) {
+    fn reset_board(&mut self) {
         self.board = Board::new();
         self.promoted = Bitboard(0);
     }
 
-    fn reset_board(slf: &Bound<'_, Self>) -> PyResult<()> {
-        slf.call_method0("_reset_board")?;
-        Ok(())
-    }
+    
 
-    fn _set_board_fen(&mut self, fen: &str) -> PyResult<()> {
+    fn set_board_fen(&mut self, fen: &str) -> PyResult<()> {
         // Assume fen is valid or we create from str
         // shakmaty::fen::BoardFen can parse, but board.rs might have something?
         // Wait, earlier the code was Board::from_str(fen).
@@ -163,11 +157,7 @@ impl BaseBoard {
         Ok(())
     }
 
-    fn set_board_fen(slf: &Bound<'_, Self>, fen: &str) -> PyResult<()> {
-        let args = (fen,);
-        slf.call_method1("_set_board_fen", args)?;
-        Ok(())
-    }
+    
 
     fn piece_count(&self) -> u32 {
         self.board.occupied().count() as u32
@@ -288,21 +278,12 @@ impl BaseBoard {
         self.pin_mask(color, square) != 0xFFFF_FFFF_FFFF_FFFF
     }
 
-    fn _remove_piece_at(&mut self, square: u8) -> Option<u8> {
-        let sq = Square::new(square as u32);
-        let piece_type = self.piece_type_at(square);
-        if piece_type.is_some() {
-            self.board.discard_piece_at(sq);
-            self.promoted.discard(sq);
-        }
-        piece_type
-    }
-
-    fn remove_piece_at(&mut self, square: u8) -> Option<PyPiece> {
-        let piece_type = self.piece_type_at(square)?;
-        let color = self.color_at(square)?;
-        self._remove_piece_at(square);
-        PyPiece::py_new(piece_type, color).ok()
+    fn remove_piece_at(&mut self, square: PySquare) -> Option<PyPiece> {
+        let sq = square.0;
+        let piece = self.board.piece_at(sq)?;
+        self.board.discard_piece_at(sq);
+        self.promoted.discard(sq);
+        PyPiece::py_new(piece.role as u8, piece.color.is_white()).ok()
     }
 
     #[pyo3(signature = (square, piece_type, color, promoted=false))]
@@ -328,12 +309,20 @@ impl BaseBoard {
     }
 
     #[pyo3(signature = (square, piece, promoted=false))]
-    fn set_piece_at(&mut self, square: u8, piece: Option<&Bound<'_, PyAny>>, promoted: bool) -> PyResult<()> {
+    fn set_piece_at(&mut self, square: PySquare, piece: Option<&Bound<'_, PyAny>>, promoted: bool) -> PyResult<()> {
+        let sq = square.0;
         if let Some(py_piece) = piece {
             let p = py_piece.extract::<PyRef<'_, PyPiece>>()?;
-            self._set_piece_at(square, p.inner.role as u8, p.inner.color.is_white(), promoted);
+            self.board.discard_piece_at(sq);
+            self.board.set_piece_at(sq, p.inner);
+            if promoted {
+                self.promoted.add(sq);
+            } else {
+                self.promoted.discard(sq);
+            }
         } else {
-            self._remove_piece_at(square);
+            self.board.discard_piece_at(sq);
+            self.promoted.discard(sq);
         }
         Ok(())
     }
