@@ -1,8 +1,8 @@
 use pyo3::IntoPyObjectExt;
-use pyo3::exceptions::{PyKeyError, PyTypeError};
+use pyo3::exceptions::PyKeyError;
 use pyo3::prelude::*;
 use pyo3::types::{PyAny, PyTuple, PyType};
-use shakmaty::{Bitboard, Square};
+use shakmaty::Bitboard;
 
 use crate::util::{PySquare, extract_mask, IntoSquareSet};
 

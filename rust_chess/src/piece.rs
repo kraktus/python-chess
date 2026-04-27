@@ -10,6 +10,15 @@ pub struct PyPiece {
     pub inner: Piece,
 }
 
+impl From<Piece> for PyPiece {
+    #[inline]
+    fn from(inner: Piece) -> Self {
+        Self {
+            inner
+        }
+    }
+}
+
 #[pymethods]
 impl PyPiece {
     #[new]

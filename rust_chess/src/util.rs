@@ -1,7 +1,6 @@
-use pyo3::IntoPyObjectExt;
-use pyo3::exceptions::{PyKeyError, PyTypeError};
+use pyo3::exceptions::PyTypeError;
 use pyo3::prelude::*;
-use pyo3::types::{PyAny, PyTuple, PyType};
+use pyo3::types::PyAny;
 use shakmaty::{Bitboard, Square, Color, Role};
 
 use crate::square_set::SquareSet;

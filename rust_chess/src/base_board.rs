@@ -8,7 +8,7 @@ use std::str::FromStr;
 use crate::piece::PyPiece;
 use crate::square_set::SquareSet;
 
-use crate::util::{PySquare, PyRole, PyColor};
+use crate::util::{PyColor, PySquare};
 
 #[pyclass(module = "rust_chess", name = "OccupiedCo")]
 pub struct OccupiedCo {
@@ -152,7 +152,7 @@ impl BaseBoard {
         // Assume fen is valid or we create from str
         // shakmaty::fen::BoardFen can parse, but board.rs might have something?
         // Wait, earlier the code was Board::from_str(fen).
-        self.board = Board::from_str(fen).map_err(|_| PyValueError::new_err("invalid fen"))?;
+        self.board = Board::from_str(fen).map_err(|e| PyValueError::new_err(format!("invalid fen: {e}")))?;
         self.promoted = Bitboard(0);
         Ok(())
     }
@@ -181,9 +181,8 @@ impl BaseBoard {
         SquareSet { bb: Bitboard(self.pieces_mask(piece_type, color)) }
     }
 
-    fn piece_type_at(&self, square: u8) -> Option<u8> {
-        let sq = Square::new(square as u32);
-        self.board.role_at(sq).map(|r| match r {
+    fn piece_type_at(&self, square: PySquare) -> Option<u8> {
+        self.board.role_at(square.0).map(|r| match r {
             Role::Pawn => 1,
             Role::Knight => 2,
             Role::Bishop => 3,
@@ -193,15 +192,12 @@ impl BaseBoard {
         })
     }
 
-    fn color_at(&self, square: u8) -> Option<bool> {
-        let sq = Square::new(square as u32);
-        self.board.color_at(sq).map(|c| c.is_white())
+    fn color_at(&self, square: PySquare) -> Option<bool> {
+        self.board.color_at(square.0).map(|c| c.is_white())
     }
 
-    fn piece_at(&self, square: u8) -> Option<PyPiece> {
-        let piece_type = self.piece_type_at(square)?;
-        let color = self.color_at(square)?;
-        PyPiece::py_new(piece_type, color).ok()
+    fn piece_at(&self, square: PySquare) -> Option<PyPiece> {
+        self.board.piece_at(square.0).map(|p| PyPiece { inner: p })
     }
 
     fn king(&self, color: bool) -> Option<u8> {
@@ -210,23 +206,21 @@ impl BaseBoard {
         kings.first().map(|sq| sq as u8)
     }
 
-    fn attacks_mask(&self, square: u8) -> u64 {
-        let sq = Square::new(square as u32);
-        if let Some(piece) = self.board.piece_at(sq) {
-            shakmaty::attacks::attacks(sq, piece, self.board.occupied()).0
+    fn attacks_mask(&self, square: PySquare) -> u64 {
+        if let Some(piece) = self.board.piece_at(square.0) {
+            shakmaty::attacks::attacks(square.0, piece, self.board.occupied()).0
         } else { 0 }
     }
-    fn attacks(&self, square: u8) -> SquareSet {
+    fn attacks(&self, square: PySquare) -> SquareSet {
         SquareSet { bb: Bitboard(self.attacks_mask(square)) }
     }
 
     #[pyo3(signature = (color, square, occupied=None))]
-    fn attackers_mask(&self, color: PyColor, square: u8, occupied: Option<u64>) -> u64 {
+    fn attackers_mask(&self, color: PyColor, square: PySquare, occupied: Option<u64>) -> u64 {
         let occ = Bitboard(occupied.unwrap_or(self.board.occupied().0));
-        let sq = Square::new(square as u32);
-        self.board.attacks_to(sq, color.0, occ).0
+        self.board.attacks_to(square.0, color.0, occ).0
     }
-    fn is_attacked_by(&self, color: bool, square: u8, occupied: Option<&Bound<'_, PyAny>>) -> PyResult<bool> {
+    fn is_attacked_by(&self, color: bool, square: PySquare, occupied: Option<&Bound<'_, PyAny>>) -> PyResult<bool> {
         let occ = if let Some(py_occ) = occupied {
             if let Ok(mask) = py_occ.extract::<u64>() { Some(mask) }
             else if let Ok(ss) = py_occ.extract::<PyRef<'_, SquareSet>>() { Some(ss.bb.0) }
@@ -236,7 +230,7 @@ impl BaseBoard {
     }
 
     #[pyo3(signature = (color, square, occupied=None))]
-    fn attackers(&self, color: bool, square: u8, occupied: Option<&Bound<'_, PyAny>>) -> PyResult<SquareSet> {
+    fn attackers(&self, color: bool, square: PySquare, occupied: Option<&Bound<'_, PyAny>>) -> PyResult<SquareSet> {
         let occ = if let Some(py_occ) = occupied {
             if let Ok(mask) = py_occ.extract::<u64>() { Some(mask) }
             else if let Ok(ss) = py_occ.extract::<PyRef<'_, SquareSet>>() { Some(ss.bb.0) }
@@ -245,12 +239,11 @@ impl BaseBoard {
         Ok(SquareSet { bb: Bitboard(self.attackers_mask(crate::util::PyColor(if color { shakmaty::Color::White } else { shakmaty::Color::Black }), square, occ)) })
     }
 
-    fn pin_mask(&self, color: bool, square: u8) -> u64 {
-        let mut king_sq_opt = self.king(color);
+    fn pin_mask(&self, color: bool, square: PySquare) -> u64 {
+        let king_sq_opt = self.king(color);
         if king_sq_opt.is_none() { return 0xFFFF_FFFF_FFFF_FFFF; }
         let king_sq = king_sq_opt.unwrap();
-        if king_sq == square { return 0xFFFF_FFFF_FFFF_FFFF; }
-        let sq = Square::new(square as u32);
+        if king_sq == (square.0 as u8) { return 0xFFFF_FFFF_FFFF_FFFF; }
         let k_sq = Square::new(king_sq as u32);
 
         let c_color = if color { Color::White } else { Color::Black };
@@ -260,9 +253,9 @@ impl BaseBoard {
 
         for sniper_sq in enemy_snipers {
             let ray = shakmaty::attacks::ray(k_sq, sniper_sq);
-            if ray.contains(sq) {
+            if ray.contains(square.0) {
                 let between = shakmaty::attacks::between(k_sq, sniper_sq);
-                if (between & self.board.occupied() & !Bitboard(1 << square)).is_empty() {
+                if (between & self.board.occupied() & !Bitboard(1 << (square.0 as u8))).is_empty() {
                     return ray.0;
                 }
             }
@@ -270,26 +263,24 @@ impl BaseBoard {
         0xFFFF_FFFF_FFFF_FFFF
     }
 
-    fn pin(&self, color: bool, square: u8) -> SquareSet {
+    fn pin(&self, color: bool, square: PySquare) -> SquareSet {
         SquareSet { bb: Bitboard(self.pin_mask(color, square)) }
     }
 
-    fn is_pinned(&self, color: bool, square: u8) -> bool {
+    fn is_pinned(&self, color: bool, square: PySquare) -> bool {
         self.pin_mask(color, square) != 0xFFFF_FFFF_FFFF_FFFF
     }
 
     fn remove_piece_at(&mut self, square: PySquare) -> Option<PyPiece> {
-        let sq = square.0;
-        let piece = self.board.piece_at(sq)?;
-        self.board.discard_piece_at(sq);
-        self.promoted.discard(sq);
+        let piece = self.board.piece_at(square.0)?;
+        self.board.discard_piece_at(square.0);
+        self.promoted.discard(square.0);
         PyPiece::py_new(piece.role as u8, piece.color.is_white()).ok()
     }
 
     #[pyo3(signature = (square, piece_type, color, promoted=false))]
-    fn _set_piece_at(&mut self, square: u8, piece_type: u8, color: bool, promoted: bool) {
-        let sq = Square::new(square as u32);
-        self.board.discard_piece_at(sq);
+    fn _set_piece_at(&mut self, square: PySquare, piece_type: u8, color: bool, promoted: bool) {
+        self.board.discard_piece_at(square.0);
         let role = match piece_type {
             1 => Role::Pawn,
             2 => Role::Knight,
@@ -300,29 +291,28 @@ impl BaseBoard {
             _ => return,
         };
         let c = if color { Color::White } else { Color::Black };
-        self.board.set_piece_at(sq, Piece { color: c, role });
+        self.board.set_piece_at(square.0, Piece { color: c, role });
         if promoted {
-            self.promoted.add(sq);
+            self.promoted.add(square.0);
         } else {
-            self.promoted.discard(sq);
+            self.promoted.discard(square.0);
         }
     }
 
     #[pyo3(signature = (square, piece, promoted=false))]
     fn set_piece_at(&mut self, square: PySquare, piece: Option<&Bound<'_, PyAny>>, promoted: bool) -> PyResult<()> {
-        let sq = square.0;
         if let Some(py_piece) = piece {
             let p = py_piece.extract::<PyRef<'_, PyPiece>>()?;
-            self.board.discard_piece_at(sq);
-            self.board.set_piece_at(sq, p.inner);
+            self.board.discard_piece_at(square.0);
+            self.board.set_piece_at(square.0, p.inner);
             if promoted {
-                self.promoted.add(sq);
+                self.promoted.add(square.0);
             } else {
-                self.promoted.discard(sq);
+                self.promoted.discard(square.0);
             }
         } else {
-            self.board.discard_piece_at(sq);
-            self.promoted.discard(sq);
+            self.board.discard_piece_at(square.0);
+            self.promoted.discard(square.0);
         }
         Ok(())
     }
@@ -342,8 +332,8 @@ impl BaseBoard {
                     empty += 1;
                 } else {
                     if empty > 0 { builder.push_str(&empty.to_string()); empty = 0; }
-                    let is_white = self.color_at(square as u8).unwrap();
-                    let mut symbol = match self.piece_type_at(square as u8) {
+                    let is_white = self.color_at(PySquare(Square::new(square as u32))).unwrap();
+                    let mut symbol = match self.piece_type_at(PySquare(Square::new(square as u32))) {
                         Some(1) => 'p', Some(2) => 'n', Some(3) => 'b', Some(4) => 'r', Some(5) => 'q', Some(6) => 'k', _ => '?',
                     };
                     if p_promoted && (self.promoted.0 & mask) != 0 {
@@ -351,7 +341,7 @@ impl BaseBoard {
                     } else if is_white { symbol = symbol.to_ascii_uppercase(); }
                     builder.push(symbol);
                     if p_promoted && (self.promoted.0 & mask) != 0 {
-                        let original = match self.piece_type_at(square as u8) {
+                        let original = match self.piece_type_at(PySquare(Square::new(square as u32))) {
                             Some(1) => 'p', Some(2) => 'n', Some(3) => 'b', Some(4) => 'r', Some(5) => 'q', Some(6) => 'k', _ => '?',
                         };
                         builder.push(if is_white { original.to_ascii_uppercase() } else { original });
@@ -384,8 +374,8 @@ impl BaseBoard {
             if (self.board.occupied().0 & mask) == 0 {
                 builder.push('.');
             } else {
-                let is_white = self.color_at((square as u8) as u8).unwrap();
-                let mut symbol = match self.piece_type_at((square as u8) as u8) {
+                let is_white = self.color_at(PySquare(square)).unwrap();
+                let mut symbol = match self.piece_type_at(PySquare(square)) {
                     Some(1) => 'p', Some(2) => 'n', Some(3) => 'b', Some(4) => 'r', Some(5) => 'q', Some(6) => 'k', _ => '?',
                 };
                 if is_white { symbol = symbol.to_ascii_uppercase(); }
@@ -407,10 +397,10 @@ impl BaseBoard {
         let kings = self.kings();
         let occupied_w = self.occupied_w();
         let occupied_b = self.occupied_b();
-        let occupied = self.occupied();
+        let _occupied = self.occupied();
         let promoted = self.promoted();
 
-        let mut apply = |bb: u64| -> PyResult<u64> {
+        let apply = |bb: u64| -> PyResult<u64> {
             f.call1((bb,))?.extract::<u64>()
         };
 

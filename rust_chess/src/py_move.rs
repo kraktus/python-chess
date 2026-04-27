@@ -2,7 +2,7 @@ use std::convert::TryFrom;
 use std::hash::{DefaultHasher, Hash, Hasher};
 use std::str::FromStr;
 
-use pyo3::exceptions::{PyTypeError, PyValueError};
+use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 use pyo3::types::PyType;
 use shakmaty::uci::UciMove;
