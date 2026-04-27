@@ -19,9 +19,9 @@ impl OccupiedCo {
     fn __getitem__(&self, index: usize, py: Python) -> PyResult<u64> {
         let board = self.board.bind(py).borrow();
         if index == 1 {
-            Ok(board.board.by_color(Color::White).0)
+            Ok(board.by_color.white.0)
         } else if index == 0 {
-            Ok(board.board.by_color(Color::Black).0)
+            Ok(board.by_color.black.0)
         } else {
             Err(PyIndexError::new_err("Index out of bounds"))
         }
@@ -41,19 +41,23 @@ impl OccupiedCo {
 
     fn __repr__(&self, py: Python) -> String {
         let board = self.board.bind(py).borrow();
-        format!(
-            "[{}, {}]",
-            board.board.by_color(Color::Black).0,
-            board.board.by_color(Color::White).0
-        )
+        format!("[{}, {}]", board.by_color.black.0, board.by_color.white.0)
     }
 }
 
 #[pyclass(subclass, dict, module = "rust_chess", name = "BaseBoard")]
 #[derive(Clone, Default, PartialEq, Eq)]
 pub struct BaseBoard {
-    pub board: shakmaty::Board,
-    pub promoted: shakmaty::Bitboard,
+    pub by_role: shakmaty::ByRole<Bitboard>,
+    pub by_color: shakmaty::ByColor<Bitboard>,
+    pub promoted: Bitboard,
+}
+
+impl BaseBoard {
+    pub fn board(&self) -> Result<Board, PyErr> {
+        Board::try_from_bitboards(self.by_role.clone(), self.by_color.clone())
+            .map_err(|e| PyValueError::new_err(format!("Invalid board state: {e}")))
+    }
 }
 
 #[pymethods]
@@ -75,51 +79,51 @@ impl BaseBoard {
 
     #[getter]
     fn pawns(&self) -> u64 {
-        self.board.by_role(Role::Pawn).0
+        self.by_role.pawn.0
     }
     #[setter]
     fn set_pawns(&mut self, value: u64) {
-        self._set_role(Role::Pawn, value);
+        self.by_role.pawn = Bitboard(value);
     }
     #[getter]
     fn knights(&self) -> u64 {
-        self.board.by_role(Role::Knight).0
+        self.by_role.knight.0
     }
     #[setter]
     fn set_knights(&mut self, value: u64) {
-        self._set_role(Role::Knight, value);
+        self.by_role.knight = Bitboard(value);
     }
     #[getter]
     fn bishops(&self) -> u64 {
-        self.board.by_role(Role::Bishop).0
+        self.by_role.bishop.0
     }
     #[setter]
     fn set_bishops(&mut self, value: u64) {
-        self._set_role(Role::Bishop, value);
+        self.by_role.bishop = Bitboard(value);
     }
     #[getter]
     fn rooks(&self) -> u64 {
-        self.board.by_role(Role::Rook).0
+        self.by_role.rook.0
     }
     #[setter]
     fn set_rooks(&mut self, value: u64) {
-        self._set_role(Role::Rook, value);
+        self.by_role.rook = Bitboard(value);
     }
     #[getter]
     fn queens(&self) -> u64 {
-        self.board.by_role(Role::Queen).0
+        self.by_role.queen.0
     }
     #[setter]
     fn set_queens(&mut self, value: u64) {
-        self._set_role(Role::Queen, value);
+        self.by_role.queen = Bitboard(value);
     }
     #[getter]
     fn kings(&self) -> u64 {
-        self.board.by_role(Role::King).0
+        self.by_role.king.0
     }
     #[setter]
     fn set_kings(&mut self, value: u64) {
-        self._set_role(Role::King, value);
+        self.by_role.king = Bitboard(value);
     }
     #[getter]
     fn promoted(&self) -> u64 {
@@ -127,7 +131,7 @@ impl BaseBoard {
     }
     #[getter]
     fn occupied(&self) -> u64 {
-        self.board.occupied().0
+        (self.by_color.white | self.by_color.black).0
     }
     #[setter]
     fn set_occupied(&mut self, _value: u64) { /* Ignore */
@@ -156,33 +160,35 @@ impl BaseBoard {
     }
 
     fn clear_board(&mut self) {
-        self.board = Board::empty();
+        let (roles, colors) = Board::empty().into_bitboards();
+        self.by_role = roles;
+        self.by_color = colors;
         self.promoted = Bitboard(0);
     }
 
     fn reset_board(&mut self) {
-        self.board = Board::new();
+        let (roles, colors) = Board::new().into_bitboards();
+        self.by_role = roles;
+        self.by_color = colors;
         self.promoted = Bitboard(0);
     }
 
     fn set_board_fen(&mut self, fen: &str) -> PyResult<()> {
-        self.board =
+        let board =
             Board::from_str(fen).map_err(|e| PyValueError::new_err(format!("invalid fen: {e}")))?;
+        let (roles, colors) = board.into_bitboards();
+        self.by_role = roles;
+        self.by_color = colors;
         self.promoted = Bitboard(0);
         Ok(())
     }
 
     fn piece_count(&self) -> u32 {
-        self.board.occupied().count() as u32
+        (self.by_color.white | self.by_color.black).count() as u32
     }
 
     fn pieces_mask(&self, piece_type: PyRole, color: PyColor) -> u64 {
-        self.board
-            .by_piece(Piece {
-                color: color.0,
-                role: piece_type.0,
-            })
-            .0
+        (*self.by_color.get(color.0) & *self.by_role.get(piece_type.0)).0
     }
 
     fn pieces(&self, piece_type: PyRole, color: PyColor) -> SquareSet {
@@ -192,25 +198,42 @@ impl BaseBoard {
     }
 
     fn piece_type_at(&self, square: PySquare) -> Option<u8> {
-        self.board.role_at(square.0).map(|r| r as u8)
+        self.by_role.find(|r| r.contains(square.0)).map(|r| r as u8)
     }
 
     fn color_at(&self, square: PySquare) -> Option<bool> {
-        self.board.color_at(square.0).map(|c| c.is_white())
+        self.by_color
+            .find(|c| c.contains(square.0))
+            .map(|c| c.is_white())
     }
 
     fn piece_at(&self, square: PySquare) -> Option<PyPiece> {
-        self.board.piece_at(square.0).map(PyPiece)
+        self.by_role
+            .find(|r| r.contains(square.0))
+            .and_then(|role| {
+                self.by_color
+                    .find(|c| c.contains(square.0))
+                    .map(|color| PyPiece(Piece { role, color }))
+            })
     }
 
     fn king(&self, color: PyColor) -> Option<u8> {
-        (self.board.by_role(Role::King) & self.board.by_color(color.0) & !self.promoted)
+        (*self.by_role.get(Role::King) & *self.by_color.get(color.0) & !self.promoted)
             .single_square()
             .map(|sq| sq as u8)
     }
 
     fn attacks_mask(&self, square: PySquare) -> u64 {
-        self.board.attacks_from(square.0).0
+        {
+            let occ = self.by_color.white | self.by_color.black;
+            let role = self.by_role.find(|r| r.contains(square.0));
+            let color = self.by_color.find(|c| c.contains(square.0));
+            if let (Some(r), Some(c)) = (role, color) {
+                shakmaty::attacks::attacks(square.0, Piece { role: r, color: c }, occ).0
+            } else {
+                0
+            }
+        }
     }
     fn attacks(&self, square: PySquare) -> SquareSet {
         SquareSet {
@@ -221,8 +244,21 @@ impl BaseBoard {
     // TODO FIXME, move to shakmaty
     #[pyo3(signature = (color, square, occupied=None))]
     fn attackers_mask(&self, color: PyColor, square: PySquare, occupied: Option<u64>) -> u64 {
-        let occ = occupied.map(Bitboard).unwrap_or(self.board.occupied());
-        self.board.attacks_to(square.0, color.0, occ).0
+        let occ = occupied
+            .map(Bitboard)
+            .unwrap_or(self.by_color.white | self.by_color.black);
+
+        let c_color = color.0;
+        let mut attacks = Bitboard(0);
+        attacks |= shakmaty::attacks::rook_attacks(square.0, occ)
+            & (*self.by_role.get(Role::Rook) | *self.by_role.get(Role::Queen));
+        attacks |= shakmaty::attacks::bishop_attacks(square.0, occ)
+            & (*self.by_role.get(Role::Bishop) | *self.by_role.get(Role::Queen));
+        attacks |= shakmaty::attacks::knight_attacks(square.0) & *self.by_role.get(Role::Knight);
+        attacks |= shakmaty::attacks::king_attacks(square.0) & *self.by_role.get(Role::King);
+        attacks |=
+            shakmaty::attacks::pawn_attacks(!c_color, square.0) & *self.by_role.get(Role::Pawn);
+        (attacks & *self.by_color.get(c_color)).0
     }
     fn is_attacked_by(
         &self,
@@ -281,16 +317,20 @@ impl BaseBoard {
 
         let c_color = color.0;
         let snipers = (shakmaty::attacks::rook_attacks(k_sq, Bitboard(0))
-            & (self.board.by_role(Role::Rook) | self.board.by_role(Role::Queen)))
+            & (*self.by_role.get(Role::Rook) | *self.by_role.get(Role::Queen)))
             | (shakmaty::attacks::bishop_attacks(k_sq, Bitboard(0))
-                & (self.board.by_role(Role::Bishop) | self.board.by_role(Role::Queen)));
-        let enemy_snipers = snipers & self.board.by_color(!c_color);
+                & (*self.by_role.get(Role::Bishop) | *self.by_role.get(Role::Queen)));
+        let enemy_snipers = snipers & *self.by_color.get(!c_color);
 
         for sniper_sq in enemy_snipers {
             let ray = shakmaty::attacks::ray(k_sq, sniper_sq);
             if ray.contains(square.0) {
                 let between = shakmaty::attacks::between(k_sq, sniper_sq);
-                if (between & self.board.occupied() & !Bitboard(1 << (square.0 as u8))).is_empty() {
+                if (between
+                    & (self.by_color.white | self.by_color.black)
+                    & !Bitboard(1 << (square.0 as u8)))
+                .is_empty()
+                {
                     return ray.0;
                 }
             }
@@ -309,9 +349,16 @@ impl BaseBoard {
     }
 
     fn remove_piece_at(&mut self, square: PySquare) -> Option<PyPiece> {
-        let piece = self.board.remove_piece_at(square.0)?;
+        let role = self.by_role.find(|r| r.contains(square.0));
+        let color = self.by_color.find(|c| c.contains(square.0));
+        self.by_role.as_mut().for_each(|r| r.discard(square.0));
+        self.by_color.as_mut().for_each(|c| c.discard(square.0));
         self.promoted.discard(square.0);
-        Some(piece.into())
+        if let (Some(r), Some(c)) = (role, color) {
+            Some(PyPiece(Piece { role: r, color: c }))
+        } else {
+            None
+        }
     }
 
     #[pyo3(signature = (square, piece, promoted=false))]
@@ -323,15 +370,16 @@ impl BaseBoard {
     ) -> PyResult<()> {
         if let Some(py_piece) = piece {
             let p = py_piece.extract::<PyRef<'_, PyPiece>>()?;
-            self.board.discard_piece_at(square.0);
-            self.board.set_piece_at(square.0, p.0);
+            self.by_role.get_mut(p.0.role).add(square.0);
+            self.by_color.get_mut(p.0.color).add(square.0);
             if promoted {
                 self.promoted.add(square.0);
             } else {
                 self.promoted.discard(square.0);
             }
         } else {
-            self.board.discard_piece_at(square.0);
+            self.by_role.as_mut().for_each(|r| r.discard(square.0));
+            self.by_color.as_mut().for_each(|c| c.discard(square.0));
             self.promoted.discard(square.0);
         }
         Ok(())
@@ -339,7 +387,7 @@ impl BaseBoard {
 
     #[pyo3(signature = (promoted=None))]
     fn board_fen(&self, promoted: Option<bool>) -> PyResult<String> {
-        self.board
+        self.board()?
             .board_fen_with_promoted(if promoted.unwrap_or(false) {
                 self.promoted
             } else {
@@ -352,7 +400,7 @@ impl BaseBoard {
     #[classmethod]
     #[pyo3(name = "empty")]
     fn py_empty(_cls: &Bound<'_, PyType>) -> PyResult<Self> {
-        Ok(Self::default())
+        Ok(Self::empty())
     }
 
     fn copy(&self) -> Self {
@@ -384,7 +432,7 @@ impl BaseBoard {
         let mut builder = String::with_capacity(150);
         for square in shakmaty::Square::ALL.into_iter().rev() {
             let mask = 1u64 << (square as u8);
-            if (self.board.occupied().0 & mask) == 0 {
+            if ((self.by_color.white | self.by_color.black).0 & mask) == 0 {
                 builder.push('.');
             } else {
                 let is_white = self.color_at(PySquare(square)).unwrap();
@@ -414,27 +462,17 @@ impl BaseBoard {
     }
 
     fn apply_transform(&mut self, f: &Bound<'_, PyAny>) -> PyResult<()> {
-        let pawns = self.pawns();
-        let knights = self.knights();
-        let bishops = self.bishops();
-        let rooks = self.rooks();
-        let queens = self.queens();
-        let kings = self.kings();
-        let occupied_w = self.occupied_w();
-        let occupied_b = self.occupied_b();
-        let promoted = self.promoted();
+        let apply = |bb: Bitboard| -> PyResult<Bitboard> {
+            Ok(Bitboard(f.call1((bb.0,))?.extract::<u64>()?))
+        };
 
-        let apply = |bb: u64| -> PyResult<u64> { f.call1((bb,))?.extract::<u64>() };
-
-        self.set_pawns(apply(pawns)?);
-        self.set_knights(apply(knights)?);
-        self.set_bishops(apply(bishops)?);
-        self.set_rooks(apply(rooks)?);
-        self.set_queens(apply(queens)?);
-        self.set_kings(apply(kings)?);
-        self.set_occupied_w(apply(occupied_w)?);
-        self.set_occupied_b(apply(occupied_b)?);
-        self.set_promoted(apply(promoted)?);
+        for role in self.by_role.as_mut() {
+            *role = apply(*role)?;
+        }
+        for color in self.by_color.as_mut() {
+            *color = apply(*color)?;
+        }
+        self.promoted = apply(self.promoted)?;
         Ok(())
     }
 
@@ -446,7 +484,16 @@ impl BaseBoard {
 
     fn mirror(&self) -> Self {
         let mut board = self.clone();
-        board.board.mirror();
+        if let Ok(mut b) = self.board() {
+            b.mirror();
+            let (roles, colors) = b.into_bitboards();
+            board.by_role = roles;
+            board.by_color = colors;
+        } else {
+            board.by_role.as_mut().for_each(|r| *r = r.flip_vertical());
+            board.by_color.as_mut().for_each(|c| *c = c.flip_vertical());
+            board.by_color.swap();
+        }
         board.promoted = Bitboard(board.promoted.0.swap_bytes());
         board
     }
@@ -454,84 +501,24 @@ impl BaseBoard {
 
 impl BaseBoard {
     fn empty() -> Self {
+        let (roles, colors) = Board::empty().into_bitboards();
         Self {
-            board: Board::empty(),
+            by_role: roles,
+            by_color: colors,
             promoted: Bitboard::EMPTY,
         }
     }
 
     fn occupied_w(&self) -> u64 {
-        self.board.by_color(Color::White).0
+        self.by_color.white.0
     }
     fn set_occupied_w(&mut self, value: u64) {
-        self._set_color(Color::White, value);
+        self.by_color.white = Bitboard(value);
     }
     fn occupied_b(&self) -> u64 {
-        self.board.by_color(Color::Black).0
+        self.by_color.black.0
     }
     fn set_occupied_b(&mut self, value: u64) {
-        self._set_color(Color::Black, value);
-    }
-
-    pub fn _set_role(&mut self, role: Role, value: u64) {
-        let (mut by_role, mut by_color) = self.board.clone().into_bitboards();
-        let new_mask = Bitboard(value);
-        let current_mask = *by_role.get(role);
-
-        let to_remove = current_mask & !new_mask;
-        let to_add = new_mask & !current_mask;
-
-        *by_role.get_mut(role) &= !to_remove;
-        by_color.white &= !to_remove;
-        by_color.black &= !to_remove;
-
-        by_role.pawn &= !to_add;
-        by_role.knight &= !to_add;
-        by_role.bishop &= !to_add;
-        by_role.rook &= !to_add;
-        by_role.queen &= !to_add;
-        by_role.king &= !to_add;
-
-        *by_role.get_mut(role) |= to_add;
-
-        let empty_before = !(by_color.white | by_color.black);
-        by_color.black |= to_add & empty_before;
-
-        if let Ok(new_board) = Board::try_from_bitboards(by_role, by_color) {
-            self.board = new_board;
-        }
-    }
-
-    pub fn _set_color(&mut self, color: Color, value: u64) {
-        let (mut by_role, mut by_color) = self.board.clone().into_bitboards();
-        let new_mask = Bitboard(value);
-        let current_mask = *by_color.get(color);
-
-        let to_remove = current_mask & !new_mask;
-        let to_add = new_mask & !current_mask;
-
-        by_role.pawn &= !to_remove;
-        by_role.knight &= !to_remove;
-        by_role.bishop &= !to_remove;
-        by_role.rook &= !to_remove;
-        by_role.queen &= !to_remove;
-        by_role.king &= !to_remove;
-
-        *by_color.get_mut(color) &= !to_remove;
-
-        *by_color.get_mut(!color) &= !to_add;
-        *by_color.get_mut(color) |= to_add;
-
-        let empty_before = !(by_role.pawn
-            | by_role.knight
-            | by_role.bishop
-            | by_role.rook
-            | by_role.queen
-            | by_role.king);
-        by_role.pawn |= to_add & empty_before;
-
-        if let Ok(new_board) = Board::try_from_bitboards(by_role, by_color) {
-            self.board = new_board;
-        }
+        self.by_color.black = Bitboard(value);
     }
 }
