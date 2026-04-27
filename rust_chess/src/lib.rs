@@ -1,9 +1,9 @@
-pub mod py_move;
 pub mod piece;
+pub mod py_move;
 pub mod square_set;
 
-use py_move::PyMove;
 use piece::PyPiece;
+use py_move::PyMove;
 use pyo3::prelude::*;
 use square_set::{CarryRipplerIter, SquareSet, SquareSetIter, SquareSetRevIter};
 

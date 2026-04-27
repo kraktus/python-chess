@@ -1,10 +1,12 @@
-use pyo3::exceptions::{PyValueError, PyTypeError};
+use std::convert::TryFrom;
+use std::hash::{DefaultHasher, Hash, Hasher};
+use std::str::FromStr;
+
+use pyo3::exceptions::{PyTypeError, PyValueError};
 use pyo3::prelude::*;
 use pyo3::types::PyType;
 use shakmaty::uci::UciMove;
 use shakmaty::{Role, Square};
-use std::convert::TryFrom;
-use std::str::FromStr;
 
 use crate::square_set::PySquare;
 
@@ -49,7 +51,10 @@ impl PyMove {
                     "drop must have from_square == to_square",
                 ));
             }
-            UciMove::Put { role: drop_piece.0, to: to_square.0 }
+            UciMove::Put {
+                role: drop_piece.0,
+                to: to_square.0,
+            }
         } else {
             UciMove::Normal {
                 from: from_square.0,
@@ -82,7 +87,7 @@ impl PyMove {
     #[getter]
     fn to_square(&self) -> u8 {
         match &self.inner {
-            UciMove::Normal { to, .. } | UciMove::Put { to, .. }  => (*to).into(),
+            UciMove::Normal { to, .. } | UciMove::Put { to, .. } => (*to).into(),
             UciMove::Null => 0,
         }
     }
@@ -175,6 +180,13 @@ impl PyMove {
             UciMove::Null => "@@@@".to_string(),
             _ => self.inner.to_string(),
         }
+    }
+
+    // not possible to derive because pymove is mutable
+    fn __hash__(&self) -> u64 {
+        let mut s = DefaultHasher::new();
+        self.hash(&mut s);
+        s.finish()
     }
 
     fn __bool__(&self) -> bool {
