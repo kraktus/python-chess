@@ -5,7 +5,10 @@ import chess
 
 if os.environ.get("RUST_CHESS") == "1":
     import rust_chess
-    chess.SquareSet = rust_chess.SquareSet
+    rust_chess.patch_supported(
+        dst_module=chess,
+        src_module=rust_chess,
+    )
 
 
 class OutcomeSuite:

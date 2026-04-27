@@ -22,6 +22,14 @@ import chess.syzygy
 import chess.variant
 
 
+if os.environ.get("RUST_CHESS") == "1":
+    import rust_chess
+    rust_chess.patch_supported(
+        dst_module=chess,
+        src_module=rust_chess,
+    )
+
+
 class RaiseLogHandler(logging.StreamHandler):
     def handle(self, record):
         super().handle(record)
