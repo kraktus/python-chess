@@ -232,7 +232,6 @@ impl BaseBoard {
     }
 
     fn king(&self, color: PyColor) -> Option<u8> {
-        let c_color = color.0;
         let kings = self.board.by_role(Role::King) & self.board.by_color(color.0) & !self.promoted;
         kings.first().map(|sq| sq as u8)
     }
@@ -299,11 +298,7 @@ impl BaseBoard {
         };
         Ok(SquareSet {
             bb: Bitboard(self.attackers_mask(
-                crate::util::PyColor(if color {
-                    shakmaty::Color::White
-                } else {
-                    shakmaty::Color::Black
-                }),
+                color,
                 square,
                 occ,
             )),
