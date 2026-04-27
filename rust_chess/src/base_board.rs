@@ -61,23 +61,16 @@ impl BaseBoard {
     #[new]
     #[pyo3(signature = (board_fen=Some("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR")))]
     fn py_new(board_fen: Option<&str>) -> PyResult<Self> {
-        let mut board = BaseBoard::default();
-        board.__init__(board_fen)?;
-        Ok(board)
-    }
-
-    #[pyo3(signature = (board_fen=Some("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR")))]
-    fn __init__(&mut self, board_fen: Option<&str>) -> PyResult<()> {
         if let Some(fen) = board_fen {
-            if fen == "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR" {
-                self.reset_board();
+            return Ok(if fen == "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR" {
+                Self::default()
             } else {
-                self.set_board_fen(fen)?;
-            }
-        } else {
-            self.clear_board();
+                let mut b = Self::empty();
+                b.set_board_fen(fen)?;
+                b
+            });
         }
-        Ok(())
+        Ok(Self::empty())
     }
 
     #[getter]
@@ -129,20 +122,8 @@ impl BaseBoard {
         self._set_role(Role::King, value);
     }
     #[getter]
-    fn occupied_w(&self) -> u64 {
-        self.board.by_color(Color::White).0
-    }
-    #[setter]
-    fn set_occupied_w(&mut self, value: u64) {
-        self._set_color(Color::White, value);
-    }
-    #[getter]
-    fn occupied_b(&self) -> u64 {
-        self.board.by_color(Color::Black).0
-    }
-    #[setter]
-    fn set_occupied_b(&mut self, value: u64) {
-        self._set_color(Color::Black, value);
+    fn promoted(&self) -> u64 {
+        self.promoted.0
     }
     #[getter]
     fn occupied(&self) -> u64 {
@@ -150,10 +131,6 @@ impl BaseBoard {
     }
     #[setter]
     fn set_occupied(&mut self, _value: u64) { /* Ignore */
-    }
-    #[getter]
-    fn promoted(&self) -> u64 {
-        self.promoted.0
     }
     #[setter]
     fn set_promoted(&mut self, value: u64) {
@@ -189,9 +166,6 @@ impl BaseBoard {
     }
 
     fn set_board_fen(&mut self, fen: &str) -> PyResult<()> {
-        // Assume fen is valid or we create from str
-        // shakmaty::fen::BoardFen can parse, but board.rs might have something?
-        // Wait, earlier the code was Board::from_str(fen).
         self.board =
             Board::from_str(fen).map_err(|e| PyValueError::new_err(format!("invalid fen: {e}")))?;
         self.promoted = Bitboard(0);
@@ -230,13 +204,8 @@ impl BaseBoard {
     }
 
     fn king(&self, color: PyColor) -> Option<u8> {
-        self.board
-            .king_of(color.0)
-            .filter(|sq| !self.promoted.contains(*sq))
-            .or_else(|| {
-                (self.board.by_role(Role::King) & self.board.by_color(color.0) & !self.promoted)
-                    .first()
-            })
+        (self.board.by_role(Role::King) & self.board.by_color(color.0) & !self.promoted)
+            .single_square()
             .map(|sq| sq as u8)
     }
 
@@ -249,9 +218,10 @@ impl BaseBoard {
         }
     }
 
+    // TODO FIXME, move to shakmaty
     #[pyo3(signature = (color, square, occupied=None))]
     fn attackers_mask(&self, color: PyColor, square: PySquare, occupied: Option<u64>) -> u64 {
-        let occ = Bitboard(occupied.unwrap_or(self.board.occupied().0));
+        let occ = occupied.map(Bitboard).unwrap_or(self.board.occupied());
         self.board.attacks_to(square.0, color.0, occ).0
     }
     fn is_attacked_by(
@@ -297,6 +267,7 @@ impl BaseBoard {
         })
     }
 
+    // TODO FIXME, move to shakmaty
     fn pin_mask(&self, color: PyColor, square: PySquare) -> u64 {
         let king_sq_opt = self.king(crate::util::PyColor(color.0));
         if king_sq_opt.is_none() {
@@ -379,7 +350,8 @@ impl BaseBoard {
     }
 
     #[classmethod]
-    fn empty(_cls: &Bound<'_, PyType>) -> PyResult<Self> {
+    #[pyo3(name = "empty")]
+    fn py_empty(_cls: &Bound<'_, PyType>) -> PyResult<Self> {
         Ok(Self::default())
     }
 
@@ -450,7 +422,6 @@ impl BaseBoard {
         let kings = self.kings();
         let occupied_w = self.occupied_w();
         let occupied_b = self.occupied_b();
-        let _occupied = self.occupied();
         let promoted = self.promoted();
 
         let apply = |bb: u64| -> PyResult<u64> { f.call1((bb,))?.extract::<u64>() };
@@ -482,35 +453,85 @@ impl BaseBoard {
 }
 
 impl BaseBoard {
-    pub fn _set_role(&mut self, role: Role, value: u64) {
-        let current_mask = self.board.by_role(role);
-        let new_mask = Bitboard(value);
-        let to_remove = current_mask & !new_mask;
-        for sq in to_remove {
-            self.board.discard_piece_at(sq);
+    fn empty() -> Self {
+        Self {
+            board: Board::empty(),
+            promoted: Bitboard::EMPTY,
         }
+    }
+
+    fn occupied_w(&self) -> u64 {
+        self.board.by_color(Color::White).0
+    }
+    fn set_occupied_w(&mut self, value: u64) {
+        self._set_color(Color::White, value);
+    }
+    fn occupied_b(&self) -> u64 {
+        self.board.by_color(Color::Black).0
+    }
+    fn set_occupied_b(&mut self, value: u64) {
+        self._set_color(Color::Black, value);
+    }
+
+    pub fn _set_role(&mut self, role: Role, value: u64) {
+        let (mut by_role, mut by_color) = self.board.clone().into_bitboards();
+        let new_mask = Bitboard(value);
+        let current_mask = *by_role.get(role);
+
+        let to_remove = current_mask & !new_mask;
         let to_add = new_mask & !current_mask;
-        for sq in to_add {
-            let color = if (self.board.by_color(Color::White).0 & (1 << (u32::from(sq)))) != 0 {
-                Color::White
-            } else {
-                Color::Black
-            };
-            self.board.set_piece_at(sq, Piece { color, role });
+
+        *by_role.get_mut(role) &= !to_remove;
+        by_color.white &= !to_remove;
+        by_color.black &= !to_remove;
+
+        by_role.pawn &= !to_add;
+        by_role.knight &= !to_add;
+        by_role.bishop &= !to_add;
+        by_role.rook &= !to_add;
+        by_role.queen &= !to_add;
+        by_role.king &= !to_add;
+
+        *by_role.get_mut(role) |= to_add;
+
+        let empty_before = !(by_color.white | by_color.black);
+        by_color.black |= to_add & empty_before;
+
+        if let Ok(new_board) = Board::try_from_bitboards(by_role, by_color) {
+            self.board = new_board;
         }
     }
 
     pub fn _set_color(&mut self, color: Color, value: u64) {
-        let current_mask = self.board.by_color(color);
+        let (mut by_role, mut by_color) = self.board.clone().into_bitboards();
         let new_mask = Bitboard(value);
+        let current_mask = *by_color.get(color);
+
         let to_remove = current_mask & !new_mask;
-        for sq in to_remove {
-            self.board.discard_piece_at(sq);
-        }
         let to_add = new_mask & !current_mask;
-        for sq in to_add {
-            let role = self.board.role_at(sq).unwrap_or(Role::Pawn);
-            self.board.set_piece_at(sq, Piece { color, role });
+
+        by_role.pawn &= !to_remove;
+        by_role.knight &= !to_remove;
+        by_role.bishop &= !to_remove;
+        by_role.rook &= !to_remove;
+        by_role.queen &= !to_remove;
+        by_role.king &= !to_remove;
+
+        *by_color.get_mut(color) &= !to_remove;
+
+        *by_color.get_mut(!color) &= !to_add;
+        *by_color.get_mut(color) |= to_add;
+
+        let empty_before = !(by_role.pawn
+            | by_role.knight
+            | by_role.bishop
+            | by_role.rook
+            | by_role.queen
+            | by_role.king);
+        by_role.pawn |= to_add & empty_before;
+
+        if let Ok(new_board) = Board::try_from_bitboards(by_role, by_color) {
+            self.board = new_board;
         }
     }
 }
