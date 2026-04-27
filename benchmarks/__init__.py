@@ -48,9 +48,10 @@ class PieceSuite:
         for p in self.pieces:
             p.unicode_symbol(invert_color=True)
 
-    def time_repr_svg(self):
-        for p in self.pieces:
-            p._repr_svg_()
+    # Not supported for the moment as internal API
+    # def time_repr_svg(self):
+    #     for p in self.pieces:
+    #         p._repr_svg_()
 
     def time_hash(self):
         for p in self.pieces:
@@ -214,8 +215,9 @@ class BaseBoardSuite:
         self.board.unicode(borders=True)
         self.board.unicode(orientation=chess.BLACK)
 
-    def time_repr_svg(self):
-        self.board._repr_svg_()
+    # Not supported for now as internal API
+    # def time_repr_svg(self):
+    #     self.board._repr_svg_()
 
     def time_set_board_fen(self):
         self.board.set_board_fen(chess.STARTING_BOARD_FEN)

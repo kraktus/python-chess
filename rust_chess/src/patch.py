@@ -14,5 +14,5 @@ def patch_supported(src_module, dst_module):
     _patch_from_module(
         dst_module=dst_module,
         src_module=src_module,
-        names=["SquareSet", "Piece"],
+        names=["SquareSet", "Piece", "Move"],
     )
