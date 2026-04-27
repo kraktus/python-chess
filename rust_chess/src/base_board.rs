@@ -227,22 +227,14 @@ impl BaseBoard {
     }
 
     // TODO? remove from pyclass and make pure rust function? undocumented in python
-    fn attacks_mask(&self, square: PySquare) -> u64 {
-        {
-            let occ = self.by_color.white | self.by_color.black;
-            let role = self.by_role.find(|r| r.contains(square.0));
-            let color = self.by_color.find(|c| c.contains(square.0));
-            if let (Some(r), Some(c)) = (role, color) {
-                shakmaty::attacks::attacks(square.0, Piece { role: r, color: c }, occ).0
-            } else {
-                0
-            }
-        }
+    #[pyo3(name = "attacks_mask")]
+    fn py_attacks_mask(&self, square: PySquare) -> u64 {
+        self.attacks_mask(square.0).0
     }
 
     fn attacks(&self, square: PySquare) -> SquareSet {
         SquareSet {
-            bb: Bitboard(self.attacks_mask(square)),
+            bb: self.attacks_mask(square.0),
         }
     }
 
@@ -483,5 +475,18 @@ impl BaseBoard {
             color.0,
             occupied.unwrap_or_else(|| self.occupied()),
         ))
+    }
+}
+
+impl BaseBoard {
+    pub fn attacks_mask(&self, square: shakmaty::Square) -> Bitboard {
+        let occ = self.by_color.white | self.by_color.black;
+        let role = self.by_role.find(|r| r.contains(square));
+        let color = self.by_color.find(|c| c.contains(square));
+        if let (Some(r), Some(c)) = (role, color) {
+            shakmaty::attacks::attacks(square, Piece { role: r, color: c }, occ)
+        } else {
+            Bitboard::EMPTY
+        }
     }
 }
