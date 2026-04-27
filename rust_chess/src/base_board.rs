@@ -248,7 +248,7 @@ impl BaseBoard {
             bb: self.attacks_mask(square.0),
         }
     }
-
+    #[pyo3(signature = (color, square, occupied=None))]
     fn is_attacked_by(
         &self,
         color: PyColor,
