@@ -54,9 +54,23 @@ pub struct BaseBoard {
 }
 
 impl BaseBoard {
-    pub fn board(&self) -> Result<Board, PyErr> {
+    fn board(&self) -> PyResult<Board> {
         Board::try_from_bitboards(self.by_role.clone(), self.by_color.clone())
             .map_err(|e| PyValueError::new_err(format!("Invalid board state: {e}")))
+    }
+
+    fn modify_board<F, P>(&mut self, mut f: F, p: P) -> PyResult<()>
+    where
+        F: FnMut(&mut Board),
+        P: Fn(Bitboard) -> Bitboard,
+    {
+        let mut b = self.board()?;
+        f(&mut b);
+        let (roles, colors) = b.into_bitboards();
+        self.by_role = roles;
+        self.by_color = colors;
+        self.promoted = p(self.promoted);
+        Ok(())
     }
 }
 
@@ -348,17 +362,17 @@ impl BaseBoard {
         self.pin_mask(color, square) != 0xFFFF_FFFF_FFFF_FFFF
     }
 
-    fn remove_piece_at(&mut self, square: PySquare) -> Option<PyPiece> {
-        let role = self.by_role.find(|r| r.contains(square.0));
-        let color = self.by_color.find(|c| c.contains(square.0));
-        self.by_role.as_mut().for_each(|r| r.discard(square.0));
-        self.by_color.as_mut().for_each(|c| c.discard(square.0));
-        self.promoted.discard(square.0);
-        if let (Some(r), Some(c)) = (role, color) {
-            Some(PyPiece(Piece { role: r, color: c }))
-        } else {
-            None
-        }
+    fn remove_piece_at(&mut self, square: PySquare) -> PyResult<Option<PyPiece>> {
+        let mut removed_piece = None;
+        let rm_piece = |b: &mut Board| {
+            removed_piece = b.remove_piece_at(square.0).map(PyPiece);
+        };
+    
+        let piece_promoted = |bb: Bitboard| -> Bitboard {
+            bb.without(square.0)
+        };
+        self.modify_board(rm_piece, piece_promoted)?;
+        Ok(removed_piece)
     }
 
     #[pyo3(signature = (square, piece, promoted=false))]
@@ -476,10 +490,10 @@ impl BaseBoard {
         Ok(())
     }
 
-    fn transform(slf: &Bound<'_, Self>, f: &Bound<'_, PyAny>) -> PyResult<Py<PyAny>> {
-        let board = slf.call_method0("copy")?;
-        board.call_method1("apply_transform", (f,))?;
-        Ok(board.unbind())
+    fn transform(&self, f: &Bound<'_, PyAny>) -> PyResult<Self> {
+        let mut board = self.clone();
+        board.apply_transform(f)?;
+        Ok(board)
     }
 
     fn mirror(&self) -> Self {
@@ -509,14 +523,8 @@ impl BaseBoard {
         }
     }
 
-    fn occupied_w(&self) -> u64 {
-        self.by_color.white.0
-    }
     fn set_occupied_w(&mut self, value: u64) {
         self.by_color.white = Bitboard(value);
-    }
-    fn occupied_b(&self) -> u64 {
-        self.by_color.black.0
     }
     fn set_occupied_b(&mut self, value: u64) {
         self.by_color.black = Bitboard(value);
