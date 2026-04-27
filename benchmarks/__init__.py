@@ -1,19 +1,6 @@
 import chess
-from rust_chess import sum_as_string
+import operator
 
-
-
-def sum_as_string_py(a: int, b: int):
-    return str(a + b)
-
-
-class RustCHessTestSuite:
-
-    def time_sum_as_str_py(self):
-        sum_as_string_py(5, 20)
-
-    def time_sum_as_str_rust(self):
-        sum_as_string(5, 20)
 
 class OutcomeSuite:
     def setup(self):
@@ -829,12 +816,12 @@ class SquareSetSuite:
         int(self.sparse)
 
     def time_index(self):
-        import operator
-
         operator.index(self.sparse)
 
-    def time_str_repr(self):
+    def time_str(self):
         str(self.sparse)
+
+    def time_repr(self):
         repr(self.sparse)
 
     def time_update_methods(self):
