@@ -13,9 +13,7 @@ pub struct PyPiece {
 impl From<Piece> for PyPiece {
     #[inline]
     fn from(inner: Piece) -> Self {
-        Self {
-            inner
-        }
+        Self { inner }
     }
 }
 

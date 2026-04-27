@@ -1,7 +1,7 @@
 use pyo3::exceptions::PyTypeError;
 use pyo3::prelude::*;
 use pyo3::types::PyAny;
-use shakmaty::{Bitboard, Square, Color, Role};
+use shakmaty::{Bitboard, Color, Role, Square};
 
 use crate::square_set::SquareSet;
 
@@ -31,7 +31,6 @@ pub fn extract_mask(value: &Bound<'_, PyAny>) -> PyResult<Bitboard> {
         "Expected SquareSet, int, or iterable of squares",
     ))
 }
-
 
 pub struct IntoSquareSet(pub Bitboard);
 

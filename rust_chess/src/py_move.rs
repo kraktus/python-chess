@@ -8,7 +8,7 @@ use pyo3::types::PyType;
 use shakmaty::uci::UciMove;
 use shakmaty::{Role, Square};
 
-use crate::util::{PySquare, PyRole};
+use crate::util::{PyRole, PySquare};
 
 #[pyclass(module = "rust_chess", from_py_object, eq, name = "Move")]
 #[derive(Clone, PartialEq, Eq, Hash)]

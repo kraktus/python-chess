@@ -1,10 +1,10 @@
 pub mod base_board;
 pub mod piece;
 pub mod py_move;
-pub mod util;
 pub mod square_set;
+pub mod util;
 
-use base_board::{OccupiedCo, BaseBoard};
+use base_board::{BaseBoard, OccupiedCo};
 use piece::PyPiece;
 use py_move::PyMove;
 use pyo3::prelude::*;

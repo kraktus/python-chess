@@ -4,7 +4,7 @@ use pyo3::prelude::*;
 use pyo3::types::{PyAny, PyTuple, PyType};
 use shakmaty::Bitboard;
 
-use crate::util::{PySquare, extract_mask, IntoSquareSet};
+use crate::util::{IntoSquareSet, PySquare, extract_mask};
 
 #[pyclass(module = "rust_chess", from_py_object)]
 #[derive(Clone, Copy, PartialEq, Eq)]
