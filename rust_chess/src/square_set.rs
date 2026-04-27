@@ -4,45 +4,7 @@ use pyo3::prelude::*;
 use pyo3::types::{PyAny, PyTuple, PyType};
 use shakmaty::{Bitboard, Square};
 
-pub struct PySquare(pub Square);
-
-impl FromPyObject<'_, '_> for PySquare {
-    type Error = PyErr;
-
-    fn extract(obj: Borrowed<'_, '_, PyAny>) -> Result<Self, Self::Error> {
-        let int: i32 = obj.extract()?;
-        Ok(PySquare(int.try_into().or_else(|_| {
-            Err(PyTypeError::new_err(format!("Square out of bounds: {int}")))
-        })?))
-    }
-}
-
-pub fn extract_mask(value: &Bound<'_, PyAny>) -> PyResult<Bitboard> {
-    if let Ok(ss) = value.extract::<SquareSet>() {
-        return Ok(ss.bb);
-    }
-
-    if let Ok(val) = value.call_method0("__int__")
-        && let Ok(masked) = val.call_method1("__and__", (Bitboard::FULL.0,))
-        && let Ok(mask) = masked.extract::<u64>()
-    {
-        return Ok(Bitboard(mask));
-    }
-
-    let mut mask = Bitboard::EMPTY;
-    if let Ok(iter) = value.try_iter() {
-        for item in iter {
-            let item = item?;
-            let square = item.extract::<PySquare>()?;
-            mask.add(square.0);
-        }
-        return Ok(mask);
-    }
-
-    Err(PyTypeError::new_err(
-        "Expected SquareSet, int, or iterable of squares",
-    ))
-}
+use crate::util::{PySquare, extract_mask, IntoSquareSet};
 
 #[pyclass(module = "rust_chess", from_py_object)]
 #[derive(Clone, Copy, PartialEq, Eq)]
@@ -97,8 +59,8 @@ impl SquareSet {
     }
 
     fn remove(&mut self, square: PySquare) -> PyResult<()> {
-        if self.bb.contains(square.0) {
-            self.bb.discard(square.0);
+        if self.bb.contains(*square) {
+            self.bb.discard(*square);
             Ok(())
         } else {
             Err(PyKeyError::new_err::<i32>(square.0.into()))
@@ -118,40 +80,36 @@ impl SquareSet {
         self.bb = Bitboard(0);
     }
 
-    fn isdisjoint(&self, other: &Bound<'_, PyAny>) -> PyResult<bool> {
-        let other_mask = extract_mask(other)?;
-        Ok(self.bb.intersect(other_mask).is_empty())
+    fn isdisjoint(&self, other: IntoSquareSet) -> PyResult<bool> {
+        Ok(self.bb.intersect(other.0).is_empty())
     }
 
-    fn issubset(&self, other: &Bound<'_, PyAny>) -> PyResult<bool> {
-        let other_mask = extract_mask(other)?;
-        Ok(self.bb.without(other_mask).is_empty())
+    fn issubset(&self, other: IntoSquareSet) -> PyResult<bool> {
+        Ok(self.bb.without(other.0).is_empty())
     }
 
-    fn issuperset(&self, other: &Bound<'_, PyAny>) -> PyResult<bool> {
-        let other_mask = extract_mask(other)?;
-        Ok(other_mask.without(self.bb).is_empty())
+    fn issuperset(&self, other: IntoSquareSet) -> PyResult<bool> {
+        Ok(other.without(self.bb).is_empty())
     }
 
-    fn union(&self, other: &Bound<'_, PyAny>) -> PyResult<SquareSet> {
-        let other_mask = extract_mask(other)?;
+    fn union(&self, other: IntoSquareSet) -> PyResult<SquareSet> {
         Ok(SquareSet {
-            bb: self.bb.with(other_mask),
+            bb: self.bb.with(other.0),
         })
     }
 
-    fn __or__(&self, other: &Bound<'_, PyAny>) -> PyResult<SquareSet> {
+    fn __or__(&self, other: IntoSquareSet) -> PyResult<SquareSet> {
         self.union(other)
     }
 
-    fn intersection(&self, other: &Bound<'_, PyAny>) -> PyResult<SquareSet> {
+    fn intersection(&self, other: IntoSquareSet) -> PyResult<SquareSet> {
         let other_mask = extract_mask(other)?;
         Ok(SquareSet {
             bb: self.bb.intersect(other_mask),
         })
     }
 
-    fn __and__(&self, other: &Bound<'_, PyAny>) -> PyResult<SquareSet> {
+    fn __and__(&self, other: IntoSquareSet) -> PyResult<SquareSet> {
         self.intersection(other)
     }
 

@@ -14,7 +14,7 @@ pub struct PyPiece {
 impl PyPiece {
     #[new]
     #[pyo3(signature = (piece_type, color))]
-    fn py_new(piece_type: u8, color: bool) -> PyResult<Self> {
+    pub fn py_new(piece_type: u8, color: bool) -> PyResult<Self> {
         let role = Role::try_from(piece_type)
             .map_err(|_| PyValueError::new_err(format!("invalid piece type: {}", piece_type)))?;
         let color = if color { Color::White } else { Color::Black };

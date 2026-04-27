@@ -8,20 +8,7 @@ use pyo3::types::PyType;
 use shakmaty::uci::UciMove;
 use shakmaty::{Role, Square};
 
-use crate::square_set::PySquare;
-
-pub struct PyRole(pub Role);
-
-impl FromPyObject<'_, '_> for PyRole {
-    type Error = PyErr;
-
-    fn extract(obj: Borrowed<'_, '_, PyAny>) -> Result<Self, Self::Error> {
-        let int: i32 = obj.extract()?;
-        Ok(PyRole(int.try_into().or_else(|_| {
-            Err(PyTypeError::new_err(format!("Role out of bounds: {int}")))
-        })?))
-    }
-}
+use crate::util::{PySquare, PyRole};
 
 #[pyclass(module = "rust_chess", from_py_object, eq, name = "Move")]
 #[derive(Clone, PartialEq, Eq, Hash)]
