@@ -16,11 +16,5 @@ fn rust_chess(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<PyPiece>()?;
     m.add_class::<PyMove>()?;
 
-    let py = m.py();
-    let python_code = std::ffi::CString::new(include_str!("patch.py")).unwrap();
-
-    let funcs = pyo3::types::PyModule::from_code(py, &python_code, c"patch.py", c"rust_chess_py")?;
-    m.add("patch_supported", funcs.getattr("patch_supported")?)?;
-
     Ok(())
 }

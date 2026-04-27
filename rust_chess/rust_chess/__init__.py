@@ -1,3 +1,5 @@
+from .rust_chess import *
+
 def _patch_from_module(dst_module, src_module, names):
     """
     Replace attributes on dst_module with attributes from src_module for each name.
