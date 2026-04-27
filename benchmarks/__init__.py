@@ -1,5 +1,11 @@
-import chess
 import operator
+import os
+
+import chess
+
+if os.environ.get("RUST_CHESS") == "1":
+    import rust_chess
+    chess.SquareSet = rust_chess.SquareSet
 
 
 class OutcomeSuite:

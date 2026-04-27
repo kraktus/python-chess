@@ -1,11 +1,27 @@
 {
     "version": 1,
     "project": "python-chess",
-    "project_url": "https://github.com/kraktus/python-ches",
+    "project_url": "https://github.com/kraktus/python-chess",
     "repo": ".",
     "branches": ["asv"],
     // TODO switch to UV after .6.6?
-    "environment_type": "existing",
+    "matrix": {
+        "env_nobuild": {
+            "RUST_CHESS": ["0", "1"]
+        }
+    },
+
+    "environment_type": "virtualenv",
+    "install_command":
+        ["in-dir={env_dir} python -m pip install {wheel_file}",
+            "python -m pip install maturin",
+            "VIRTUAL_ENV={env_dir} python -m maturin develop --manifest-path rust_chess/Cargo.toml --release"],
+    "uninstall_command":
+        ["return-code=any python -m pip uninstall -y {project}"],
+    "build_command":
+        ["python setup.py build",
+        "python -m pip wheel -w {build_cache_dir} {build_dir}"],
+
     "benchmark_dir": "benchmarks",
     "env_dir": ".asv/env",
     "results_dir": ".asv/results",
