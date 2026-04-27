@@ -1,4 +1,4 @@
-use pyo3::exceptions::PyTypeError;
+use pyo3::exceptions::{PyTypeError, PyAssertionError};
 use pyo3::prelude::*;
 use pyo3::types::PyAny;
 use shakmaty::{Bitboard, Color, Role, Square};
@@ -63,7 +63,7 @@ impl FromPyObject<'_, '_> for PyRole {
     fn extract(obj: Borrowed<'_, '_, PyAny>) -> Result<Self, Self::Error> {
         let int: i32 = obj.extract()?;
         Ok(Self(int.try_into().or_else(|_| {
-            Err(PyTypeError::new_err(format!("Role out of bounds: {int}")))
+            Err(PyAssertionError::new_err(format!("Role out of bounds: {int}")))
         })?))
     }
 }
