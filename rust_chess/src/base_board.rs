@@ -1,7 +1,11 @@
-use pyo3::exceptions::{PyIndexError, PyValueError};
+use pyo3::exceptions::{PyIndexError, PyValueError, PyNotImplementedError};
 use pyo3::prelude::*;
+use std::str::FromStr;
 use pyo3::types::PyType;
 use shakmaty::{Bitboard, Board, Piece, Role, Square};
+use crate::util::{PyColor, PySquare, PyRole, IntoSquareSet};
+use crate::piece::PyPiece;
+use crate::square_set::SquareSet;
 
 #[pyclass(module = "rust_chess", name = "OccupiedCo")]
 pub struct OccupiedCo {
@@ -166,55 +170,6 @@ impl BaseBoard {
         board.set_occupied_w(value[1]);
         Ok(())
     }
-
-impl BaseBoard {
-    pub fn empty() -> PyResult<Self> {
-        let (roles, colors) = Board::empty().into_bitboards();
-        Ok(Self {
-            by_role: roles,
-            by_color: colors,
-            promoted: Bitboard::EMPTY,
-        })
-    }
-
-    pub fn set_occupied_w(&mut self, value: u64) {
-        self.by_color.white = Bitboard(value);
-    }
-    pub fn set_occupied_b(&mut self, value: u64) {
-        self.by_color.black = Bitboard(value);
-    }
-
-    pub fn occupied(&self) -> Bitboard {
-        self.by_color.white | self.by_color.black
-    }
-
-    pub fn attackers_mask(
-        &self,
-        color: PyColor,
-        square: PySquare,
-        occupied: Option<Bitboard>,
-    ) -> PyResult<Bitboard> {
-        Ok(self.board()?.attacks_to(
-            square.0,
-            color.0,
-            occupied.unwrap_or_else(|| self.occupied()),
-        ))
-    }
-
-    pub fn clear_board(&mut self) {
-        let (roles, colors) = Board::empty().into_bitboards();
-        self.by_role = roles;
-        self.by_color = colors;
-        self.promoted = Bitboard(0);
-    }
-
-    pub fn reset_board(&mut self) {
-        let (roles, colors) = Board::new().into_bitboards();
-        self.by_role = roles;
-        self.by_color = colors;
-        self.promoted = Bitboard(0);
-    }
-}
 
     fn set_board_fen(&mut self, fen: &str) -> PyResult<()> {
         let board =
@@ -528,5 +483,21 @@ impl BaseBoard {
         } else {
             Bitboard::EMPTY
         }
+    }
+}
+
+impl BaseBoard {
+    pub fn clear_board(&mut self) {
+        let (roles, colors) = shakmaty::Board::empty().into_bitboards();
+        self.by_role = roles;
+        self.by_color = colors;
+        self.promoted = shakmaty::Bitboard(0);
+    }
+
+    pub fn reset_board(&mut self) {
+        let (roles, colors) = shakmaty::Board::new().into_bitboards();
+        self.by_role = roles;
+        self.by_color = colors;
+        self.promoted = shakmaty::Bitboard(0);
     }
 }
