@@ -42,6 +42,7 @@ impl FromPyObject<'_, '_> for IntoSquareSet {
     }
 }
 
+#[derive(Clone, Copy)]
 pub struct PySquare(pub Square);
 
 impl FromPyObject<'_, '_> for PySquare {
