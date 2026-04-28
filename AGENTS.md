@@ -22,9 +22,11 @@
 ## Guidelines
 
 
-- When porting API to rust, always use the highest-level of abstraction of shakmaty internal, do not fallback to constants.
+- When porting API to rust, always use the highest-level of abstraction of shakmaty internal, do not fallback to constants. You can check the whole shakmaty API by viewing `shakmaty_api.txt`
+- USE Bitboards as much as possible. NEVER ENCODE BITBOARD Constants as raw u64, always look for an appropriely named constant in shakmaty::Bitboard.
 - Also use shakmaty constant every time it is possible, like for default board fen, full bitboard, etc.
 - Never implement private python API (starting with an underscore)
+
 - Use types in rust_chess/src/utils.py for converting args of python method to higher-level types:
 
 
@@ -33,11 +35,22 @@ Exemple:
     * use PyColor instead of bool for color
     * use PySquare instead of u32/any int for square/sq
 
-- Never modify chess/__init__.py
+- DO NOT MONKEY-PATCH Board and BaseBoard. They will be swapped later on by user at the import level, like :
+
+```py
+USE_RUST_CHESS = os.environ.get("RUST_CHESS") == "1"
+if USE_RUST_CHESS:
+    import rust_chess
+    rust_chess.patch_supported(
+        dst_module=chess,
+        src_module=rust_chess,
+    )
+    from rust_chess import BaseBoard
+    from chess import Board
+else:
+    from chess import BaseBoard, Board
+```
+
+- Never modify chess/\*.py
 - Never modify test.py
-- All your temporary scripts/tests should be in a tmp folder.
-
-## testing 
-
-run ./bin/test.sh
-
+- All your temporary scripts/tests should be in a tmp/ folder.

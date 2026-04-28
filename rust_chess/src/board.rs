@@ -5,7 +5,6 @@ use std::num::NonZeroU32;
 use crate::base_board::BaseBoard;
 use crate::py_move::PyMove;
 use crate::util::{PyColor, PySquare};
-use pyo3::ffi::PyObject;
 use pyo3::prelude::*;
 
 #[pyclass(module = "rust_chess", name = "LegalMoveGenerator")]
@@ -443,6 +442,16 @@ impl Board {
     ) -> Option<crate::piece::PyPiece> {
         slf.clear_stack(py);
         slf.into_super().remove_piece_at(square)
+    }
+
+    #[pyo3(signature = (pieces))]
+    fn set_piece_map(
+        mut slf: PyRefMut<'_, Self>,
+        py: Python<'_>,
+        pieces: &Bound<'_, pyo3::types::PyDict>,
+    ) -> PyResult<()> {
+        slf.clear_stack(py);
+        slf.into_super().set_piece_map(pieces)
     }
 
     fn set_board_fen(mut slf: PyRefMut<'_, Self>, py: Python<'_>, fen: &str) -> PyResult<()> {
