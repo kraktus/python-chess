@@ -24,3 +24,4 @@ fuzz/corpus
 release-v*.txt
 target/
 .asv/
+*.so

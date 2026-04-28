@@ -1,13 +1,7 @@
-use pyo3::exceptions::{PyIndexError, PyNotImplementedError, PyValueError};
+use pyo3::exceptions::{PyIndexError, PyValueError};
 use pyo3::prelude::*;
-use pyo3::types::{PyAny, PyType};
-use shakmaty::{Bitboard, Board, Color, Piece, Role, Square};
-use std::str::FromStr;
-
-use crate::piece::PyPiece;
-use crate::square_set::SquareSet;
-
-use crate::util::{IntoSquareSet, PyColor, PyRole, PySquare};
+use pyo3::types::PyType;
+use shakmaty::{Bitboard, Board, Piece, Role, Square};
 
 #[pyclass(module = "rust_chess", name = "OccupiedCo")]
 pub struct OccupiedCo {
@@ -65,7 +59,7 @@ impl Default for BaseBoard {
 }
 
 impl BaseBoard {
-    fn board(&self) -> PyResult<Board> {
+    pub fn board(&self) -> PyResult<Board> {
         Board::try_from_bitboards(self.by_role.clone(), self.by_color.clone())
             .map_err(|e| PyValueError::new_err(format!("Invalid board state: {e}")))
     }
@@ -80,12 +74,12 @@ impl BaseBoard {
             return Ok(if fen == "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR" {
                 Self::default()
             } else {
-                let mut b = Self::empty();
+                let mut b = Self::empty()?;
                 b.set_board_fen(fen)?;
                 b
             });
         }
-        Ok(Self::empty())
+        Self::empty()
     }
 
     #[getter]
@@ -173,19 +167,54 @@ impl BaseBoard {
         Ok(())
     }
 
-    fn clear_board(&mut self) {
+impl BaseBoard {
+    pub fn empty() -> PyResult<Self> {
+        let (roles, colors) = Board::empty().into_bitboards();
+        Ok(Self {
+            by_role: roles,
+            by_color: colors,
+            promoted: Bitboard::EMPTY,
+        })
+    }
+
+    pub fn set_occupied_w(&mut self, value: u64) {
+        self.by_color.white = Bitboard(value);
+    }
+    pub fn set_occupied_b(&mut self, value: u64) {
+        self.by_color.black = Bitboard(value);
+    }
+
+    pub fn occupied(&self) -> Bitboard {
+        self.by_color.white | self.by_color.black
+    }
+
+    pub fn attackers_mask(
+        &self,
+        color: PyColor,
+        square: PySquare,
+        occupied: Option<Bitboard>,
+    ) -> PyResult<Bitboard> {
+        Ok(self.board()?.attacks_to(
+            square.0,
+            color.0,
+            occupied.unwrap_or_else(|| self.occupied()),
+        ))
+    }
+
+    pub fn clear_board(&mut self) {
         let (roles, colors) = Board::empty().into_bitboards();
         self.by_role = roles;
         self.by_color = colors;
         self.promoted = Bitboard(0);
     }
 
-    fn reset_board(&mut self) {
+    pub fn reset_board(&mut self) {
         let (roles, colors) = Board::new().into_bitboards();
         self.by_role = roles;
         self.by_color = colors;
         self.promoted = Bitboard(0);
     }
+}
 
     fn set_board_fen(&mut self, fen: &str) -> PyResult<()> {
         let board =
@@ -357,7 +386,7 @@ impl BaseBoard {
     #[classmethod]
     #[pyo3(name = "empty")]
     fn py_empty(_cls: &Bound<'_, PyType>) -> PyResult<Self> {
-        Ok(Self::empty())
+        Self::empty()
     }
 
     fn copy(&self) -> Self {
@@ -455,27 +484,27 @@ impl BaseBoard {
 }
 
 impl BaseBoard {
-    fn empty() -> Self {
+    pub fn empty() -> PyResult<Self> {
         let (roles, colors) = Board::empty().into_bitboards();
-        Self {
+        Ok(Self {
             by_role: roles,
             by_color: colors,
             promoted: Bitboard::EMPTY,
-        }
+        })
     }
 
-    fn set_occupied_w(&mut self, value: u64) {
+    pub fn set_occupied_w(&mut self, value: u64) {
         self.by_color.white = Bitboard(value);
     }
-    fn set_occupied_b(&mut self, value: u64) {
+    pub fn set_occupied_b(&mut self, value: u64) {
         self.by_color.black = Bitboard(value);
     }
 
-    fn occupied(&self) -> Bitboard {
+    pub fn occupied(&self) -> Bitboard {
         self.by_color.white | self.by_color.black
     }
 
-    fn attackers_mask(
+    pub fn attackers_mask(
         &self,
         color: PyColor,
         square: PySquare,
