@@ -42,13 +42,13 @@ impl Board {
                 .map_err(|e| {
                     pyo3::exceptions::PyValueError::new_err(format!("invalid fen: {}", e))
                 })?
-                .into_setup(shakmaty::CastlingMode::Standard);
+                .into_setup();
 
             turn = setup.turn;
             castling_rights = setup.castling_rights;
             ep_square = setup.ep_square;
             halfmove_clock = setup.halfmoves as u16;
-            fullmove_number = setup.fullmoves;
+            fullmove_number = setup.fullmoves.into();
 
             let (roles, colors) = setup.board.into_bitboards();
             BaseBoard {
@@ -66,7 +66,8 @@ impl Board {
             castling_rights,
             ep_square,
             halfmove_clock,
-            fullmove_number,
+            fullmove_number: std::num::NonZeroU32::new(fullmove_number)
+                .unwrap_or(std::num::NonZeroU32::new(1).unwrap()),
             move_stack: Vec::new(),
             _stack: Vec::new(),
         };
@@ -134,7 +135,7 @@ impl Board {
         slf._stack.clear();
 
         let mut base = slf.into_super();
-        base.clear_board();
+        (&mut *base).clear_board();
     }
 
     fn reset(mut slf: PyRefMut<'_, Self>) {
@@ -147,19 +148,19 @@ impl Board {
         slf._stack.clear();
 
         let mut base = slf.into_super();
-        base.reset_board();
+        (&mut *base).reset_board();
     }
 
     fn set_fen(mut slf: PyRefMut<'_, Self>, fen: &str) -> PyResult<()> {
         let setup = shakmaty::fen::Fen::from_ascii(fen.as_bytes())
             .map_err(|e| pyo3::exceptions::PyValueError::new_err(format!("invalid fen: {}", e)))?
-            .into_setup(shakmaty::CastlingMode::Standard);
+            .into_setup();
 
         slf.turn = setup.turn;
         slf.castling_rights = setup.castling_rights;
         slf.ep_square = setup.ep_square;
         slf.halfmove_clock = setup.halfmoves as u16;
-        slf.fullmove_number = setup.fullmoves;
+        slf.fullmove_number = setup.fullmoves.into();
         slf.move_stack.clear();
         slf._stack.clear();
 
@@ -177,13 +178,23 @@ impl Board {
     }
 
     #[getter]
-    fn legal_moves(&self, py: Python) -> pyo3::PyObject {
-        py.None()
+    fn legal_moves<'py>(
+        slf: &Bound<'py, Self>,
+        py: Python<'py>,
+    ) -> PyResult<Bound<'py, pyo3::PyAny>> {
+        let chess_mod = py.import("chess")?;
+        let generator = chess_mod.getattr("LegalMoveGenerator")?;
+        generator.call1((slf,))
     }
 
     #[getter]
-    fn pseudo_legal_moves(&self, py: Python) -> pyo3::PyObject {
-        py.None()
+    fn pseudo_legal_moves<'py>(
+        slf: &Bound<'py, Self>,
+        py: Python<'py>,
+    ) -> PyResult<Bound<'py, pyo3::PyAny>> {
+        let chess_mod = py.import("chess")?;
+        let generator = chess_mod.getattr("PseudoLegalMoveGenerator")?;
+        generator.call1((slf,))
     }
 
     fn is_check(slf: &Bound<'_, Self>) -> PyResult<bool> {
@@ -198,26 +209,21 @@ impl Board {
         Ok(Board::try_shakmaty(slf)?.is_game_over())
     }
 
-    fn push(&mut self, move_obj: pyo3::PyObject, py: Python) {
-        // History push logic
-        self._stack.push(BoardState {
-            castling_rights: self.castling_rights,
-            ep_square: self.ep_square,
-            halfmove_clock: self.halfmove_clock,
-            fullmove_number: self.fullmove_number,
-        });
-        // FIXME: convert PyObject -> PyMove cleanly instead of string representation, but for now just bypass
-        //self.move_stack.push(move_obj.extract::<PyMove>(py).unwrap()); // FIXME handle PyMove extraction
+    fn push<'py>(
+        slf: &Bound<'py, Self>,
+        py: Python<'py>,
+        move_obj: &Bound<'py, pyo3::PyAny>,
+    ) -> PyResult<()> {
+        let chess_mod = py.import("chess")?;
+        let board_cls = chess_mod.getattr("Board")?;
+        board_cls.getattr("push")?.call1((slf, move_obj))?;
+        Ok(())
     }
 
-    fn pop(&mut self, py: Python) -> pyo3::PyObject {
-        if let Some(state) = self._stack.pop() {
-            self.castling_rights = state.castling_rights;
-            self.ep_square = state.ep_square;
-            self.halfmove_clock = state.halfmove_clock;
-            self.fullmove_number = state.fullmove_number;
-        }
-        py.None() // FIXME
+    fn pop<'py>(slf: &Bound<'py, Self>, py: Python<'py>) -> PyResult<Bound<'py, pyo3::PyAny>> {
+        let chess_mod = py.import("chess")?;
+        let board_cls = chess_mod.getattr("Board")?;
+        board_cls.getattr("pop")?.call1((slf,))
     }
 }
 
