@@ -84,12 +84,12 @@ impl BaseBoard {
             return Ok(if fen == "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR" {
                 Self::default()
             } else {
-                let mut b = Self::empty()?;
+                let mut b = Self::empty();
                 b.set_board_fen(fen)?;
                 b
             });
         }
-        Self::empty()
+        Ok(Self::empty())
     }
 
     #[allow(clippy::new_without_default)]
@@ -105,12 +105,18 @@ impl BaseBoard {
                 self.set_board_fen(fen)?;
             }
         } else {
-            let empty = Self::empty()?;
+            let empty = Self::empty();
             self.by_role = empty.by_role;
             self.by_color = empty.by_color;
             self.promoted = empty.promoted;
         }
         Ok(())
+    }
+
+    #[classmethod]
+    #[pyo3(name = "empty")]
+    fn py_empty(_cls: &Bound<'_, PyType>) -> Self {
+        Self::empty()
     }
 
     #[getter]
@@ -455,14 +461,6 @@ impl BaseBoard {
 }
 
 impl BaseBoard {
-    pub fn empty() -> PyResult<Self> {
-        let (roles, colors) = Board::empty().into_bitboards();
-        Ok(Self {
-            by_role: roles,
-            by_color: colors,
-            promoted: Bitboard::EMPTY,
-        })
-    }
 
     pub fn set_occupied_w(&mut self, value: u64) {
         self.by_color.white = Bitboard(value);
@@ -500,9 +498,16 @@ impl BaseBoard {
             Bitboard::EMPTY
         }
     }
-}
 
-impl BaseBoard {
+    pub fn empty() -> Self {
+        let (roles, colors) = Board::empty().into_bitboards();
+        Self {
+            by_role: roles,
+            by_color: colors,
+            promoted: Bitboard::EMPTY,
+        }
+    }
+
     pub fn apply_mirror(&mut self, py: Python<'_>) -> PyResult<()> {
         let flip_vertical = py.import("chess")?.getattr("flip_vertical")?;
         self.apply_transform(&flip_vertical)?;

@@ -155,7 +155,7 @@ impl Board {
                 promoted: setup.promoted,
             }
         } else {
-            let b = BaseBoard::empty()?;
+            let b = BaseBoard::empty();
             b
         };
 
