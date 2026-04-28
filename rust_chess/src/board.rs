@@ -8,6 +8,80 @@ use crate::py_move::PyMove;
 use crate::util::{PyColor, PySquare};
 use pyo3::prelude::*;
 
+#[pyclass(module = "rust_chess", name = "LegalMoveGenerator")]
+pub struct LegalMoveGenerator {
+    board: Py<Board>,
+}
+
+#[pymethods]
+impl LegalMoveGenerator {
+    #[new]
+    fn py_new(board: Py<Board>) -> Self {
+        Self { board }
+    }
+
+    fn __bool__(&self, py: Python<'_>) -> PyResult<bool> {
+        let board = self.board.bind(py);
+        let chess = Board::try_shakmaty(&board)?;
+        Ok(!chess.legal_moves().is_empty())
+    }
+
+    fn __len__(&self, py: Python<'_>) -> PyResult<usize> {
+        self.count(py)
+    }
+
+    fn count(&self, py: Python<'_>) -> PyResult<usize> {
+        let board = self.board.bind(py);
+        let chess = Board::try_shakmaty(&board)?;
+        Ok(chess.legal_moves().len())
+    }
+
+    fn __iter__<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, pyo3::PyAny>> {
+        let board = self.board.bind(py);
+        let chess = Board::try_shakmaty(&board)?;
+
+        let mode = shakmaty::CastlingMode::Standard; // TODO: support chess960
+        let mut py_moves = Vec::new();
+        for m in chess.legal_moves() {
+            let pm = PyMove {
+                inner: m.to_uci(mode),
+            };
+            py_moves.push(Bound::new(py, pm)?.into_any());
+        }
+
+        let list = pyo3::types::PyList::new(py, py_moves)?;
+        list.call_method0("__iter__")
+    }
+
+    fn __contains__(&self, move_obj: &Bound<'_, pyo3::PyAny>, py: Python<'_>) -> PyResult<bool> {
+        if let Ok(m) = move_obj.extract::<PyRef<'_, PyMove>>() {
+            let board = self.board.bind(py);
+            let chess = Board::try_shakmaty(&board)?;
+            if let Ok(sm_move) = m.inner.to_move(&chess) {
+                return Ok(chess.is_legal(sm_move));
+            }
+        }
+        Ok(false)
+    }
+
+    fn __repr__(slf: &Bound<'_, Self>) -> PyResult<String> {
+        let py = slf.py();
+        let self_rust = slf.borrow();
+        let board = self_rust.board.bind(py);
+        let chess = Board::try_shakmaty(&board)?;
+        let moves = chess.legal_moves();
+        let mut sans = Vec::new();
+        for m in moves.iter() {
+            sans.push(shakmaty::san::San::from_move(&chess, m.clone()).to_string());
+        }
+        Ok(format!(
+            "<LegalMoveGenerator at {:#x} ({})>",
+            slf.as_ptr() as usize,
+            sans.join(", ")
+        ))
+    }
+}
+
 pub struct BoardState {
     pub castling_rights: Bitboard,
     pub ep_square: Option<Square>,
@@ -15,7 +89,7 @@ pub struct BoardState {
     pub fullmove_number: NonZeroU32,
 }
 
-#[pyclass(extends=BaseBoard, subclass)]
+#[pyclass(extends=BaseBoard, subclass, dict)]
 pub struct Board {
     pub turn: Color,
     pub castling_rights: Bitboard,
@@ -30,6 +104,7 @@ pub struct Board {
 impl Board {
     #[new]
     #[pyo3(signature = (fen=Some("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"), *, chess960=false))]
+    #[allow(unused_variables)]
     fn __new__(fen: Option<&str>, chess960: bool) -> PyResult<(Self, BaseBoard)> {
         let mut turn = shakmaty::Color::White;
         let mut castling_rights = shakmaty::Bitboard::EMPTY;
@@ -182,9 +257,8 @@ impl Board {
         slf: &Bound<'py, Self>,
         py: Python<'py>,
     ) -> PyResult<Bound<'py, pyo3::PyAny>> {
-        let chess_mod = py.import("chess")?;
-        let generator = chess_mod.getattr("LegalMoveGenerator")?;
-        generator.call1((slf,))
+        let generator = Bound::new(py, LegalMoveGenerator::py_new(slf.clone().unbind()))?;
+        Ok(generator.into_any())
     }
 
     #[getter]
@@ -205,25 +279,8 @@ impl Board {
         Ok(Board::try_shakmaty(slf)?.is_variant_end())
     }
 
-    fn is_game_over(slf: &Bound<'_, Self>, claim_draw: Option<bool>) -> PyResult<bool> {
+    fn is_game_over(slf: &Bound<'_, Self>, _claim_draw: Option<bool>) -> PyResult<bool> {
         Ok(Board::try_shakmaty(slf)?.is_game_over())
-    }
-
-    fn push<'py>(
-        slf: &Bound<'py, Self>,
-        py: Python<'py>,
-        move_obj: &Bound<'py, pyo3::PyAny>,
-    ) -> PyResult<()> {
-        let chess_mod = py.import("chess")?;
-        let board_cls = chess_mod.getattr("Board")?;
-        board_cls.getattr("push")?.call1((slf, move_obj))?;
-        Ok(())
-    }
-
-    fn pop<'py>(slf: &Bound<'py, Self>, py: Python<'py>) -> PyResult<Bound<'py, pyo3::PyAny>> {
-        let chess_mod = py.import("chess")?;
-        let board_cls = chess_mod.getattr("Board")?;
-        board_cls.getattr("pop")?.call1((slf,))
     }
 }
 
