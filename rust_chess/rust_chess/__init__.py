@@ -14,7 +14,6 @@ def _patch_from_module(dst_module, src_module, names):
 
 # cannot reference itself as module
 def patch_supported(src_module, dst_module):
-    patch_baseboard(dst_module, src_module)
     _patch_from_module(
         dst_module=dst_module,
         src_module=src_module,
@@ -32,8 +31,4 @@ def patch_baseboard(dst_module, src_module):
         if not name.startswith("__") and not hasattr(src_bb, name):
             setattr(src_bb, name, getattr(dst_bb, name))
 
-    def new_bb_init(self, board_fen=None):
-        pass
-
-    src_bb.__init__ = new_bb_init
     dst_module.BaseBoard = src_bb

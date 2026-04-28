@@ -1,11 +1,11 @@
-use pyo3::exceptions::{PyIndexError, PyValueError, PyNotImplementedError};
-use pyo3::prelude::*;
-use std::str::FromStr;
-use pyo3::types::PyType;
-use shakmaty::{Bitboard, Board, Piece, Role, Square};
-use crate::util::{PyColor, PySquare, PyRole, IntoSquareSet};
 use crate::piece::PyPiece;
 use crate::square_set::SquareSet;
+use crate::util::{IntoSquareSet, PyColor, PyRole, PySquare};
+use pyo3::exceptions::{PyIndexError, PyNotImplementedError, PyValueError};
+use pyo3::prelude::*;
+use pyo3::types::PyType;
+use shakmaty::{Bitboard, Board, Piece, Role, Square};
+use std::str::FromStr;
 
 #[pyclass(module = "rust_chess", name = "OccupiedCo")]
 pub struct OccupiedCo {
@@ -43,7 +43,13 @@ impl OccupiedCo {
     }
 }
 
-#[pyclass(subclass, dict, module = "rust_chess", name = "BaseBoard")]
+#[pyclass(
+    subclass,
+    dict,
+    module = "rust_chess",
+    name = "BaseBoard",
+    from_py_object
+)]
 #[derive(Clone, PartialEq, Eq)]
 pub struct BaseBoard {
     pub by_role: shakmaty::ByRole<Bitboard>,
