@@ -4,7 +4,7 @@ use crate::util::{IntoSquareSet, PyColor, PyRole, PySquare};
 use pyo3::exceptions::{PyIndexError, PyNotImplementedError, PyValueError};
 use pyo3::prelude::*;
 use pyo3::types::PyType;
-use shakmaty::{Bitboard, Board, Piece, Role, Square};
+use shakmaty::{Bitboard, Board, Piece, Role, Square, Color};
 use std::str::FromStr;
 
 #[pyclass(module = "rust_chess", name = "OccupiedCo")]
@@ -214,8 +214,8 @@ impl BaseBoard {
         Ok(())
     }
 
-    fn piece_count(&self) -> u32 {
-        (self.by_color.white | self.by_color.black).count() as u32
+    fn piece_count(&self) -> usize {
+        self.occupied().count()
     }
 
     fn pieces_mask(&self, piece_type: PyRole, color: PyColor) -> u64 {
@@ -248,10 +248,9 @@ impl BaseBoard {
             })
     }
 
-    fn king(&self, color: PyColor) -> Option<u8> {
-        (*self.by_role.get(Role::King) & *self.by_color.get(color.0) & !self.promoted)
-            .single_square()
-            .map(|sq| sq as u8)
+    #[pyo3(name = "king")]
+    fn py_king(&self, color: PyColor) -> Option<u8> {
+        self.king(color.0).map(|x| x as u8)
     }
 
     // TODO? remove from pyclass and make pure rust function? undocumented in python
@@ -289,53 +288,18 @@ impl BaseBoard {
         })
     }
 
-    // TODO FIXME, move to shakmaty
-    fn pin_mask(&self, color: PyColor, square: PySquare) -> u64 {
-        let king_sq_opt = self.king(crate::util::PyColor(color.0));
-        if king_sq_opt.is_none() {
-            return 0xFFFF_FFFF_FFFF_FFFF;
-        }
-        let king_sq = king_sq_opt.unwrap();
-        if king_sq == (square.0 as u8) {
-            return 0xFFFF_FFFF_FFFF_FFFF;
-        }
-        let k_sq = Square::new(king_sq as u32);
-
-        let c_color = color.0;
-        let snipers = (shakmaty::attacks::rook_attacks(k_sq, Bitboard(0))
-            & (*self.by_role.get(Role::Rook) | *self.by_role.get(Role::Queen)))
-            | (shakmaty::attacks::bishop_attacks(k_sq, Bitboard(0))
-                & (*self.by_role.get(Role::Bishop) | *self.by_role.get(Role::Queen)));
-        let enemy_snipers = snipers & *self.by_color.get(!c_color);
-
-        for sniper_sq in enemy_snipers {
-            let ray = shakmaty::attacks::ray(k_sq, sniper_sq);
-            if ray.contains(square.0) {
-                let between = shakmaty::attacks::between(k_sq, sniper_sq);
-                if (between
-                    & (self.by_color.white | self.by_color.black)
-                    & !Bitboard(1 << (square.0 as u8)))
-                .is_empty()
-                {
-                    return ray.0;
-                }
-            }
-        }
-        0xFFFF_FFFF_FFFF_FFFF
-    }
-
     fn pin(&self, color: PyColor, square: PySquare) -> SquareSet {
         SquareSet {
-            bb: Bitboard(self.pin_mask(color, square)),
+            bb: self.pin_mask(color.0, square.0),
         }
     }
 
     fn is_pinned(&self, color: PyColor, square: PySquare) -> bool {
-        self.pin_mask(color, square) != 0xFFFF_FFFF_FFFF_FFFF
+        self.pin_mask(color.0, square.0) != Bitboard::FULL
     }
 
     pub fn remove_piece_at(&mut self, square: PySquare) -> Option<PyPiece> {
-        let piece = self.piece_at(crate::util::PySquare(square.0));
+        let piece = self.piece_at(square);
         self.by_role.as_mut().for_each(|r| r.discard(square.0));
         self.by_color.as_mut().for_each(|c| c.discard(square.0));
         self.promoted.discard(square.0);
@@ -352,6 +316,40 @@ impl BaseBoard {
                 self.promoted.add(square.0);
             }
         }
+    }
+
+    #[pyo3(signature = (*, mask=None))]
+    fn piece_map<'py>(
+        &self,
+        py: Python<'py>,
+        mask: Option<u64>,
+    ) -> PyResult<Bound<'py, pyo3::types::PyDict>> {
+        let board = self.board()?;
+        let mask_bb = mask.map(Bitboard).unwrap_or(Bitboard::FULL);
+        let dict = pyo3::types::PyDict::new(py);
+        let occ = board.occupied() & mask_bb;
+        for (sq, piece) in board.iter() {
+            if mask_bb.contains(sq) {
+                let py_piece = PyPiece(piece);
+                dict.set_item(u32::from(sq), py_piece.into_pyobject(py)?)?;
+            }
+        }
+        Ok(dict)
+    }
+
+    #[pyo3(signature = (pieces))]
+    pub fn set_piece_map(&mut self, pieces: &Bound<'_, pyo3::types::PyDict>) -> PyResult<()> {
+        self.clear_board();
+        for (sq, p) in pieces {
+            let square: PySquare = sq.extract()?;
+            let piece: PyPiece = p.extract()?;
+            self.set_piece_at(
+                square,
+                Some(piece),
+                false,
+            );
+        }
+        Ok(())
     }
 
     #[pyo3(signature = (promoted=None))]
@@ -461,7 +459,6 @@ impl BaseBoard {
 }
 
 impl BaseBoard {
-
     pub fn set_occupied_w(&mut self, value: u64) {
         self.by_color.white = Bitboard(value);
     }
@@ -530,5 +527,41 @@ impl BaseBoard {
         self.by_role = roles;
         self.by_color = colors;
         self.promoted = shakmaty::Bitboard(0);
+    }
+
+    pub fn king(&self, color: Color) -> Option<Square> {
+        (*self.by_role.get(Role::King) & *self.by_color.get(color) & !self.promoted)
+            .single_square()
+    }
+
+    // TODO FIXME, move to shakmaty
+    fn pin_mask(&self, color: Color, square: Square) -> Bitboard {
+        let Some(king_sq) = self.king(color) else {
+            return Bitboard::FULL;
+        };
+        if king_sq == square {
+            return Bitboard::FULL;
+        }
+
+        let snipers = (shakmaty::attacks::rook_attacks(king_sq, Bitboard::EMPTY)
+            & (*self.by_role.get(Role::Rook) | *self.by_role.get(Role::Queen)))
+            | (shakmaty::attacks::bishop_attacks(king_sq, Bitboard::EMPTY)
+                & (*self.by_role.get(Role::Bishop) | *self.by_role.get(Role::Queen)));
+        let enemy_snipers = snipers & *self.by_color.get(!color);
+
+        for sniper_sq in enemy_snipers {
+            let ray = shakmaty::attacks::ray(king_sq, sniper_sq);
+            if ray.contains(square) {
+                let between = shakmaty::attacks::between(king_sq, sniper_sq);
+                if (between
+                    & (self.by_color.white | self.by_color.black)
+                    & !Bitboard::from(square))
+                .is_empty()
+                {
+                    return ray;
+                }
+            }
+        }
+        Bitboard::FULL
     }
 }
