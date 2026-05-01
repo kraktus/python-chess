@@ -409,6 +409,7 @@ class BoardTestCase(unittest.TestCase):
         with self.assertRaises(chess.IllegalMoveError):
             board.parse_san("Kh1")
 
+    @unittest.skipIf(USE_RUST_CHESS, "generate_castling_moves is internal API")
     def test_ninesixty_castling(self):
         fen = "3r1k1r/4pp2/8/8/8/8/8/4RKR1 w Gd - 1 1"
         board = Board(fen, chess960=True)
@@ -1640,6 +1641,7 @@ class BoardTestCase(unittest.TestCase):
         self.assertIn(move, board.generate_legal_moves())
         self.assertIn(move, board.generate_legal_ep())
 
+    @unittest.skipIf(USE_RUST_CHESS, "generate_pseudo_legal_captures is internal API")
     def test_capture_generation(self):
         board = Board("3q1rk1/ppp1p1pp/4b3/3pPp2/3P4/1K1n4/PPQ2PPP/3b1BNR w - f6 0 1")
 

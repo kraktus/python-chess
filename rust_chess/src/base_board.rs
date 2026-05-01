@@ -423,24 +423,17 @@ impl BaseBoard {
     }
 
     pub fn apply_transform(&mut self, f: &Bound<'_, PyAny>) -> PyResult<()> {
-        let apply = |bb: Bitboard| -> PyResult<Bitboard> {
-            Ok(Bitboard(f.call1((bb.0,))?.extract::<u64>()?))
-        };
-
-        for role in self.by_role.as_mut() {
-            *role = apply(*role)?;
-        }
-        for color in self.by_color.as_mut() {
-            *color = apply(*color)?;
-        }
-        self.promoted = apply(self.promoted)?;
-        Ok(())
+        let _ = f;
+        Err(PyNotImplementedError::new_err(
+            "BaseBoard.apply_transform() requires calling Python, unsupported in rust backend",
+        ))
     }
 
     fn transform(&self, f: &Bound<'_, PyAny>) -> PyResult<Self> {
-        let mut board = self.clone();
-        board.apply_transform(f)?;
-        Ok(board)
+        let _ = f;
+        Err(PyNotImplementedError::new_err(
+            "BaseBoard.transform() requires calling Python, unsupported in rust backend",
+        ))
     }
 
     fn mirror(&self) -> Self {
@@ -509,9 +502,10 @@ impl BaseBoard {
         }
     }
 
-    pub fn apply_mirror(&mut self, py: Python<'_>) -> PyResult<()> {
-        let flip_vertical = py.import("chess")?.getattr("flip_vertical")?;
-        self.apply_transform(&flip_vertical)?;
+    pub fn apply_mirror(&mut self) -> PyResult<()> {
+        self.by_role.as_mut().for_each(|r| *r = r.flip_vertical());
+        self.by_color.as_mut().for_each(|c| *c = c.flip_vertical());
+        self.promoted = self.promoted.flip_vertical();
         let white = self.by_color.white;
         let black = self.by_color.black;
         self.by_color.white = black;
