@@ -13,6 +13,8 @@ pub struct LegalMoveGenerator {
     board: Py<Board>,
 }
 
+const ONE: NonZeroU32 = std::num::NonZeroU32::MIN;
+
 #[pymethods]
 impl LegalMoveGenerator {
     #[new]
@@ -175,8 +177,8 @@ impl Board {
             castling_rights,
             ep_square,
             halfmove_clock,
-            fullmove_number: std::num::NonZeroU32::new(fullmove_number)
-                .unwrap_or(std::num::NonZeroU32::new(1).unwrap()),
+            fullmove_number: NonZeroU32::new(fullmove_number)
+                .unwrap_or(NonZeroU32::new(1).unwrap()),
             move_stack: pyo3::types::PyList::empty(py).into(),
             _stack: pyo3::types::PyList::empty(py).into(),
             chess960,
@@ -200,8 +202,8 @@ impl Board {
             slf.castling_rights = setup.castling_rights;
             slf.ep_square = setup.ep_square;
             slf.halfmove_clock = setup.halfmoves as u16;
-            slf.fullmove_number = std::num::NonZeroU32::new(setup.fullmoves.into())
-                .unwrap_or(std::num::NonZeroU32::new(1).unwrap());
+            slf.fullmove_number = NonZeroU32::new(setup.fullmoves.into())
+                .unwrap_or(NonZeroU32::new(1).unwrap());
 
             let (roles, colors) = setup.board.into_bitboards();
             let promoted = setup.promoted;
@@ -214,11 +216,11 @@ impl Board {
             base.by_color = colors;
             base.promoted = promoted;
         } else {
-            slf.turn = shakmaty::Color::White;
-            slf.castling_rights = shakmaty::Bitboard::EMPTY;
+            slf.turn = Color::White;
+            slf.castling_rights = Bitboard::EMPTY;
             slf.ep_square = None;
             slf.halfmove_clock = 0;
-            slf.fullmove_number = std::num::NonZeroU32::new(1).unwrap();
+            slf.fullmove_number = NonZeroU32::new(1).unwrap();
             slf.move_stack.bind(slf.py()).call_method0("clear")?;
             slf._stack.bind(slf.py()).call_method0("clear")?;
             slf.chess960 = chess960;
@@ -295,8 +297,8 @@ impl Board {
     }
 
     fn reset(mut slf: PyRefMut<'_, Self>) -> PyResult<()> {
-        slf.turn = shakmaty::Color::White;
-        slf.castling_rights = shakmaty::Bitboard(0x8100_0000_0000_0081); // standard castling rights
+        slf.turn = Color::White;
+        slf.castling_rights = Bitboard(0x8100_0000_0000_0081); // standard castling rights
         slf.ep_square = None;
         slf.halfmove_clock = 0;
         slf.fullmove_number = NonZeroU32::new(1).unwrap();
@@ -783,5 +785,19 @@ impl Board {
             .or_else(|e| e.ignore_invalid_castling_rights())
             .or_else(|e| e.ignore_invalid_ep_square())
             .map_err(|e| pyo3::exceptions::PyValueError::new_err(format!("Invalid state: {:?}", e)))
+    }
+
+    fn empty() -> (Self, BaseBoard) {
+
+        let turn = Color::White;
+        let castling_rights = Bitboard::EMPTY;
+        let ep_square = None;
+        let halfmove_clock = 0;
+        let fullmove_number = ONE;
+        (Self {
+            turn, castling_rights,ep_square, fullmove_number
+        },
+        BaseBoard::empty())
+
     }
 }
