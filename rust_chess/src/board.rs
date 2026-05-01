@@ -84,6 +84,18 @@ impl LegalMoveGenerator {
     }
 }
 
+#[derive(Clone)]
+pub struct StateBoard {
+    pub by_role: shakmaty::ByRole<Bitboard>,
+    pub by_color: shakmaty::ByColor<Bitboard>,
+    pub promoted: Bitboard,
+    pub turn: Color,
+    pub castling_rights: Bitboard,
+    pub ep_square: Option<Square>,
+    pub halfmove_clock: u16,
+    pub fullmove_number: NonZeroU32,
+}
+
 #[pyclass(extends=BaseBoard, subclass, dict)]
 pub struct Board {
     pub turn: Color,
@@ -91,8 +103,8 @@ pub struct Board {
     pub ep_square: Option<Square>,
     pub halfmove_clock: u16,
     pub fullmove_number: NonZeroU32,
-    pub move_stack: Py<pyo3::types::PyList>,
-    pub _stack: Py<pyo3::types::PyList>,
+    pub move_stack: Vec<PyMove>,
+    pub _stack: Vec<StateBoard>,
     pub chess960: bool,
 }
 
@@ -112,28 +124,19 @@ impl Board {
     }
 
     #[getter]
-    fn move_stack(&self, py: Python<'_>) -> Py<pyo3::types::PyList> {
-        self.move_stack.clone_ref(py)
+    fn move_stack(&self) -> Vec<PyMove> {
+        self.move_stack.clone()
     }
 
     #[setter]
-    fn set_move_stack(&mut self, stack: Py<pyo3::types::PyList>) {
+    fn set_move_stack(&mut self, stack: Vec<PyMove>) {
         self.move_stack = stack;
     }
 
-    #[getter]
-    fn _stack(&self, py: Python<'_>) -> Py<pyo3::types::PyList> {
-        self._stack.clone_ref(py)
-    }
-
-    #[setter]
-    fn set__stack(&mut self, stack: Py<pyo3::types::PyList>) {
-        self._stack = stack;
-    }
     #[classmethod]
     #[pyo3(name = "empty")]
-    fn py_empty(cls: &Bound<'_, PyType>, py: Python<'_>) -> PyResult<Py<Self>> {
-        let (board, base_board) = Self::__new__(py, None, false)?;
+    fn py_empty(_cls: &Bound<'_, PyType>, py: Python<'_>) -> PyResult<Py<Self>> {
+        let (board, base_board) = Self::empty();
         let class_obj = pyo3::PyClassInitializer::from(base_board).add_subclass(board);
         Py::new(py, class_obj)
     }
@@ -141,12 +144,12 @@ impl Board {
     #[new]
     #[pyo3(signature = (fen=Some("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"), *, chess960=false))]
     #[allow(unused_variables)]
-    fn __new__(py: Python<'_>, fen: Option<&str>, chess960: bool) -> PyResult<(Self, BaseBoard)> {
-        let mut turn = shakmaty::Color::White;
-        let mut castling_rights = shakmaty::Bitboard::EMPTY;
+    fn __new__(_py: Python<'_>, fen: Option<&str>, chess960: bool) -> PyResult<(Self, BaseBoard)> {
+        let mut turn = Color::White;
+        let mut castling_rights = Bitboard::EMPTY;
         let mut ep_square = None;
         let mut halfmove_clock = 0;
-        let mut fullmove_number = 1;
+        let mut fullmove_number = ONE;
 
         let base_board = if let Some(f) = fen {
             let setup = shakmaty::fen::Fen::from_ascii(f.as_bytes())
@@ -177,10 +180,9 @@ impl Board {
             castling_rights,
             ep_square,
             halfmove_clock,
-            fullmove_number: NonZeroU32::new(fullmove_number)
-                .unwrap_or(NonZeroU32::new(1).unwrap()),
-            move_stack: pyo3::types::PyList::empty(py).into(),
-            _stack: pyo3::types::PyList::empty(py).into(),
+            fullmove_number,
+            move_stack: Vec::new(),
+            _stack: Vec::new(),
             chess960,
         };
 
@@ -202,13 +204,11 @@ impl Board {
             slf.castling_rights = setup.castling_rights;
             slf.ep_square = setup.ep_square;
             slf.halfmove_clock = setup.halfmoves as u16;
-            slf.fullmove_number = NonZeroU32::new(setup.fullmoves.into())
-                .unwrap_or(NonZeroU32::new(1).unwrap());
+            slf.fullmove_number = NonZeroU32::new(setup.fullmoves.into()).unwrap_or(ONE);
 
             let (roles, colors) = setup.board.into_bitboards();
             let promoted = setup.promoted;
-            slf.move_stack.bind(slf.py()).call_method0("clear")?;
-            slf._stack.bind(slf.py()).call_method0("clear")?;
+            slf.clear_stack();
             slf.chess960 = chess960;
 
             let mut base = slf.into_super();
@@ -221,8 +221,7 @@ impl Board {
             slf.ep_square = None;
             slf.halfmove_clock = 0;
             slf.fullmove_number = NonZeroU32::new(1).unwrap();
-            slf.move_stack.bind(slf.py()).call_method0("clear")?;
-            slf._stack.bind(slf.py()).call_method0("clear")?;
+            slf.clear_stack();
             slf.chess960 = chess960;
 
             let mut base = slf.into_super();
@@ -278,18 +277,17 @@ impl Board {
     }
 
     #[setter]
-    fn set_fullmove_number(&mut self, fullmove_number: u16) {
-        self.fullmove_number = NonZeroU32::new(std::cmp::max(1, fullmove_number as u32)).unwrap();
+    fn set_fullmove_number(&mut self, fullmove_number: NonZeroU32) {
+        self.fullmove_number = fullmove_number;
     }
 
     fn clear(mut slf: PyRefMut<'_, Self>) -> PyResult<()> {
-        slf.turn = shakmaty::Color::White;
-        slf.castling_rights = shakmaty::Bitboard::EMPTY;
+        slf.turn = Color::White;
+        slf.castling_rights = Bitboard::EMPTY;
         slf.ep_square = None;
         slf.halfmove_clock = 0;
-        slf.fullmove_number = NonZeroU32::new(1).unwrap();
-        slf.move_stack.bind(slf.py()).call_method0("clear")?;
-        slf._stack.bind(slf.py()).call_method0("clear")?;
+        slf.fullmove_number = ONE;
+        slf.clear_stack();
 
         let mut base = slf.into_super();
         (&mut *base).clear_board();
@@ -301,9 +299,8 @@ impl Board {
         slf.castling_rights = Bitboard(0x8100_0000_0000_0081); // standard castling rights
         slf.ep_square = None;
         slf.halfmove_clock = 0;
-        slf.fullmove_number = NonZeroU32::new(1).unwrap();
-        slf.move_stack.bind(slf.py()).call_method0("clear")?;
-        slf._stack.bind(slf.py()).call_method0("clear")?;
+        slf.fullmove_number = ONE;
+        slf.clear_stack();
 
         let mut base = slf.into_super();
         (&mut *base).reset_board();
@@ -320,8 +317,7 @@ impl Board {
         slf.ep_square = setup.ep_square;
         slf.halfmove_clock = setup.halfmoves as u16;
         slf.fullmove_number = setup.fullmoves.into();
-        slf.move_stack.bind(slf.py()).call_method0("clear")?;
-        slf._stack.bind(slf.py()).call_method0("clear")?;
+        slf.clear_stack();
 
         let mut base = slf.into_super();
         let (roles, colors) = setup.board.into_bitboards();
@@ -336,7 +332,6 @@ impl Board {
     #[allow(unused_variables)]
     fn fen(
         slf: &Bound<'_, Self>,
-        py: Python<'_>,
         shredder: bool,
         en_passant: &str,
         promoted: Option<bool>,
@@ -383,7 +378,6 @@ impl Board {
     #[allow(unused_variables)]
     fn epd(
         slf: &Bound<'_, Self>,
-        py: Python<'_>,
         shredder: bool,
         en_passant: &str,
         promoted: Option<bool>,
@@ -407,10 +401,7 @@ impl Board {
         let board_rust = slf.borrow();
         let base_rust = slf.as_super().borrow();
 
-        let move_stack_bound = board_rust.move_stack.bind(py);
-        let _stack_bound = board_rust._stack.bind(py);
-
-        let mut stack_len = move_stack_bound.len();
+        let mut stack_len = board_rust.move_stack.len();
         if let Some(s) = stack {
             if let Ok(b) = s.extract::<bool>() {
                 if !b {
@@ -421,21 +412,8 @@ impl Board {
             }
         }
 
-        let new_move_stack = pyo3::types::PyList::empty(py);
-        let stack_start = move_stack_bound.len().saturating_sub(stack_len);
-        for i in stack_start..move_stack_bound.len() {
-            let m = move_stack_bound.get_item(i)?;
-            let copy_mod = py.import("copy")?;
-            let copy_m = copy_mod.call_method1("copy", (m,))?;
-            new_move_stack.append(copy_m)?;
-        }
-
-        let new__stack = pyo3::types::PyList::empty(py);
-        let _stack_start = _stack_bound.len().saturating_sub(stack_len);
-        for i in _stack_start.._stack_bound.len() {
-            let s = _stack_bound.get_item(i)?;
-            new__stack.append(s)?;
-        }
+        let move_stack_start = board_rust.move_stack.len().saturating_sub(stack_len);
+        let state_stack_start = board_rust._stack.len().saturating_sub(stack_len);
 
         let new_board = Board {
             turn: board_rust.turn,
@@ -443,8 +421,8 @@ impl Board {
             ep_square: board_rust.ep_square,
             halfmove_clock: board_rust.halfmove_clock,
             fullmove_number: board_rust.fullmove_number,
-            move_stack: new_move_stack.into(),
-            _stack: new__stack.into(),
+            move_stack: board_rust.move_stack[move_stack_start..].to_vec(),
+            _stack: board_rust._stack[state_stack_start..].to_vec(),
             chess960: board_rust.chess960,
         };
         let new_base = base_rust.clone();
@@ -464,12 +442,13 @@ impl Board {
     #[pyo3(signature = (memo, *, stack=None))]
     fn __deepcopy__<'py>(
         slf: &Bound<'py, Self>,
-        py: Python<'py>,
+        _py: Python<'py>,
         memo: Bound<'py, PyAny>,
         stack: Option<Bound<'py, PyAny>>,
     ) -> PyResult<Bound<'py, Self>> {
+        let _ = memo;
         // deepcopy in python uses copy() essentially, we'll just do shallow for _stack.
-        Self::copy(slf, py, stack)
+        Self::copy(slf, slf.py(), stack)
     }
 
     #[getter]
@@ -502,41 +481,38 @@ impl Board {
     #[pyo3(signature = (square, piece, promoted=false))]
     fn set_piece_at(
         mut slf: PyRefMut<'_, Self>,
-        py: Python<'_>,
         square: PySquare,
         piece: Option<crate::piece::PyPiece>,
         promoted: bool,
     ) {
-        slf.clear_stack(py);
+        slf.clear_stack();
         slf.into_super().set_piece_at(square, piece, promoted);
     }
 
     fn remove_piece_at(
         mut slf: PyRefMut<'_, Self>,
-        py: Python<'_>,
         square: PySquare,
     ) -> Option<crate::piece::PyPiece> {
-        slf.clear_stack(py);
+        slf.clear_stack();
         slf.into_super().remove_piece_at(square)
     }
 
     #[pyo3(signature = (pieces))]
     fn set_piece_map(
         mut slf: PyRefMut<'_, Self>,
-        py: Python<'_>,
         pieces: &Bound<'_, pyo3::types::PyDict>,
     ) -> PyResult<()> {
-        slf.clear_stack(py);
+        slf.clear_stack();
         slf.into_super().set_piece_map(pieces)
     }
 
-    fn set_board_fen(mut slf: PyRefMut<'_, Self>, py: Python<'_>, fen: &str) -> PyResult<()> {
-        slf.clear_stack(py);
+    fn set_board_fen(mut slf: PyRefMut<'_, Self>, fen: &str) -> PyResult<()> {
+        slf.clear_stack();
         slf.into_super().set_board_fen(fen)
     }
 
-    fn set_chess960_pos(slf: &Bound<'_, Self>, py: Python<'_>, scharnagl: u16) -> PyResult<()> {
-        slf.borrow_mut().clear_stack(py);
+    fn set_chess960_pos(slf: &Bound<'_, Self>, scharnagl: u16) -> PyResult<()> {
+        slf.borrow_mut().clear_stack();
         slf.call_method1("_set_chess960_pos", (scharnagl,))?;
 
         let mut rust_board = slf.borrow_mut();
@@ -568,17 +544,13 @@ impl Board {
         Ok(())
     }
 
-    fn clear_board(mut slf: PyRefMut<'_, Self>, py: Python<'_>) {
-        slf.clear_stack(py);
+    fn clear_board(mut slf: PyRefMut<'_, Self>) {
+        slf.clear_stack();
         slf.into_super().clear_board();
     }
 
     #[pyo3(name = "push")]
-    fn py_push(
-        slf: &Bound<'_, Self>,
-        py: Python<'_>,
-        move_obj: &Bound<'_, pyo3::PyAny>,
-    ) -> PyResult<()> {
+    fn py_push(slf: &Bound<'_, Self>, move_obj: &Bound<'_, pyo3::PyAny>) -> PyResult<()> {
         if let Ok(m) = move_obj.extract::<PyRef<'_, PyMove>>() {
             let chess = Board::try_shakmaty(slf)?;
             if let Ok(sm_move) = m.inner.to_move(&chess) {
@@ -586,29 +558,31 @@ impl Board {
                     pyo3::exceptions::PyValueError::new_err(format!("illegal move: {}", e))
                 })?;
 
-                // To keep state syncing with python-chess `_stack`, we must capture it
-                let chess_mod = py.import("chess")?;
-                let board_state_cls = chess_mod.getattr("_BoardState")?;
-                let board_state = board_state_cls.call1((slf,))?;
+                let board_state = {
+                    let rust_board = slf.borrow();
+                    let base_board = slf.as_super().borrow();
+                    StateBoard {
+                        by_role: base_board.by_role.clone(),
+                        by_color: base_board.by_color.clone(),
+                        promoted: base_board.promoted,
+                        turn: rust_board.turn,
+                        castling_rights: rust_board.castling_rights,
+                        ep_square: rust_board.ep_square,
+                        halfmove_clock: rust_board.halfmove_clock,
+                        fullmove_number: rust_board.fullmove_number,
+                    }
+                };
 
                 let mut rust_board = slf.borrow_mut();
-                rust_board
-                    ._stack
-                    .bind(py)
-                    .call_method1("append", (board_state,))?;
+                rust_board._stack.push(board_state);
 
                 rust_board.turn = new_chess.turn();
                 rust_board.castling_rights = new_chess.castles().castling_rights();
                 rust_board.ep_square = new_chess.ep_square(shakmaty::EnPassantMode::Legal);
                 rust_board.halfmove_clock = new_chess.halfmoves() as u16;
-                rust_board.fullmove_number =
-                    std::num::NonZeroU32::new(std::cmp::max(1, new_chess.fullmoves().get()))
-                        .unwrap();
+                rust_board.fullmove_number = new_chess.fullmoves();
 
-                rust_board
-                    .move_stack
-                    .bind(py)
-                    .call_method1("append", (m.clone(),))?;
+                rust_board.move_stack.push((*m).clone());
 
                 // Update BaseBoard bitboards
                 let (roles, colors) = new_chess.board().clone().into_bitboards();
@@ -650,7 +624,7 @@ impl Board {
         Ok(move_obj.into())
     }
 
-    fn push_uci(slf: &Bound<'_, Self>, py: Python<'_>, uci: &str) -> PyResult<Py<PyAny>> {
+    fn push_uci(slf: &Bound<'_, Self>, uci: &str) -> PyResult<Py<PyAny>> {
         let move_obj = slf.call_method1("parse_uci", (uci,))?;
         slf.call_method1("push", (&move_obj,))?;
         Ok(move_obj.into())
@@ -658,59 +632,66 @@ impl Board {
 
     #[pyo3(name = "pop")]
     fn py_pop(slf: &Bound<'_, Self>, py: Python<'_>) -> PyResult<Py<PyAny>> {
-        let rust_board = slf.borrow();
-        let move_stack = rust_board.move_stack.bind(py);
-        if move_stack.len() == 0 {
-            return Err(pyo3::exceptions::PyIndexError::new_err(
-                "pop from empty move stack",
-            ));
+        let (m, board_state) = {
+            let mut rust_board = slf.borrow_mut();
+            let m = rust_board.move_stack.pop().ok_or_else(|| {
+                pyo3::exceptions::PyIndexError::new_err("pop from empty move stack")
+            })?;
+            let board_state = rust_board._stack.pop();
+            (m, board_state)
+        };
+
+        if let Some(state) = board_state {
+            let StateBoard {
+                by_role,
+                by_color,
+                promoted,
+                turn,
+                castling_rights,
+                ep_square,
+                halfmove_clock,
+                fullmove_number,
+            } = state;
+
+            {
+                let mut rust_board = slf.borrow_mut();
+                rust_board.turn = turn;
+                rust_board.castling_rights = castling_rights;
+                rust_board.ep_square = ep_square;
+                rust_board.halfmove_clock = halfmove_clock;
+                rust_board.fullmove_number = fullmove_number;
+            }
+
+            let mut base = slf.as_super().borrow_mut();
+            base.by_role = by_role;
+            base.by_color = by_color;
+            base.promoted = promoted;
         }
 
-        let m = move_stack.call_method0("pop")?;
-
-        let _stack = rust_board._stack.bind(py);
-        if _stack.len() > 0 {
-            let board_state = _stack.call_method0("pop")?;
-            // Drop borrow to allow restore to mutate slf
-            drop(rust_board);
-            board_state.call_method1("restore", (slf.clone(),))?;
-        }
-
-        Ok(m.into())
+        Ok(Bound::new(py, m)?.into_any().unbind())
     }
 
     fn peek(slf: &Bound<'_, Self>, py: Python<'_>) -> PyResult<Py<PyAny>> {
-        let rust_board = slf.borrow();
-        let move_stack = rust_board.move_stack.bind(py);
-        if move_stack.len() == 0 {
-            return Err(pyo3::exceptions::PyIndexError::new_err(
-                "peek from empty move stack",
-            ));
-        }
-        Ok(move_stack.get_item(move_stack.len() - 1)?.into())
+        let move_obj = {
+            let rust_board = slf.borrow();
+            rust_board.move_stack.last().cloned().ok_or_else(|| {
+                pyo3::exceptions::PyIndexError::new_err("peek from empty move stack")
+            })?
+        };
+        Ok(Bound::new(py, move_obj)?.into_any().unbind())
+    }
+
+    fn is_legal(slf: &Bound<'_, Self>, move_obj: PyMove) -> PyResult<bool> {
+        let chess = Board::try_shakmaty(slf)?;
+        Ok(move_obj
+            .inner
+            .to_move(&chess)
+            .map(|m| chess.is_legal(m))
+            .unwrap_or_default())
     }
 
     #[pyo3(signature = (move_obj))]
-    fn is_legal(
-        slf: &Bound<'_, Self>,
-        py: Python<'_>,
-        move_obj: &Bound<'_, pyo3::PyAny>,
-    ) -> PyResult<bool> {
-        if let Ok(m) = move_obj.extract::<PyRef<'_, PyMove>>() {
-            let chess = Board::try_shakmaty(slf)?;
-            if let Ok(sm_move) = m.inner.to_move(&chess) {
-                return Ok(chess.is_legal(sm_move));
-            }
-        }
-        Ok(false)
-    }
-
-    #[pyo3(signature = (move_obj))]
-    fn is_pseudo_legal(
-        slf: &Bound<'_, Self>,
-        py: Python<'_>,
-        move_obj: &Bound<'_, pyo3::PyAny>,
-    ) -> PyResult<bool> {
+    fn is_pseudo_legal(slf: &Bound<'_, Self>, move_obj: &Bound<'_, pyo3::PyAny>) -> PyResult<bool> {
         // Pseudo legal just means the piece can move there, ignoring checks
         // `python-chess` tests expect we can just use `chess.pseudo_legal_moves`.
         slf.call_method1("pseudo_legal_moves", ())?
@@ -718,31 +699,83 @@ impl Board {
             .extract()
     }
 
-    fn clear_stack(&mut self, py: Python<'_>) {
-        self.move_stack = pyo3::types::PyList::empty(py).into();
-        self._stack = pyo3::types::PyList::empty(py).into();
+    fn clear_stack(&mut self) {
+        self.move_stack.clear();
+        self._stack.clear();
     }
 
-    fn ply(slf: &Bound<'_, Self>, py: Python<'_>) -> PyResult<usize> {
-        Ok(slf.borrow().move_stack.bind(py).len())
+    fn ply(&self) -> usize {
+        let fullmoves = self.fullmove_number.get() as usize;
+        2 * (fullmoves.saturating_sub(1)) + usize::from(self.turn == Color::Black)
     }
 
     fn root(slf: &Bound<'_, Self>, py: Python<'_>) -> PyResult<Py<PyAny>> {
-        let board_rust = slf.borrow();
-        let _stack = board_rust._stack.bind(py);
-        if _stack.len() > 0 {
-            let first = _stack.get_item(0)?;
-            let new_board = slf.call_method1("empty", ())?;
-            // Call restore on the first state
-            first.call_method1("restore", (&new_board,))?;
-            Ok(new_board.into())
+        let (
+            first_state,
+            turn,
+            castling_rights,
+            ep_square,
+            halfmove_clock,
+            fullmove_number,
+            chess960,
+        ) = {
+            let board_rust = slf.borrow();
+            (
+                board_rust._stack.first().cloned(),
+                board_rust.turn,
+                board_rust.castling_rights,
+                board_rust.ep_square,
+                board_rust.halfmove_clock,
+                board_rust.fullmove_number,
+                board_rust.chess960,
+            )
+        };
+
+        if let Some(state) = first_state {
+            let StateBoard {
+                by_role,
+                by_color,
+                promoted,
+                turn,
+                castling_rights,
+                ep_square,
+                halfmove_clock,
+                fullmove_number,
+            } = state;
+
+            let board = Board {
+                turn,
+                castling_rights,
+                ep_square,
+                halfmove_clock,
+                fullmove_number,
+                move_stack: Vec::new(),
+                _stack: Vec::new(),
+                chess960,
+            };
+            let base = BaseBoard {
+                by_role,
+                by_color,
+                promoted,
+            };
+            Ok(Bound::new(py, (board, base))?.into_any().unbind())
         } else {
-            Ok(slf.call_method1("copy", ())?.into())
+            let base = slf.as_super().borrow().clone();
+            let board = Board {
+                turn,
+                castling_rights,
+                ep_square,
+                halfmove_clock,
+                fullmove_number,
+                move_stack: Vec::new(),
+                _stack: Vec::new(),
+                chess960,
+            };
+            Ok(Bound::new(py, (board, base))?.into_any().unbind())
         }
     }
 
     fn mirror(slf: &Bound<'_, Self>) -> PyResult<Py<PyAny>> {
-        let py = slf.py();
         let py_board = slf.call_method0("copy")?;
         py_board.call_method0("apply_mirror")?;
         Ok(py_board.into_any().unbind())
@@ -788,16 +821,23 @@ impl Board {
     }
 
     fn empty() -> (Self, BaseBoard) {
-
         let turn = Color::White;
         let castling_rights = Bitboard::EMPTY;
         let ep_square = None;
         let halfmove_clock = 0;
         let fullmove_number = ONE;
-        (Self {
-            turn, castling_rights,ep_square, fullmove_number
-        },
-        BaseBoard::empty())
-
+        (
+            Self {
+                turn,
+                castling_rights,
+                ep_square,
+                halfmove_clock,
+                fullmove_number,
+                move_stack: Vec::new(),
+                _stack: Vec::new(),
+                chess960: false,
+            },
+            BaseBoard::empty(),
+        )
     }
 }
