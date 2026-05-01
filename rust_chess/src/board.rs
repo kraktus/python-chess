@@ -6,6 +6,7 @@ use crate::base_board::BaseBoard;
 use crate::py_move::PyMove;
 use crate::util::{PyColor, PySquare};
 use pyo3::prelude::*;
+use pyo3::types::PyType;
 
 #[pyclass(module = "rust_chess", name = "LegalMoveGenerator")]
 pub struct LegalMoveGenerator {
@@ -95,6 +96,9 @@ pub struct Board {
 
 #[pymethods]
 impl Board {
+    #[classattr]
+    const uci_variant: &'static str = "chess";
+
     #[getter]
     fn chess960(&self) -> bool {
         self.chess960
@@ -124,6 +128,14 @@ impl Board {
     fn set__stack(&mut self, stack: Py<pyo3::types::PyList>) {
         self._stack = stack;
     }
+    #[classmethod]
+    #[pyo3(name = "empty")]
+    fn py_empty(cls: &Bound<'_, PyType>, py: Python<'_>) -> PyResult<Py<Self>> {
+        let (board, base_board) = Self::__new__(py, None, false)?;
+        let class_obj = pyo3::PyClassInitializer::from(base_board).add_subclass(board);
+        Py::new(py, class_obj)
+    }
+
     #[new]
     #[pyo3(signature = (fen=Some("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"), *, chess960=false))]
     #[allow(unused_variables)]
@@ -318,8 +330,70 @@ impl Board {
         Ok(())
     }
 
-    fn set_epd(slf: PyRefMut<'_, Self>, epd: &str) -> PyResult<()> {
-        Board::set_fen(slf, epd)
+    #[pyo3(signature = (*, shredder=false, en_passant="legal", promoted=None))]
+    #[allow(unused_variables)]
+    fn fen(
+        slf: &Bound<'_, Self>,
+        py: Python<'_>,
+        shredder: bool,
+        en_passant: &str,
+        promoted: Option<bool>,
+    ) -> PyResult<String> {
+        let chess = Board::try_shakmaty(slf)?;
+
+        let ep_mode = match en_passant {
+            "legal" => shakmaty::EnPassantMode::Legal,
+            "fen" | "x-fen" => shakmaty::EnPassantMode::PseudoLegal,
+            _ => shakmaty::EnPassantMode::Legal,
+        };
+
+        let mut fen_obj = shakmaty::fen::Fen::from_position(&chess, ep_mode);
+
+        if !shredder {
+            // If shredder=False (standard FEN), shakmaty::fen::Fen automatically handles it
+            // by not printing shredder castling rights, but wait, shakmaty fen always prints standard castling rights
+            // unless it's a chess960 position? Actually, Fen::from_position just uses standard FEN rules.
+        }
+
+        // However, python-chess also accepts promoted parameter.
+        // We can just let shakmaty format it, but wait, shakmaty's Fen doesn't format promoted pieces.
+        // python-chess extension might use `base_board.board_fen(promoted)` for just the board part.
+        // For the full FEN, we can just return `fen_obj.to_string()`.
+
+        let mut fen_str = fen_obj.to_string();
+
+        if let Some(true) = promoted {
+            let board_fen_str = slf.as_super().borrow().board_fen(Some(true))?;
+            let split: Vec<&str> = fen_str.splitn(2, ' ').collect();
+            if split.len() == 2 {
+                fen_str = format!("{} {}", board_fen_str, split[1]);
+            }
+        }
+
+        if shredder {
+            // TODO: properly format shredder castling rights if needed
+        }
+
+        Ok(fen_str)
+    }
+
+    #[pyo3(signature = (*, shredder=false, en_passant="legal", promoted=None))]
+    #[allow(unused_variables)]
+    fn epd(
+        slf: &Bound<'_, Self>,
+        py: Python<'_>,
+        shredder: bool,
+        en_passant: &str,
+        promoted: Option<bool>,
+    ) -> PyResult<String> {
+        let chess = Board::try_shakmaty(slf)?;
+        let ep_mode = match en_passant {
+            "legal" => shakmaty::EnPassantMode::Legal,
+            "fen" | "x-fen" => shakmaty::EnPassantMode::PseudoLegal,
+            _ => shakmaty::EnPassantMode::Legal,
+        };
+        let epd_obj = shakmaty::fen::Epd::from_position(&chess, ep_mode);
+        Ok(epd_obj.to_string())
     }
 
     #[pyo3(signature = (*, stack=None))]
@@ -479,10 +553,16 @@ impl Board {
     fn apply_mirror(slf: &Bound<'_, Self>, py: Python<'_>) -> PyResult<()> {
         let turn = !slf.borrow().turn;
         slf.borrow_mut().turn = turn;
-        let flip_vertical = py.import("chess")?.getattr("flip_vertical")?;
-        slf.borrow_mut()
-            .into_super()
-            .apply_transform(&flip_vertical)?;
+        slf.borrow_mut().into_super().apply_mirror(py)?;
+
+        let ep = slf.borrow().ep_square;
+        if let Some(sq) = ep {
+            slf.borrow_mut().ep_square = Some(sq.flip_vertical());
+        }
+
+        let cr = slf.borrow().castling_rights;
+        slf.borrow_mut().castling_rights = cr.flip_vertical();
+
         Ok(())
     }
 
@@ -491,14 +571,172 @@ impl Board {
         slf.into_super().clear_board();
     }
 
-    fn reset_board(mut slf: PyRefMut<'_, Self>, py: Python<'_>) {
-        slf.clear_stack(py);
-        slf.into_super().reset_board();
+    #[pyo3(name = "push")]
+    fn py_push(
+        slf: &Bound<'_, Self>,
+        py: Python<'_>,
+        move_obj: &Bound<'_, pyo3::PyAny>,
+    ) -> PyResult<()> {
+        if let Ok(m) = move_obj.extract::<PyRef<'_, PyMove>>() {
+            let chess = Board::try_shakmaty(slf)?;
+            if let Ok(sm_move) = m.inner.to_move(&chess) {
+                let new_chess = chess.play(sm_move).map_err(|e| {
+                    pyo3::exceptions::PyValueError::new_err(format!("illegal move: {}", e))
+                })?;
+
+                // To keep state syncing with python-chess `_stack`, we must capture it
+                let chess_mod = py.import("chess")?;
+                let board_state_cls = chess_mod.getattr("_BoardState")?;
+                let board_state = board_state_cls.call1((slf,))?;
+
+                let mut rust_board = slf.borrow_mut();
+                rust_board
+                    ._stack
+                    .bind(py)
+                    .call_method1("append", (board_state,))?;
+
+                rust_board.turn = new_chess.turn();
+                rust_board.castling_rights = new_chess.castles().castling_rights();
+                rust_board.ep_square = new_chess.ep_square(shakmaty::EnPassantMode::Legal);
+                rust_board.halfmove_clock = new_chess.halfmoves() as u16;
+                rust_board.fullmove_number =
+                    std::num::NonZeroU32::new(std::cmp::max(1, new_chess.fullmoves().get()))
+                        .unwrap();
+
+                rust_board
+                    .move_stack
+                    .bind(py)
+                    .call_method1("append", (m.clone(),))?;
+
+                // Update BaseBoard bitboards
+                let (roles, colors) = new_chess.board().clone().into_bitboards();
+                let promoted = new_chess.promoted();
+
+                // Drop rust_board borrow to mutably borrow super
+                drop(rust_board);
+
+                let mut base = slf.as_super().borrow_mut();
+                base.by_role = roles;
+                base.by_color = colors;
+                base.promoted = promoted;
+                return Ok(());
+            }
+        }
+        Err(pyo3::exceptions::PyValueError::new_err("Invalid move"))
+    }
+
+    fn parse_uci(slf: &Bound<'_, Self>, py: Python<'_>, uci: &str) -> PyResult<Py<PyAny>> {
+        let chess_mod = py.import("chess")?;
+        let move_cls = chess_mod.getattr("Move")?;
+        let move_obj = move_cls.call_method1("from_uci", (uci,))?;
+
+        let is_truthy = move_obj.is_truthy()?;
+        if !is_truthy {
+            return Ok(move_obj.into());
+        }
+
+        let is_legal = slf
+            .call_method1("is_legal", (&move_obj,))?
+            .extract::<bool>()?;
+        if !is_legal {
+            let fen = slf.call_method0("fen")?;
+            let msg = format!("illegal uci: '{}' in {}", uci, fen);
+            let err_cls = chess_mod.getattr("IllegalMoveError")?;
+            return Err(PyErr::from_value(err_cls.call1((msg,))?));
+        }
+
+        Ok(move_obj.into())
+    }
+
+    fn push_uci(slf: &Bound<'_, Self>, py: Python<'_>, uci: &str) -> PyResult<Py<PyAny>> {
+        let move_obj = slf.call_method1("parse_uci", (uci,))?;
+        slf.call_method1("push", (&move_obj,))?;
+        Ok(move_obj.into())
+    }
+
+    #[pyo3(name = "pop")]
+    fn py_pop(slf: &Bound<'_, Self>, py: Python<'_>) -> PyResult<Py<PyAny>> {
+        let rust_board = slf.borrow();
+        let move_stack = rust_board.move_stack.bind(py);
+        if move_stack.len() == 0 {
+            return Err(pyo3::exceptions::PyIndexError::new_err(
+                "pop from empty move stack",
+            ));
+        }
+
+        let m = move_stack.call_method0("pop")?;
+
+        let _stack = rust_board._stack.bind(py);
+        if _stack.len() > 0 {
+            let board_state = _stack.call_method0("pop")?;
+            // Drop borrow to allow restore to mutate slf
+            drop(rust_board);
+            board_state.call_method1("restore", (slf.clone(),))?;
+        }
+
+        Ok(m.into())
+    }
+
+    fn peek(slf: &Bound<'_, Self>, py: Python<'_>) -> PyResult<Py<PyAny>> {
+        let rust_board = slf.borrow();
+        let move_stack = rust_board.move_stack.bind(py);
+        if move_stack.len() == 0 {
+            return Err(pyo3::exceptions::PyIndexError::new_err(
+                "peek from empty move stack",
+            ));
+        }
+        Ok(move_stack.get_item(move_stack.len() - 1)?.into())
+    }
+
+    #[pyo3(signature = (move_obj))]
+    fn is_legal(
+        slf: &Bound<'_, Self>,
+        py: Python<'_>,
+        move_obj: &Bound<'_, pyo3::PyAny>,
+    ) -> PyResult<bool> {
+        if let Ok(m) = move_obj.extract::<PyRef<'_, PyMove>>() {
+            let chess = Board::try_shakmaty(slf)?;
+            if let Ok(sm_move) = m.inner.to_move(&chess) {
+                return Ok(chess.is_legal(sm_move));
+            }
+        }
+        Ok(false)
+    }
+
+    #[pyo3(signature = (move_obj))]
+    fn is_pseudo_legal(
+        slf: &Bound<'_, Self>,
+        py: Python<'_>,
+        move_obj: &Bound<'_, pyo3::PyAny>,
+    ) -> PyResult<bool> {
+        // Pseudo legal just means the piece can move there, ignoring checks
+        // `python-chess` tests expect we can just use `chess.pseudo_legal_moves`.
+        slf.call_method1("pseudo_legal_moves", ())?
+            .call_method1("__contains__", (move_obj,))?
+            .extract()
     }
 
     fn clear_stack(&mut self, py: Python<'_>) {
         self.move_stack = pyo3::types::PyList::empty(py).into();
         self._stack = pyo3::types::PyList::empty(py).into();
+    }
+
+    fn ply(slf: &Bound<'_, Self>, py: Python<'_>) -> PyResult<usize> {
+        Ok(slf.borrow().move_stack.bind(py).len())
+    }
+
+    fn root(slf: &Bound<'_, Self>, py: Python<'_>) -> PyResult<Py<PyAny>> {
+        let board_rust = slf.borrow();
+        let _stack = board_rust._stack.bind(py);
+        if _stack.len() > 0 {
+            let first = _stack.get_item(0)?;
+            let new_board = slf.call_method1("empty", ())?;
+            // Call restore on the first state
+            first.call_method1("restore", (&new_board,))?;
+            Ok(new_board.into())
+        } else {
+            Ok(slf.call_method1("copy", ())?.into())
+        }
     }
 
     fn mirror(slf: &Bound<'_, Self>) -> PyResult<Py<PyAny>> {
