@@ -113,6 +113,12 @@ impl Board {
     #[classattr]
     const uci_variant: &'static str = "chess";
 
+    #[classattr]
+    const xboard_variant: &'static str = "normal";
+
+    #[classattr]
+    const starting_fen: &'static str = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
+
     #[getter]
     fn chess960(&self) -> bool {
         self.chess960
@@ -193,7 +199,6 @@ impl Board {
     #[allow(unused_variables)]
     fn __init__(mut slf: PyRefMut<'_, Self>, fen: Option<&str>, chess960: bool) -> PyResult<()> {
         if let Some(f) = fen {
-            println!("RUST INIT FEN: {:?}", f);
             let setup = shakmaty::fen::Fen::from_ascii(f.as_bytes())
                 .map_err(|e| {
                     pyo3::exceptions::PyValueError::new_err(format!("invalid fen: {}", e))
@@ -805,11 +810,7 @@ impl Board {
             ep_square: board.ep_square,
             remaining_checks: None,
             halfmoves: board.halfmove_clock as u32,
-            fullmoves: std::num::NonZeroU32::new(std::cmp::max(
-                1,
-                u32::from(board.fullmove_number.get()),
-            ))
-            .unwrap_or(std::num::NonZeroU32::MIN),
+            fullmoves: board.fullmove_number,
         };
 
         shakmaty::Chess::from_setup(setup, shakmaty::CastlingMode::Standard)
