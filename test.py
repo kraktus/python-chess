@@ -28,8 +28,8 @@ if USE_RUST_CHESS:
         dst_module=chess,
         src_module=rust_chess,
     )
-    from rust_chess import BaseBoard
-    from chess import Board
+    from rust_chess import BaseBoard, Board
+    # from chess import Board
 else:
     from chess import BaseBoard, Board
 
