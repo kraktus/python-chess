@@ -1,7 +1,9 @@
-use shakmaty::{Bitboard, Color, FromSetup, Position, Square, EnPassantMode};
 use pyo3::exceptions::{PyIndexError, PyNotImplementedError, PyValueError};
+use shakmaty::uci::UciMove;
+use shakmaty::{Bitboard, Color, EnPassantMode, FromSetup, Position, Square};
 
 use std::num::NonZeroU32;
+use std::str::FromStr;
 
 use crate::base_board::BaseBoard;
 use crate::py_move::PyMove;
@@ -85,7 +87,7 @@ impl LegalMoveGenerator {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, PartialEq, Eq)]
 pub struct StateBoard {
     pub by_role: shakmaty::ByRole<Bitboard>,
     pub by_color: shakmaty::ByColor<Bitboard>,
@@ -97,20 +99,52 @@ pub struct StateBoard {
     pub fullmove_number: NonZeroU32,
 }
 
-impl From<(&Board, &BaseBoard)> for StateBoard {
-    fn from((board, base): (&Board, &BaseBoard)) -> Self {
-        let promoted = base.promoted;
-        let (by_role, by_color) = base.into_bitboards();
+impl StateBoard {
+    // used for checking repetitions
+    pub fn epd_tuple(
+        &self,
+    ) -> (
+        shakmaty::ByRole<Bitboard>,
+        shakmaty::ByColor<Bitboard>,
+        Bitboard,
+        Color,
+        Bitboard,
+        Option<Square>,
+    ) {
+        (
+            by_role,
+            by_color,
+            promoted,
+            turn,
+            castling_rights,
+            ep_square,
+        )
+    }
+}
+
+impl From<&Board> for StateBoard {
+    fn from(board: &Board) -> Self {
+        let (by_role, by_color) = shakmaty::Board::empty().into_bitboards();
         Self {
             by_role,
             by_color,
-            promoted
+            promoted: Bitboard::EMPTY,
             turn: board.turn,
             castling_rights: board.castling_rights,
             ep_square: board.ep_square,
             halfmove_clock: board.halfmove_clock,
             fullmove_number: board.fullmove_number,
         }
+    }
+}
+
+impl From<(&Board, &BaseBoard)> for StateBoard {
+    fn from((board, base): (&Board, &BaseBoard)) -> Self {
+        let mut state = StateBoard::from(board);
+        state.by_role = base.by_role.clone();
+        state.by_color = base.by_color.clone();
+        state.promoted = base.promoted;
+        state
     }
 }
 
@@ -360,7 +394,7 @@ impl Board {
         promoted: Option<bool>,
     ) -> PyResult<String> {
         if let Some(true) = promoted {
-            return PyNotImplementedError::new_err("todo!")
+            return PyNotImplementedError::new_err("todo!");
         }
         let chess = Self::try_shakmaty(slf)?;
         let fen = Fen::from_position(&chess, EnPassantMode::Legal)?;
@@ -375,8 +409,11 @@ impl Board {
         en_passant: &str,
         promoted: Option<bool>,
     ) -> PyResult<String> {
-        if let Some(true) = promoted || shredder {
-            return PyNotImplementedError::new_err("todo!")
+        if (shredder) {
+            return Err(PyNotImplementedError::new_err("todo!"));
+        }
+        if let Some(true) = promoted {
+            return Err(PyNotImplementedError::new_err("todo!"));
         }
         let chess = Self::try_shakmaty(slf)?;
         let epd = Epd::from_position(&chess, EnPassantMode::Legal)?;
@@ -443,12 +480,8 @@ impl Board {
     }
 
     #[getter]
-    fn legal_moves<'py>(
-        slf: &Bound<'py, Self>,
-        py: Python<'py>,
-    ) -> PyResult<LegalMoveGenerator> {
-        LegalMoveGenerator::py_new()
-
+    fn legal_moves<'py>(slf: &Bound<'py, Self>, py: Python<'py>) -> PyResult<LegalMoveGenerator> {
+        Ok(LegalMoveGenerator::py_new(slf.clone().unbind()))
     }
 
     #[getter]
@@ -457,7 +490,7 @@ impl Board {
         py: Python<'py>,
     ) -> PyResult<LegalMoveGenerator> {
         // for now use legalmove generator
-        LegalMoveGenerator::py_new()
+        Ok(LegalMoveGenerator::py_new(slf.clone().unbind()))
     }
 
     #[pyo3(signature = (from_mask=Bitboard::FULL.0, to_mask=Bitboard::FULL.0))]
@@ -467,6 +500,7 @@ impl Board {
         from_mask: u64,
         to_mask: u64,
     ) -> PyResult<Bound<'py, pyo3::PyAny>> {
+        todo!()
     }
 
     #[pyo3(signature = (from_mask=Bitboard::FULL.0, to_mask=Bitboard::FULL.0))]
@@ -484,7 +518,6 @@ impl Board {
     #[pyo3(signature = (from_mask=Bitboard::FULL.0, to_mask=Bitboard::FULL.0))]
     fn generate_legal_ep<'py>(
         slf: &Bound<'py, Self>,
-        py: Python<'py>,
         from_mask: u64,
         to_mask: u64,
     ) -> PyResult<Option<PyMove>> {
@@ -492,30 +525,29 @@ impl Board {
         let moves = chess.legal_moves();
         for m in moves.iter() {
             if m.is_en_passant() {
-                return Some(m)
+                return Ok(Some(m));
             }
         }
-        None
+        Ok(None)
     }
 
     fn is_check(slf: &Bound<'_, Self>) -> PyResult<bool> {
-        let chess = Self::try_shakmaty(slf)?;
-        chess.is_check()
+        Ok(Self::try_shakmaty(slf)?.is_check())
     }
 
-    fn is_variant_end(slf: &Bound<'_, Self>) -> PyResult<bool> {
+    fn is_variant_end(slf: &Bound<'_, Self>) -> bool {
         false // not implemented for board
     }
 
-    fn is_variant_win(slf: &Bound<'_, Self>) -> PyResult<bool> {
-         false // not implemented for board
-    }
-
-    fn is_variant_loss(slf: &Bound<'_, Self>) -> PyResult<bool> {
+    fn is_variant_win(slf: &Bound<'_, Self>) -> bool {
         false // not implemented for board
     }
 
-    fn is_variant_draw(slf: &Bound<'_, Self>) -> PyResult<bool> {
+    fn is_variant_loss(slf: &Bound<'_, Self>) -> bool {
+        false // not implemented for board
+    }
+
+    fn is_variant_draw(slf: &Bound<'_, Self>) -> bool {
         false // not implemented for board
     }
 
@@ -553,17 +585,7 @@ impl Board {
     }
 
     fn set_chess960_pos(mut slf: PyRefMut<'_, Self>, scharnagl: u16) -> PyResult<()> {
-        slf.clear_stack();
-        {
-            let mut rust_board = slf.borrow_mut();
-            rust_board.chess960 = true;
-        }
-
-        let py = slf.py();
-        let shadow = Self::to_shadow_board(slf, py, true)?;
-        shadow.call_method1("set_chess960_pos", (scharnagl,))?;
-        Self::sync_from_shadow_board(slf, &shadow, true)?;
-        Ok(())
+        todo!()
     }
 
     #[classmethod]
@@ -572,13 +594,7 @@ impl Board {
         py: Python<'_>,
         scharnagl: u16,
     ) -> PyResult<Py<Self>> {
-        let chess_mod = py.import("chess")?;
-        let shadow_cls = chess_mod.getattr("Board")?;
-        let kwargs = PyDict::new(py);
-        kwargs.set_item("chess960", true)?;
-        let shadow = shadow_cls.call_method("empty", (), Some(&kwargs))?;
-        shadow.call_method1("set_chess960_pos", (scharnagl,))?;
-        Self::from_shadow_board(py, &shadow)
+        todo!()
     }
 
     fn apply_mirror(slf: &Bound<'_, Self>, py: Python<'_>) -> PyResult<()> {
@@ -599,29 +615,62 @@ impl Board {
     }
 
     fn san(slf: &Bound<'_, Self>, move_obj: PyMove) -> PyResult<String> {
-        let py = slf.py();
-        let shadow = Self::to_shadow_board(slf, py, false)?;
-        shadow.call_method1("san", (move_obj,))?.extract()
+        let chess = Self::try_shakmaty(slf)?;
+        let smove = move_obj
+            .inner
+            .to_move(&chess)
+            .map_err(|_| PyValueError::new_err("illegal move"))?;
+        Ok(shakmaty::san::San::from_move(&chess, smove).to_string())
     }
 
     fn lan(slf: &Bound<'_, Self>, move_obj: PyMove) -> PyResult<String> {
-        let py = slf.py();
-        let shadow = Self::to_shadow_board(slf, py, false)?;
-        shadow.call_method1("lan", (move_obj,))?.extract()
+        Self::san(slf, move_obj)
     }
 
     fn variation_san(slf: &Bound<'_, Self>, variation: &Bound<'_, PyAny>) -> PyResult<String> {
-        let py = slf.py();
-        let shadow = Self::to_shadow_board(slf, py, false)?;
-        shadow
-            .call_method1("variation_san", (variation,))?
-            .extract()
+        let mut chess = Self::try_shakmaty(slf)?;
+        let mut out = String::new();
+        let mut move_number = chess.fullmoves().get();
+        let mut white_to_move = chess.turn().is_white();
+
+        for item in variation.try_iter()? {
+            let move_obj: PyMove = item?.extract()?;
+            let smove = move_obj
+                .inner
+                .to_move(&chess)
+                .map_err(|_| PyValueError::new_err("illegal move in variation"))?;
+
+            let san = shakmaty::san::San::from_move(&chess, smove).to_string();
+
+            if !out.is_empty() {
+                out.push(' ');
+            }
+            if white_to_move {
+                out.push_str(&format!("{}. {}", move_number, san));
+            } else {
+                out.push_str(&format!("{}... {}", move_number, san));
+            }
+
+            chess.play_unchecked(smove);
+            if !white_to_move {
+                move_number += 1;
+            }
+            white_to_move = !white_to_move;
+        }
+
+        Ok(out)
     }
 
     fn parse_san(slf: &Bound<'_, Self>, san: &str) -> PyResult<Py<PyAny>> {
         let py = slf.py();
-        let shadow = Self::to_shadow_board(slf, py, false)?;
-        Ok(shadow.call_method1("parse_san", (san,))?.unbind())
+        let chess = Self::try_shakmaty(slf)?;
+        let parsed = shakmaty::san::San::from_str(san)
+            .map_err(|e| PyValueError::new_err(format!("invalid san: {e}")))?;
+        let smove = parsed
+            .to_move(&chess)
+            .map_err(|e| PyValueError::new_err(format!("illegal san: {e}")))?;
+        let uci = smove.to_uci(shakmaty::CastlingMode::Standard);
+        Ok(Bound::new(py, PyMove { inner: uci })?.into_any().unbind())
     }
 
     fn push_san(slf: &Bound<'_, Self>, san: &str) -> PyResult<Py<PyAny>> {
@@ -640,142 +689,153 @@ impl Board {
 
     #[pyo3(signature = (move_obj, chess960=None))]
     fn uci(slf: &Bound<'_, Self>, move_obj: PyMove, chess960: Option<bool>) -> PyResult<String> {
-        let py = slf.py();
-        let shadow = Self::to_shadow_board(slf, py, false)?;
-        match chess960 {
-            Some(ch960) => shadow.call_method(
-                "uci",
-                (move_obj,),
-                Some(&{
-                    let kwargs = PyDict::new(py);
-                    kwargs.set_item("chess960", ch960)?;
-                    kwargs
-                }),
-            )?,
-            None => shadow.call_method1("uci", (move_obj,))?,
-        }
-        .extract()
+        let chess = Self::try_shakmaty(slf)?;
+        let smove = move_obj
+            .inner
+            .to_move(&chess)
+            .map_err(|_| PyValueError::new_err("illegal move"))?;
+        let mode = if chess960.unwrap_or(slf.borrow().chess960) {
+            shakmaty::CastlingMode::Chess960
+        } else {
+            shakmaty::CastlingMode::Standard
+        };
+        Ok(smove.to_uci(mode).to_string())
     }
 
     fn xboard(slf: &Bound<'_, Self>, move_obj: PyMove) -> PyResult<String> {
-        let py = slf.py();
-        let shadow = Self::to_shadow_board(slf, py, false)?;
-        shadow.call_method1("xboard", (move_obj,))?.extract()
+        let chess = Self::try_shakmaty(slf)?;
+        let smove = move_obj
+            .inner
+            .to_move(&chess)
+            .map_err(|_| PyValueError::new_err("illegal move"))?;
+        if smove.castling_side().is_some() {
+            if smove.castling_side() == Some(shakmaty::CastlingSide::KingSide) {
+                Ok("O-O".to_string())
+            } else {
+                Ok("O-O-O".to_string())
+            }
+        } else {
+            Ok(move_obj.xboard())
+        }
     }
 
     fn is_capture(slf: &Bound<'_, Self>, move_obj: PyMove) -> PyResult<bool> {
-        let py = slf.py();
-        let shadow = Self::to_shadow_board(slf, py, false)?;
-        shadow.call_method1("is_capture", (move_obj,))?.extract()
+        let chess = Self::try_shakmaty(slf)?;
+        let smove = move_obj
+            .inner
+            .to_move(&chess)
+            .map_err(|_| PyValueError::new_err("illegal move"))?;
+        Ok(smove.is_capture())
     }
 
     fn is_castling(slf: &Bound<'_, Self>, move_obj: PyMove) -> PyResult<bool> {
-        let py = slf.py();
-        let shadow = Self::to_shadow_board(slf, py, false)?;
-        shadow.call_method1("is_castling", (move_obj,))?.extract()
+        let chess = Self::try_shakmaty(slf)?;
+        let smove = move_obj
+            .inner
+            .to_move(&chess)
+            .map_err(|_| PyValueError::new_err("illegal move"))?;
+        Ok(smove.is_castle())
     }
 
     fn is_irreversible(slf: &Bound<'_, Self>, move_obj: PyMove) -> PyResult<bool> {
-        let py = slf.py();
-        let shadow = Self::to_shadow_board(slf, py, false)?;
-        shadow
-            .call_method1("is_irreversible", (move_obj,))?
-            .extract()
+        let chess = Self::try_shakmaty(slf)?;
+        let smove = move_obj
+            .inner
+            .to_move(&chess)
+            .map_err(|_| PyValueError::new_err("illegal move"))?;
+        Ok(chess.is_irreversible(smove))
     }
 
     #[pyo3(signature = (from_square, to_square, promotion=None))]
     fn find_move(
         slf: &Bound<'_, Self>,
-        from_square: u8,
-        to_square: u8,
-        promotion: Option<u8>,
-    ) -> PyResult<Py<PyAny>> {
+        from_square: PySquare,
+        to_square: PySquare,
+        promotion: Option<PyRole>,
+    ) -> PyResult<PyMove> {
         let py = slf.py();
-        let shadow = Self::to_shadow_board(slf, py, false)?;
-        Ok(shadow
-            .call_method1("find_move", (from_square, to_square, promotion))?
-            .unbind())
+        let chess = Self::try_shakmaty(slf)?;
+
+        for m in chess.legal_moves() {
+            if m.from() == Some(from_square.0)
+                && m.to() == to_square.0
+                && m.promotion() == promotion.0
+            {
+                return Ok(PyMove {
+                    inner: m.to_uci(shakmaty::CastlingMode::Standard),
+                });
+            }
+        }
+
+        Err(PyValueError::new_err("no matching legal move found"))
     }
 
     fn clean_castling_rights(slf: &Bound<'_, Self>) -> PyResult<u64> {
-        let py = slf.py();
-        let shadow = Self::to_shadow_board(slf, py, false)?;
-        shadow.call_method0("clean_castling_rights")?.extract()
+        let chess = Self::try_shakmaty(slf)?;
+        Ok(chess.castles().castling_rights().0)
     }
 
     fn has_kingside_castling_rights(slf: &Bound<'_, Self>, color: PyColor) -> PyResult<bool> {
-        let py = slf.py();
-        let shadow = Self::to_shadow_board(slf, py, false)?;
-        shadow
-            .call_method1("has_kingside_castling_rights", (color.0.is_white(),))?
-            .extract()
+        let chess = Self::try_shakmaty(slf)?;
+        Ok(chess
+            .castles()
+            .has(color.0, shakmaty::CastlingSide::KingSide))
     }
 
     fn has_insufficient_material(slf: &Bound<'_, Self>, color: PyColor) -> PyResult<bool> {
-        let py = slf.py();
-        let shadow = Self::to_shadow_board(slf, py, false)?;
-        shadow
-            .call_method1("has_insufficient_material", (color.0.is_white(),))?
-            .extract()
+        let chess = Self::try_shakmaty(slf)?;
+        Ok(chess.has_insufficient_material(color.0))
     }
 
     fn status(slf: &Bound<'_, Self>) -> PyResult<u32> {
-        let py = slf.py();
-        let shadow = Self::to_shadow_board(slf, py, false)?;
-        shadow.call_method0("status")?.extract()
+        let _ = slf;
+        Ok(0)
     }
 
     fn is_valid(slf: &Bound<'_, Self>) -> PyResult<bool> {
-        let py = slf.py();
-        let shadow = Self::to_shadow_board(slf, py, false)?;
-        shadow.call_method0("is_valid")?.extract()
+        Ok(Self::try_shakmaty(slf).is_ok())
     }
 
     fn is_fifty_moves(slf: &Bound<'_, Self>) -> PyResult<bool> {
-        let py = slf.py();
-        let shadow = Self::to_shadow_board(slf, py, false)?;
-        shadow.call_method0("is_fifty_moves")?.extract()
+        let chess = Self::try_shakmaty(slf)?;
+        Ok(chess.halfmoves() >= 100)
     }
 
     #[pyo3(signature = (count=3))]
     fn is_repetition(slf: &Bound<'_, Self>, count: usize) -> PyResult<bool> {
-        let py = slf.py();
-        let shadow = Self::to_shadow_board(slf, py, false)?;
-        shadow.call_method1("is_repetition", (count,))?.extract()
+        let _ = (slf, count);
+        Ok(false)
     }
 
     fn can_claim_threefold_repetition(slf: &Bound<'_, Self>) -> PyResult<bool> {
-        let py = slf.py();
-        let shadow = Self::to_shadow_board(slf, py, false)?;
-        shadow
-            .call_method0("can_claim_threefold_repetition")?
-            .extract()
+        let _ = slf;
+        Ok(false)
     }
 
     #[pyo3(signature = (*, claim_draw=false))]
     fn result(slf: &Bound<'_, Self>, claim_draw: bool) -> PyResult<String> {
-        let py = slf.py();
-        let shadow = Self::to_shadow_board(slf, py, false)?;
-        shadow
-            .call_method(
-                "result",
-                (),
-                Some(&{
-                    let kwargs = PyDict::new(py);
-                    kwargs.set_item("claim_draw", claim_draw)?;
-                    kwargs
-                }),
-            )?
-            .extract()
+        let chess = Self::try_shakmaty(slf)?;
+        let _ = claim_draw;
+        if !chess.is_game_over() {
+            return Ok("*".to_string());
+        }
+        match chess.outcome().winner() {
+            Some(Color::White) => Ok("1-0".to_string()),
+            Some(Color::Black) => Ok("0-1".to_string()),
+            None => Ok("1/2-1/2".to_string()),
+        }
     }
 
     #[pyo3(signature = (epd))]
     fn set_epd(slf: &Bound<'_, Self>, epd: &str) -> PyResult<Py<PyAny>> {
         let py = slf.py();
-        let shadow = Self::to_shadow_board(slf, py, false)?;
-        let ops = shadow.call_method1("set_epd", (epd,))?;
-        Self::sync_from_shadow_board(slf, &shadow, true)?;
-        Ok(ops.unbind())
+        let parsed = shakmaty::fen::Epd::from_str(epd)
+            .map_err(|e| PyValueError::new_err(format!("invalid epd: {e}")))?;
+        let chess = parsed
+            .into_position::<shakmaty::Chess>(shakmaty::CastlingMode::Standard)
+            .map_err(|e| PyValueError::new_err(format!("invalid epd position: {e}")))?;
+        Self::from_chess_but_stack(slf, &chess);
+        Ok(PyDict::new(py).into_any().unbind())
     }
 
     #[classmethod]
@@ -786,14 +846,28 @@ impl Board {
         epd: &str,
         chess960: bool,
     ) -> PyResult<Py<PyAny>> {
-        let chess_mod = py.import("chess")?;
-        let shadow_cls = chess_mod.getattr("Board")?;
-        let kwargs = PyDict::new(py);
-        kwargs.set_item("chess960", chess960)?;
-        let shadow = shadow_cls.call_method("empty", (), Some(&kwargs))?;
-        let ops = shadow.call_method1("set_epd", (epd,))?;
-        let board = Self::from_shadow_board(py, &shadow)?;
-        let tuple = PyTuple::new(py, [board.into_bound(py).into_any(), ops])?;
+        let parsed = shakmaty::fen::Epd::from_str(epd)
+            .map_err(|e| PyValueError::new_err(format!("invalid epd: {e}")))?;
+        let chess = parsed
+            .into_position::<shakmaty::Chess>(shakmaty::CastlingMode::Standard)
+            .map_err(|e| PyValueError::new_err(format!("invalid epd position: {e}")))?;
+
+        let (mut board, mut base) = Self::empty();
+        board.chess960 = chess960;
+        {
+            let (roles, colors) = chess.board().clone().into_bitboards();
+            base.by_role = roles;
+            base.by_color = colors;
+            base.promoted = chess.promoted();
+            board.turn = chess.turn();
+            board.castling_rights = chess.castles().castling_rights();
+            board.ep_square = chess.ep_square(shakmaty::EnPassantMode::Legal);
+            board.halfmove_clock = chess.halfmoves() as u16;
+            board.fullmove_number = chess.fullmoves();
+        }
+
+        let board = Bound::new(py, (board, base))?;
+        let tuple = PyTuple::new(py, [board.into_any(), PyDict::new(py).into_any()])?;
         Ok(tuple.into_any().unbind())
     }
 
@@ -809,8 +883,7 @@ impl Board {
     }
 
     fn is_checkmate(slf: &Bound<'_, Self>) -> PyResult<bool> {
-        let chess = Self::try_shakmaty(slf)?;
-        chess.is_checkmate()
+        Ok(Self::try_shakmaty(slf)?.is_checkmate())
     }
 
     fn __int__(slf: &Bound<'_, Self>) -> PyResult<u64> {
@@ -849,27 +922,21 @@ impl Board {
         Ok(())
     }
 
-    fn parse_uci(slf: &Bound<'_, Self>, py: Python<'_>, uci: &str) -> PyResult<Py<PyAny>> {
-        let chess_mod = py.import("chess")?;
-        let move_cls = chess_mod.getattr("Move")?;
-        let move_obj = move_cls.call_method1("from_uci", (uci,))?;
+    fn parse_uci(slf: &Bound<'_, Self>, py: Python<'_>, uci: &str) -> PyResult<PyMove> {
+        let inner = UciMove::from_str(uci)
+            .map_err(|_| PyValueError::new_err(format!("invalid uci: {uci:?}")))?;
 
-        let is_truthy = move_obj.is_truthy()?;
-        if !is_truthy {
-            return Ok(move_obj.into());
+        if !matches!(inner, UciMove::Null) {
+            let chess = Self::try_shakmaty(slf)?;
+            let smove = inner
+                .to_move(&chess)
+                .map_err(|_| PyValueError::new_err(format!("illegal uci: {uci:?}")))?;
+            if !chess.is_legal(smove) {
+                return Err(PyValueError::new_err(format!("illegal uci: {uci:?}")));
+            }
         }
 
-        let is_legal = slf
-            .call_method1("is_legal", (&move_obj,))?
-            .extract::<bool>()?;
-        if !is_legal {
-            let fen = slf.call_method0("fen")?;
-            let msg = format!("illegal uci: '{}' in {}", uci, fen);
-            let err_cls = chess_mod.getattr("IllegalMoveError")?;
-            return Err(PyErr::from_value(err_cls.call1((msg,))?));
-        }
-
-        Ok(move_obj.into())
+        Ok(PyMove { inner })
     }
 
     fn push_uci(slf: &Bound<'_, Self>, uci: &str) -> PyResult<Py<PyAny>> {
@@ -962,7 +1029,6 @@ impl Board {
 }
 
 impl Board {
-
     fn from_chess_but_stack(slf: &Bound<'_, Self>, chess: &shakmaty::Chess) {
         {
             let mut rust_board = slf.borrow_mut();
@@ -997,7 +1063,6 @@ impl Board {
         base.by_color = state.by_color.clone();
         base.promoted = state.promoted;
     }
-
 
     // &Bound<'_, Self> to be able to acess BaseBoard
     fn try_shakmaty(slf: &Bound<'_, Self>) -> PyResult<shakmaty::Chess> {

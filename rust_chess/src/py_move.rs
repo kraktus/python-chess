@@ -165,7 +165,7 @@ impl PyMove {
         self.inner.to_string()
     }
 
-    fn xboard(&self) -> String {
+    pub fn xboard(&self) -> String {
         match self.inner {
             // because shakmaty consider null move to be 0000
             UciMove::Null => "@@@@".to_string(),

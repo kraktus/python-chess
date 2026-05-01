@@ -1,7 +1,7 @@
 pub mod base_board;
+pub mod board;
 pub mod piece;
 pub mod py_move;
-pub mod board;
 pub mod square_set;
 pub mod util;
 
