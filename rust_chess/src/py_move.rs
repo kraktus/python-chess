@@ -16,6 +16,10 @@ pub struct PyMove {
     pub inner: UciMove,
 }
 
+impl From<Move> for PyMove {
+    // TODO!
+}
+
 #[pymethods]
 impl PyMove {
     #[new]
