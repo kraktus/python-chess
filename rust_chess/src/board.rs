@@ -1,4 +1,5 @@
-use pyo3::exceptions::{PyIndexError, PyNotImplementedError, PyValueError};
+use pyo3::exceptions::{PyNotImplementedError, PyValueError};
+use shakmaty::fen::{Epd, Fen};
 use shakmaty::uci::UciMove;
 use shakmaty::{Bitboard, Color, EnPassantMode, FromSetup, Position, Square};
 
@@ -7,7 +8,7 @@ use std::str::FromStr;
 
 use crate::base_board::BaseBoard;
 use crate::py_move::PyMove;
-use crate::util::{PyColor, PySquare};
+use crate::util::{PyColor, PyRole, PySquare};
 use pyo3::prelude::*;
 use pyo3::types::{PyDict, PyTuple, PyType};
 
@@ -112,12 +113,12 @@ impl StateBoard {
         Option<Square>,
     ) {
         (
-            by_role,
-            by_color,
-            promoted,
-            turn,
-            castling_rights,
-            ep_square,
+            self.by_role,
+            self.by_color,
+            self.promoted,
+            self.turn,
+            self.castling_rights,
+            self.ep_square,
         )
     }
 }
@@ -393,12 +394,13 @@ impl Board {
         en_passant: &str,
         promoted: Option<bool>,
     ) -> PyResult<String> {
+        let _ = (shredder, en_passant);
         if let Some(true) = promoted {
-            return PyNotImplementedError::new_err("todo!");
+            return Err(PyNotImplementedError::new_err("todo!"));
         }
         let chess = Self::try_shakmaty(slf)?;
-        let fen = Fen::from_position(&chess, EnPassantMode::Legal)?;
-        fen.to_string()
+        let fen = Fen::from_position(&chess, EnPassantMode::Legal);
+        Ok(fen.to_string())
     }
 
     #[pyo3(signature = (*, shredder=false, en_passant="legal", promoted=None))]
@@ -409,15 +411,16 @@ impl Board {
         en_passant: &str,
         promoted: Option<bool>,
     ) -> PyResult<String> {
-        if (shredder) {
+        let _ = en_passant;
+        if shredder {
             return Err(PyNotImplementedError::new_err("todo!"));
         }
         if let Some(true) = promoted {
             return Err(PyNotImplementedError::new_err("todo!"));
         }
         let chess = Self::try_shakmaty(slf)?;
-        let epd = Epd::from_position(&chess, EnPassantMode::Legal)?;
-        epd.to_string()
+        let epd = Epd::from_position(&chess, EnPassantMode::Legal);
+        Ok(epd.to_string())
     }
 
     #[pyo3(signature = (*, stack=None))]
@@ -480,14 +483,14 @@ impl Board {
     }
 
     #[getter]
-    fn legal_moves<'py>(slf: &Bound<'py, Self>, py: Python<'py>) -> PyResult<LegalMoveGenerator> {
+    fn legal_moves<'py>(slf: &Bound<'py, Self>, _py: Python<'py>) -> PyResult<LegalMoveGenerator> {
         Ok(LegalMoveGenerator::py_new(slf.clone().unbind()))
     }
 
     #[getter]
     fn pseudo_legal_moves<'py>(
         slf: &Bound<'py, Self>,
-        py: Python<'py>,
+        _py: Python<'py>,
     ) -> PyResult<LegalMoveGenerator> {
         // for now use legalmove generator
         Ok(LegalMoveGenerator::py_new(slf.clone().unbind()))
@@ -509,10 +512,20 @@ impl Board {
         py: Python<'py>,
         from_mask: u64,
         to_mask: u64,
-    ) -> PyResult<Bound<'py, pyo3::PyAny>> {
-        let board = self.board.bind(py);
-        let chess = Board::try_shakmaty(&board)?;
-        Ok(chess.legal_moves())
+    ) -> PyResult<Vec<PyMove>> {
+        let chess = Self::try_shakmaty(slf)?;
+        let from_mask = Bitboard(from_mask);
+        let to_mask = Bitboard(to_mask);
+
+        let mut py_moves = Vec::new();
+        for m in chess.legal_moves() {
+            let from_ok = m.from().is_none_or(|sq| from_mask.contains(sq));
+            if from_ok && to_mask.contains(m.to()) {
+                py_moves.push(m.into())
+            }
+        }
+
+        Ok(py_moves)
     }
 
     #[pyo3(signature = (from_mask=Bitboard::FULL.0, to_mask=Bitboard::FULL.0))]
@@ -522,10 +535,13 @@ impl Board {
         to_mask: u64,
     ) -> PyResult<Option<PyMove>> {
         let chess = Self::try_shakmaty(slf)?;
+        let from_mask = Bitboard(from_mask);
+        let to_mask = Bitboard(to_mask);
         let moves = chess.legal_moves();
         for m in moves.iter() {
-            if m.is_en_passant() {
-                return Ok(Some(m));
+            let from_ok = m.from().is_none_or(|sq| from_mask.contains(sq));
+            if m.is_en_passant() && from_ok && to_mask.contains(m.to()) {
+                return Ok(Some(m.into()));
             }
         }
         Ok(None)
@@ -715,7 +731,10 @@ impl Board {
                 Ok("O-O-O".to_string())
             }
         } else {
-            Ok(move_obj.xboard())
+            Ok(match move_obj.inner {
+                UciMove::Null => "@@@@".to_string(),
+                _ => move_obj.inner.to_string(),
+            })
         }
     }
 
@@ -753,13 +772,13 @@ impl Board {
         to_square: PySquare,
         promotion: Option<PyRole>,
     ) -> PyResult<PyMove> {
-        let py = slf.py();
         let chess = Self::try_shakmaty(slf)?;
+        let wanted_promotion = promotion.map(|r| r.0);
 
         for m in chess.legal_moves() {
             if m.from() == Some(from_square.0)
                 && m.to() == to_square.0
-                && m.promotion() == promotion.0
+                && m.promotion() == wanted_promotion
             {
                 return Ok(PyMove {
                     inner: m.to_uci(shakmaty::CastlingMode::Standard),
@@ -922,7 +941,7 @@ impl Board {
         Ok(())
     }
 
-    fn parse_uci(slf: &Bound<'_, Self>, py: Python<'_>, uci: &str) -> PyResult<PyMove> {
+    fn parse_uci(slf: &Bound<'_, Self>, _py: Python<'_>, uci: &str) -> PyResult<PyMove> {
         let inner = UciMove::from_str(uci)
             .map_err(|_| PyValueError::new_err(format!("invalid uci: {uci:?}")))?;
 
