@@ -6,7 +6,7 @@ use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 use pyo3::types::PyType;
 use shakmaty::uci::UciMove;
-use shakmaty::{Role, Square};
+use shakmaty::{Move, Role, Square};
 
 use crate::util::{PyRole, PySquare};
 
@@ -17,7 +17,17 @@ pub struct PyMove {
 }
 
 impl From<Move> for PyMove {
-    // TODO!
+    fn from(value: Move) -> Self {
+        Self {
+            inner: value.to_uci(shakmaty::CastlingMode::Standard),
+        }
+    }
+}
+
+impl From<&Move> for PyMove {
+    fn from(value: &Move) -> Self {
+        (*value).into()
+    }
 }
 
 #[pymethods]
