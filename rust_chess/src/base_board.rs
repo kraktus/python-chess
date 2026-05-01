@@ -327,7 +327,6 @@ impl BaseBoard {
         let board = self.board()?;
         let mask_bb = mask.map(Bitboard).unwrap_or(Bitboard::FULL);
         let dict = pyo3::types::PyDict::new(py);
-        let occ = board.occupied() & mask_bb;
         for (sq, piece) in board.iter() {
             if mask_bb.contains(sq) {
                 let py_piece = PyPiece(piece);
