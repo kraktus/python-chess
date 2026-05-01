@@ -4,7 +4,7 @@ use crate::util::{IntoSquareSet, PyColor, PyRole, PySquare};
 use pyo3::exceptions::{PyIndexError, PyNotImplementedError, PyValueError};
 use pyo3::prelude::*;
 use pyo3::types::PyType;
-use shakmaty::{Bitboard, Board, Piece, Role, Square, Color};
+use shakmaty::{Bitboard, Board, Color, Piece, Role, Square};
 use std::str::FromStr;
 
 #[pyclass(module = "rust_chess", name = "OccupiedCo")]
@@ -343,17 +343,13 @@ impl BaseBoard {
         for (sq, p) in pieces {
             let square: PySquare = sq.extract()?;
             let piece: PyPiece = p.extract()?;
-            self.set_piece_at(
-                square,
-                Some(piece),
-                false,
-            );
+            self.set_piece_at(square, Some(piece), false);
         }
         Ok(())
     }
 
     #[pyo3(signature = (promoted=None))]
-    fn board_fen(&self, promoted: Option<bool>) -> PyResult<String> {
+    pub fn board_fen(&self, promoted: Option<bool>) -> PyResult<String> {
         self.board()?
             .board_fen_with_promoted(if promoted.unwrap_or(false) {
                 self.promoted
@@ -391,32 +387,37 @@ impl BaseBoard {
 
     fn __str__(&self) -> String {
         let mut builder = String::with_capacity(150);
-        for square in shakmaty::Square::ALL.into_iter().rev() {
-            let mask = 1u64 << (square as u8);
-            if ((self.by_color.white | self.by_color.black).0 & mask) == 0 {
-                builder.push('.');
-            } else {
-                let is_white = self.color_at(PySquare(square)).unwrap();
-                let mut symbol = match self.piece_type_at(PySquare(square)) {
-                    Some(1) => 'p',
-                    Some(2) => 'n',
-                    Some(3) => 'b',
-                    Some(4) => 'r',
-                    Some(5) => 'q',
-                    Some(6) => 'k',
-                    _ => '?',
-                };
-                if is_white {
-                    symbol = symbol.to_ascii_uppercase();
+        for rank in (0..8).rev() {
+            for file in 0..8 {
+                let square = shakmaty::Square::from_coords(
+                    shakmaty::File::new(file),
+                    shakmaty::Rank::new(rank),
+                );
+                let mask = 1u64 << (square as u8);
+                if ((self.by_color.white | self.by_color.black).0 & mask) == 0 {
+                    builder.push('.');
+                } else {
+                    let is_white = self.color_at(PySquare(square)).unwrap();
+                    let mut symbol = match self.piece_type_at(PySquare(square)) {
+                        Some(1) => 'p',
+                        Some(2) => 'n',
+                        Some(3) => 'b',
+                        Some(4) => 'r',
+                        Some(5) => 'q',
+                        Some(6) => 'k',
+                        _ => '?',
+                    };
+                    if is_white {
+                        symbol = symbol.to_ascii_uppercase();
+                    }
+                    builder.push(symbol);
                 }
-                builder.push(symbol);
+                if file != 7 {
+                    builder.push(' ');
+                }
             }
-            if square.file() == shakmaty::File::H {
-                if square != shakmaty::Square::H1 {
-                    builder.push('\n');
-                }
-            } else {
-                builder.push(' ');
+            if rank != 0 {
+                builder.push('\n');
             }
         }
         builder
@@ -454,6 +455,10 @@ impl BaseBoard {
             .as_mut()
             .for_each(|c| *c = c.flip_vertical());
         base_board.promoted = base_board.promoted.flip_vertical();
+        let white = base_board.by_color.white;
+        let black = base_board.by_color.black;
+        base_board.by_color.white = black;
+        base_board.by_color.black = white;
         base_board
     }
 }
@@ -530,8 +535,7 @@ impl BaseBoard {
     }
 
     pub fn king(&self, color: Color) -> Option<Square> {
-        (*self.by_role.get(Role::King) & *self.by_color.get(color) & !self.promoted)
-            .single_square()
+        (*self.by_role.get(Role::King) & *self.by_color.get(color) & !self.promoted).single_square()
     }
 
     // TODO FIXME, move to shakmaty
@@ -553,12 +557,14 @@ impl BaseBoard {
             let ray = shakmaty::attacks::ray(king_sq, sniper_sq);
             if ray.contains(square) {
                 let between = shakmaty::attacks::between(king_sq, sniper_sq);
-                if (between
-                    & (self.by_color.white | self.by_color.black)
-                    & !Bitboard::from(square))
-                .is_empty()
-                {
-                    return ray;
+                if between.contains(square) {
+                    if (between
+                        & (self.by_color.white | self.by_color.black)
+                        & !Bitboard::from(square))
+                    .is_empty()
+                    {
+                        return ray;
+                    }
                 }
             }
         }
