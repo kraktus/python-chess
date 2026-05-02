@@ -1,3 +1,4 @@
+#![allow(unused_variables)]
 use pyo3::exceptions::PyValueError;
 use shakmaty::uci::UciMove;
 use shakmaty::{Bitboard, Color, FromSetup, Position, Square};
@@ -17,6 +18,7 @@ pub struct LegalMoveGenerator {
 }
 
 const ONE: NonZeroU32 = std::num::NonZeroU32::MIN;
+
 
 #[pymethods]
 impl LegalMoveGenerator {
@@ -408,13 +410,7 @@ impl Board {
         en_passant: &str,
         promoted: Option<bool>,
     ) -> PyResult<String> {
-        let _ = (shredder, en_passant);
-        if let Some(true) = promoted {
-            return Err(PyNotImplementedError::new_err("todo!"));
-        }
-        let chess = Self::try_shakmaty(slf)?;
-        let fen = Fen::from_position(&chess, EnPassantMode::Legal);
-        Ok(fen.to_string())
+        todo!()
     }
 
     #[pyo3(signature = (*, en_passant="legal", promoted=None))]
@@ -423,16 +419,7 @@ impl Board {
         en_passant: &str,
         promoted: Option<bool>,
     ) -> PyResult<String> {
-        let _ = en_passant;
-        if shredder {
-            return Err(PyNotImplementedError::new_err("todo!"));
-        }
-        if let Some(true) = promoted {
-            return Err(PyNotImplementedError::new_err("todo!"));
-        }
-        let chess = Self::try_shakmaty(slf)?;
-        let epd = Epd::from_position(&chess, EnPassantMode::Legal);
-        Ok(epd.to_string())
+        todo!()
     }
 
     #[pyo3(signature = (*, stack=None))]
@@ -504,81 +491,61 @@ impl Board {
         slf: &Bound<'py, Self>,
         py: Python<'py>,
     ) -> PyResult<Bound<'py, PyAny>> {
-        let py_board = Self::to_python_board(slf, true)?;
-        let chess_mod = py.import("chess")?;
-        chess_mod
-            .getattr("PseudoLegalMoveGenerator")?
-            .call1((py_board,))
+        todo!()
     }
 
-    #[pyo3(signature = (from_mask=-1i128, to_mask=-1i128))]
+    #[pyo3(signature = (from_mask=Bitboard::FULL.0, to_mask=Bitboard::FULL.0))]
     fn generate_pseudo_legal_moves<'py>(
         slf: &Bound<'py, Self>,
-        _py: Python<'py>,
-        from_mask: i128,
-        to_mask: i128,
-    ) -> PyResult<Bound<'py, pyo3::PyAny>> {
-        let py_board = Self::to_python_board(slf, true)?;
-        py_board.call_method1("generate_pseudo_legal_moves", (from_mask, to_mask))
+        from_mask: u64,
+        to_mask: u64,
+    ) -> PyResult<Vec<PyMove>> {
+        Self::generate_x_moves(slf, from_mask, to_mask, |_| true)
     }
 
-    #[pyo3(signature = (from_mask=-1i128, to_mask=-1i128))]
+    #[pyo3(signature = (from_mask=Bitboard::FULL.0, to_mask=Bitboard::FULL.0))]
     fn generate_legal_moves<'py>(
         slf: &Bound<'py, Self>,
-        from_mask: i128,
-        to_mask: i128,
-    ) -> PyResult<Bound<'py, pyo3::PyAny>> {
-        // FIXME this is slow use arrayvec retain
-        let mut py_moves = Vec::new();
-        for m in chess.legal_moves() {
-            let from_ok = m.from().is_none_or(|sq| from_mask.contains(sq));
-            if from_ok && to_mask.contains(m.to()) {
-                py_moves.push(m.into())
-            }
-        }
+        from_mask: u64,
+        to_mask: u64,
+    ) -> PyResult<Vec<PyMove>> {
+        Self::generate_x_moves(slf, from_mask, to_mask, |_| true)
     }
 
-    #[pyo3(signature = (from_mask=-1i128, to_mask=-1i128))]
+    #[pyo3(signature = (from_mask=Bitboard::FULL.0, to_mask=Bitboard::FULL.0))]
     fn generate_castling_moves<'py>(
         slf: &Bound<'py, Self>,
-        _py: Python<'py>,
-        from_mask: i128,
-        to_mask: i128,
-    ) -> PyResult<Bound<'py, pyo3::PyAny>> {
-        let py_board = Self::to_python_board(slf, true)?;
-        py_board.call_method1("generate_castling_moves", (from_mask, to_mask))
+        from_mask: u64,
+        to_mask: u64,
+    ) -> PyResult<Vec<PyMove>> {
+        Self::generate_x_moves(slf, from_mask, to_mask, |m| m.is_castle())
     }
 
-    #[pyo3(signature = (from_mask=-1i128, to_mask=-1i128))]
+    #[pyo3(signature = (from_mask=Bitboard::FULL.0, to_mask=Bitboard::FULL.0))]
     fn generate_pseudo_legal_ep<'py>(
         slf: &Bound<'py, Self>,
-        _py: Python<'py>,
-        from_mask: i128,
-        to_mask: i128,
-    ) -> PyResult<Bound<'py, pyo3::PyAny>> {
-        let py_board = Self::to_python_board(slf, true)?;
-        py_board.call_method1("generate_pseudo_legal_ep", (from_mask, to_mask))
+        from_mask: u64,
+        to_mask: u64,
+    ) -> PyResult<Vec<PyMove>> {
+        Self::generate_x_moves(slf, from_mask, to_mask, |m| m.is_en_passant())
     }
 
-    #[pyo3(signature = (from_mask=-1i128, to_mask=-1i128))]
+    #[pyo3(signature = (from_mask=Bitboard::FULL.0, to_mask=Bitboard::FULL.0))]
     fn generate_legal_captures<'py>(
         slf: &Bound<'py, Self>,
-        _py: Python<'py>,
-        from_mask: i128,
-        to_mask: i128,
-    ) -> PyResult<Bound<'py, pyo3::PyAny>> {
-        let py_board = Self::to_python_board(slf, true)?;
-        py_board.call_method1("generate_legal_captures", (from_mask, to_mask))
+        from_mask: u64,
+        to_mask: u64,
+    ) -> PyResult<Vec<PyMove>> {
+        Self::generate_x_moves(slf, from_mask, to_mask, |m| m.is_capture())
     }
 
-    #[pyo3(signature = (from_mask=-1i128, to_mask=-1i128))]
+    #[pyo3(signature = (from_mask=Bitboard::FULL.0, to_mask=Bitboard::FULL.0))]
     fn generate_legal_ep<'py>(
         slf: &Bound<'py, Self>,
-        from_mask: i128,
-        to_mask: i128,
-    ) -> PyResult<Bound<'py, pyo3::PyAny>> {
-        let py_board = Self::to_python_board(slf, true)?;
-        py_board.call_method1("generate_legal_ep", (from_mask, to_mask))
+        from_mask: u64,
+        to_mask: u64,
+    ) -> PyResult<Vec<PyMove>> {
+        Self::generate_x_moves(slf, from_mask, to_mask, |m| m.is_en_passant())
     }
 
     fn is_check(slf: &Bound<'_, Self>) -> PyResult<bool> {
@@ -634,7 +601,7 @@ impl Board {
         slf.into_super().set_board_fen(fen)
     }
 
-    fn set_chess960_pos(mut slf: PyRefMut<'_, Self>, scharnagl: u16) -> PyResult<()> {
+    fn set_chess960_pos(slf: PyRefMut<'_, Self>, scharnagl: u16) -> PyResult<()> {
         todo!()
     }
 
@@ -1163,5 +1130,29 @@ impl Board {
             },
             BaseBoard::empty(),
         )
+    }
+
+    // Private helper for move generation
+    fn generate_x_moves<F>(
+        slf: &Bound<'_, Self>,
+        from_mask: u64,
+        to_mask: u64,
+        filter: F,
+    ) -> PyResult<Vec<PyMove>>
+    where
+        F: Fn(&shakmaty::Move) -> bool,
+    {
+        let chess = Self::try_shakmaty(slf)?;
+        let from = Bitboard(from_mask);
+        let to = Bitboard(to_mask);
+        // FIXME this is slow use arrayvec retain
+        let mut py_moves = Vec::new();
+        for m in chess.legal_moves() {
+            let from_ok = m.from().is_none_or(|sq| from.contains(sq));
+            if from_ok && to.contains(m.to()) && filter(&m) {
+                py_moves.push(m.into());
+            }
+        }
+        Ok(py_moves)
     }
 }
