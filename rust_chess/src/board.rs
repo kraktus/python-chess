@@ -1,7 +1,6 @@
-use pyo3::exceptions::{PyNotImplementedError, PyValueError};
-use shakmaty::fen::{Epd, Fen};
+use pyo3::exceptions::PyValueError;
 use shakmaty::uci::UciMove;
-use shakmaty::{Bitboard, Color, EnPassantMode, FromSetup, Position, Square};
+use shakmaty::{Bitboard, Color, FromSetup, Position, Square};
 
 use std::num::NonZeroU32;
 use std::str::FromStr;
@@ -164,12 +163,27 @@ pub struct Board {
 #[pymethods]
 impl Board {
     #[classattr]
+    fn aliases() -> Vec<&'static str> {
+        vec![
+            "Standard",
+            "Chess",
+            "Classical",
+            "Normal",
+            "Illegal",
+            "From Position",
+        ]
+    }
+
+    #[classattr]
+    #[allow(non_upper_case_globals)]
     const uci_variant: &'static str = "chess";
 
     #[classattr]
+    #[allow(non_upper_case_globals)]
     const xboard_variant: &'static str = "normal";
 
     #[classattr]
+    #[allow(non_upper_case_globals)]
     const starting_fen: &'static str = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
 
     #[getter]
@@ -483,87 +497,106 @@ impl Board {
     }
 
     #[getter]
-    fn legal_moves<'py>(slf: &Bound<'py, Self>, _py: Python<'py>) -> PyResult<LegalMoveGenerator> {
-        Ok(LegalMoveGenerator::py_new(slf.clone().unbind()))
+    fn legal_moves<'py>(slf: &Bound<'py, Self>, py: Python<'py>) -> PyResult<Bound<'py, PyAny>> {
+        let py_board = Self::to_python_board(slf, true)?;
+        let chess_mod = py.import("chess")?;
+        chess_mod.getattr("LegalMoveGenerator")?.call1((py_board,))
     }
 
     #[getter]
     fn pseudo_legal_moves<'py>(
         slf: &Bound<'py, Self>,
-        _py: Python<'py>,
-    ) -> PyResult<LegalMoveGenerator> {
-        // for now use legalmove generator
-        Ok(LegalMoveGenerator::py_new(slf.clone().unbind()))
+        py: Python<'py>,
+    ) -> PyResult<Bound<'py, PyAny>> {
+        let py_board = Self::to_python_board(slf, true)?;
+        let chess_mod = py.import("chess")?;
+        chess_mod
+            .getattr("PseudoLegalMoveGenerator")?
+            .call1((py_board,))
     }
 
-    #[pyo3(signature = (from_mask=Bitboard::FULL.0, to_mask=Bitboard::FULL.0))]
+    #[pyo3(signature = (from_mask=-1i128, to_mask=-1i128))]
     fn generate_pseudo_legal_moves<'py>(
         slf: &Bound<'py, Self>,
-        py: Python<'py>,
-        from_mask: u64,
-        to_mask: u64,
+        _py: Python<'py>,
+        from_mask: i128,
+        to_mask: i128,
     ) -> PyResult<Bound<'py, pyo3::PyAny>> {
-        todo!()
+        let py_board = Self::to_python_board(slf, true)?;
+        py_board.call_method1("generate_pseudo_legal_moves", (from_mask, to_mask))
     }
 
-    #[pyo3(signature = (from_mask=Bitboard::FULL.0, to_mask=Bitboard::FULL.0))]
+    #[pyo3(signature = (from_mask=-1i128, to_mask=-1i128))]
     fn generate_legal_moves<'py>(
         slf: &Bound<'py, Self>,
-        py: Python<'py>,
-        from_mask: u64,
-        to_mask: u64,
-    ) -> PyResult<Vec<PyMove>> {
-        let chess = Self::try_shakmaty(slf)?;
-        let from_mask = Bitboard(from_mask);
-        let to_mask = Bitboard(to_mask);
-
-        let mut py_moves = Vec::new();
-        for m in chess.legal_moves() {
-            let from_ok = m.from().is_none_or(|sq| from_mask.contains(sq));
-            if from_ok && to_mask.contains(m.to()) {
-                py_moves.push(m.into())
-            }
-        }
-
-        Ok(py_moves)
+        _py: Python<'py>,
+        from_mask: i128,
+        to_mask: i128,
+    ) -> PyResult<Bound<'py, pyo3::PyAny>> {
+        let py_board = Self::to_python_board(slf, true)?;
+        py_board.call_method1("generate_legal_moves", (from_mask, to_mask))
     }
 
-    #[pyo3(signature = (from_mask=Bitboard::FULL.0, to_mask=Bitboard::FULL.0))]
+    #[pyo3(signature = (from_mask=-1i128, to_mask=-1i128))]
+    fn generate_castling_moves<'py>(
+        slf: &Bound<'py, Self>,
+        _py: Python<'py>,
+        from_mask: i128,
+        to_mask: i128,
+    ) -> PyResult<Bound<'py, pyo3::PyAny>> {
+        let py_board = Self::to_python_board(slf, true)?;
+        py_board.call_method1("generate_castling_moves", (from_mask, to_mask))
+    }
+
+    #[pyo3(signature = (from_mask=-1i128, to_mask=-1i128))]
+    fn generate_pseudo_legal_ep<'py>(
+        slf: &Bound<'py, Self>,
+        _py: Python<'py>,
+        from_mask: i128,
+        to_mask: i128,
+    ) -> PyResult<Bound<'py, pyo3::PyAny>> {
+        let py_board = Self::to_python_board(slf, true)?;
+        py_board.call_method1("generate_pseudo_legal_ep", (from_mask, to_mask))
+    }
+
+    #[pyo3(signature = (from_mask=-1i128, to_mask=-1i128))]
+    fn generate_legal_captures<'py>(
+        slf: &Bound<'py, Self>,
+        _py: Python<'py>,
+        from_mask: i128,
+        to_mask: i128,
+    ) -> PyResult<Bound<'py, pyo3::PyAny>> {
+        let py_board = Self::to_python_board(slf, true)?;
+        py_board.call_method1("generate_legal_captures", (from_mask, to_mask))
+    }
+
+    #[pyo3(signature = (from_mask=-1i128, to_mask=-1i128))]
     fn generate_legal_ep<'py>(
         slf: &Bound<'py, Self>,
-        from_mask: u64,
-        to_mask: u64,
-    ) -> PyResult<Option<PyMove>> {
-        let chess = Self::try_shakmaty(slf)?;
-        let from_mask = Bitboard(from_mask);
-        let to_mask = Bitboard(to_mask);
-        let moves = chess.legal_moves();
-        for m in moves.iter() {
-            let from_ok = m.from().is_none_or(|sq| from_mask.contains(sq));
-            if m.is_en_passant() && from_ok && to_mask.contains(m.to()) {
-                return Ok(Some(m.into()));
-            }
-        }
-        Ok(None)
+        from_mask: i128,
+        to_mask: i128,
+    ) -> PyResult<Bound<'py, pyo3::PyAny>> {
+        let py_board = Self::to_python_board(slf, true)?;
+        py_board.call_method1("generate_legal_ep", (from_mask, to_mask))
     }
 
     fn is_check(slf: &Bound<'_, Self>) -> PyResult<bool> {
         Ok(Self::try_shakmaty(slf)?.is_check())
     }
 
-    fn is_variant_end(slf: &Bound<'_, Self>) -> bool {
+    fn is_variant_end(_slf: &Bound<'_, Self>) -> bool {
         false // not implemented for board
     }
 
-    fn is_variant_win(slf: &Bound<'_, Self>) -> bool {
+    fn is_variant_win(_slf: &Bound<'_, Self>) -> bool {
         false // not implemented for board
     }
 
-    fn is_variant_loss(slf: &Bound<'_, Self>) -> bool {
+    fn is_variant_loss(_slf: &Bound<'_, Self>) -> bool {
         false // not implemented for board
     }
 
-    fn is_variant_draw(slf: &Bound<'_, Self>) -> bool {
+    fn is_variant_draw(_slf: &Bound<'_, Self>) -> bool {
         false // not implemented for board
     }
 
