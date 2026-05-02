@@ -417,11 +417,9 @@ impl Board {
         Ok(fen.to_string())
     }
 
-    #[pyo3(signature = (*, shredder=false, en_passant="legal", promoted=None))]
-    #[allow(unused_variables)]
-    fn epd(
+    #[pyo3(signature = (*, en_passant="legal", promoted=None))]
+    fn shredder_fen(
         slf: &Bound<'_, Self>,
-        shredder: bool,
         en_passant: &str,
         promoted: Option<bool>,
     ) -> PyResult<String> {
@@ -498,9 +496,7 @@ impl Board {
 
     #[getter]
     fn legal_moves<'py>(slf: &Bound<'py, Self>, py: Python<'py>) -> PyResult<Bound<'py, PyAny>> {
-        let py_board = Self::to_python_board(slf, true)?;
-        let chess_mod = py.import("chess")?;
-        chess_mod.getattr("LegalMoveGenerator")?.call1((py_board,))
+        todo!()
     }
 
     #[getter]
@@ -529,12 +525,17 @@ impl Board {
     #[pyo3(signature = (from_mask=-1i128, to_mask=-1i128))]
     fn generate_legal_moves<'py>(
         slf: &Bound<'py, Self>,
-        _py: Python<'py>,
         from_mask: i128,
         to_mask: i128,
     ) -> PyResult<Bound<'py, pyo3::PyAny>> {
-        let py_board = Self::to_python_board(slf, true)?;
-        py_board.call_method1("generate_legal_moves", (from_mask, to_mask))
+        // FIXME this is slow use arrayvec retain
+        let mut py_moves = Vec::new();
+        for m in chess.legal_moves() {
+            let from_ok = m.from().is_none_or(|sq| from_mask.contains(sq));
+            if from_ok && to_mask.contains(m.to()) {
+                py_moves.push(m.into())
+            }
+        }
     }
 
     #[pyo3(signature = (from_mask=-1i128, to_mask=-1i128))]
