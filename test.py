@@ -273,7 +273,7 @@ class BoardTestCase(unittest.TestCase):
         board = Board(xfen, chess960=True)
         self.assertEqual(board.castling_rights, chess.BB_G1 | chess.BB_A8 | chess.BB_G8)
         self.assertEqual(board.clean_castling_rights(), chess.BB_G1 | chess.BB_A8 | chess.BB_G8)
-        self.assertEqual(board.shredder_fen(), "rn2k1r1/ppp1pp1p/3p2p1/5bn1/P7/2N2B2/1PPPPP2/2BNK1RR w Gga - 4 11")
+        self.assertEqual(board.fen(shredder=True), "rn2k1r1/ppp1pp1p/3p2p1/5bn1/P7/2N2B2/1PPPPP2/2BNK1RR w Gga - 4 11")
         self.assertEqual(board.fen(), xfen)
         self.assertTrue(board.has_castling_rights(chess.WHITE))
         self.assertTrue(board.has_castling_rights(chess.BLACK))
@@ -287,7 +287,7 @@ class BoardTestCase(unittest.TestCase):
         board.castling_rights = board.rooks
         self.assertTrue(board.clean_castling_rights() & chess.BB_A1)
         self.assertEqual(board.fen(), "rkbqrbnn/pppppppp/8/8/8/8/PPPPPPPP/RKBQRBNN w KQkq - 0 1")
-        self.assertEqual(board.shredder_fen(), "rkbqrbnn/pppppppp/8/8/8/8/PPPPPPPP/RKBQRBNN w EAea - 0 1")
+        self.assertEqual(board.fen(shredder=True), "rkbqrbnn/pppppppp/8/8/8/8/PPPPPPPP/RKBQRBNN w EAea - 0 1")
 
         # Valid en passant square on illegal board.
         fen = "8/8/8/pP6/8/8/8/8 w - a6 0 1"

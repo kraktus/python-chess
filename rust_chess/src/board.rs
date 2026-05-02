@@ -3,6 +3,7 @@ use pyo3::exceptions::PyValueError;
 use shakmaty::uci::UciMove;
 use shakmaty::{Bitboard, Color, FromSetup, Position, Square};
 
+use std::fmt::Write;
 use std::num::NonZeroU32;
 use std::str::FromStr;
 
@@ -18,7 +19,6 @@ pub struct LegalMoveGenerator {
 }
 
 const ONE: NonZeroU32 = std::num::NonZeroU32::MIN;
-
 
 #[pymethods]
 impl LegalMoveGenerator {
@@ -410,16 +410,27 @@ impl Board {
         en_passant: &str,
         promoted: Option<bool>,
     ) -> PyResult<String> {
-        todo!()
-    }
-
-    #[pyo3(signature = (*, en_passant="legal", promoted=None))]
-    fn shredder_fen(
-        slf: &Bound<'_, Self>,
-        en_passant: &str,
-        promoted: Option<bool>,
-    ) -> PyResult<String> {
-        todo!()
+        let board_rust = slf.borrow();
+        let base_board = board_rust.as_super();
+        let board = base_board.board()?;
+        let mut board_fen = (if promoted.is_some_and(|x| x) {
+            board
+                .board_fen_with_promoted(base_board.promoted)
+                .map_err(|e| {
+                    PyValueError::new_err(format!(
+                        "invalid FEN due to promoted not being subset of occupied, {e:?}"
+                    ))
+                })?
+        } else {
+            board.board_fen()
+        })
+        .to_string();
+        write!(
+            &mut board_fen,
+            " {} {}",
+            board_rust.halfmove_clock, board_rust.fullmove_number
+        );
+        Ok(board_fen) // FIXME not having moves
     }
 
     #[pyo3(signature = (*, stack=None))]
