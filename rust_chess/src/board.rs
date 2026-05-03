@@ -410,9 +410,8 @@ impl Board {
         en_passant: &str,
         promoted: Option<bool>,
     ) -> PyResult<String> {
-        let board_rust = slf.borrow();
-        let base_board = board_rust.as_super();
-        let board = base_board.board()?;
+        let chess = Self::try_shakmaty(slf)?;
+        let board = chess.board;
         let mut board_fen = (if promoted.is_some_and(|x| x) {
             board
                 .board_fen_with_promoted(base_board.promoted)
@@ -431,6 +430,16 @@ impl Board {
             board_rust.halfmove_clock, board_rust.fullmove_number
         );
         Ok(board_fen) // FIXME not having moves
+    }
+
+    #[pyo3(signature = (*, shredder=false, en_passant="legal", promoted=None))]
+    #[allow(unused_variables)]
+    fn shredder_fen(
+        slf: &Bound<'_, Self>,
+        en_passant: &str,
+        promoted: Option<bool>,
+    ) -> PyResult<String> {
+
     }
 
     #[pyo3(signature = (*, stack=None))]
