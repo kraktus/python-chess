@@ -1,7 +1,8 @@
 #![allow(unused_variables)]
 use pyo3::exceptions::PyValueError;
+use shakmaty::fen::Fen;
 use shakmaty::uci::UciMove;
-use shakmaty::{Bitboard, Color, FromSetup, Position, Square};
+use shakmaty::{Bitboard, Chess, Color, FromSetup, Position, Setup, Square};
 
 use std::fmt::Write;
 use std::num::NonZeroU32;
@@ -410,36 +411,24 @@ impl Board {
         en_passant: &str,
         promoted: Option<bool>,
     ) -> PyResult<String> {
-        let chess = Self::try_shakmaty(slf)?;
-        let board = chess.board;
-        let mut board_fen = (if promoted.is_some_and(|x| x) {
-            board
-                .board_fen_with_promoted(base_board.promoted)
-                .map_err(|e| {
-                    PyValueError::new_err(format!(
-                        "invalid FEN due to promoted not being subset of occupied, {e:?}"
-                    ))
-                })?
+        let setup = Self::try_setup_with_promoted(slf, promoted.unwrap_or_default())?;
+        let fen = Fen::try_from_setup(setup)
+            .map_err(|e| PyValueError::new_err(format!("unable to gen FEN: {e:?}")))?;
+        Ok(if shredder {
+            fen.to_string_with_shredder()
         } else {
-            board.board_fen()
+            fen.to_string()
         })
-        .to_string();
-        write!(
-            &mut board_fen,
-            " {} {}",
-            board_rust.halfmove_clock, board_rust.fullmove_number
-        );
-        Ok(board_fen) // FIXME not having moves
     }
 
-    #[pyo3(signature = (*, shredder=false, en_passant="legal", promoted=None))]
+    #[pyo3(signature = (*, en_passant="legal", promoted=None))]
     #[allow(unused_variables)]
     fn shredder_fen(
         slf: &Bound<'_, Self>,
         en_passant: &str,
         promoted: Option<bool>,
     ) -> PyResult<String> {
-
+        Self::fen(slf, true, en_passant, promoted)
     }
 
     #[pyo3(signature = (*, stack=None))]
@@ -1105,15 +1094,33 @@ impl Board {
     }
 
     // &Bound<'_, Self> to be able to acess BaseBoard
-    fn try_shakmaty(slf: &Bound<'_, Self>) -> PyResult<shakmaty::Chess> {
+    fn try_shakmaty(slf: &Bound<'_, Self>) -> PyResult<Chess> {
+        Chess::from_setup(Self::try_setup(slf)?, shakmaty::CastlingMode::Standard)
+            .or_else(|e| e.ignore_too_much_material())
+            .or_else(|e| e.ignore_impossible_check())
+            .or_else(|e| e.ignore_invalid_castling_rights())
+            .or_else(|e| e.ignore_invalid_ep_square())
+            .map_err(|e| pyo3::exceptions::PyValueError::new_err(format!("Invalid state: {:?}", e)))
+    }
+
+    // &Bound<'_, Self> to be able to acess BaseBoard
+    fn try_setup(slf: &Bound<'_, Self>) -> PyResult<Setup> {
+        Self::try_setup_with_promoted(slf, true)
+    }
+
+    fn try_setup_with_promoted(slf: &Bound<'_, Self>, include_promoted: bool) -> PyResult<Setup> {
         let board = slf.borrow();
         let base_board = slf.as_super().borrow();
 
         let b = base_board.board()?;
 
-        let setup = shakmaty::Setup {
+        Ok(Setup {
             board: b,
-            promoted: base_board.promoted,
+            promoted: if include_promoted {
+                base_board.promoted
+            } else {
+                Bitboard::EMPTY
+            },
             pockets: None,
             turn: board.turn,
             castling_rights: board.castling_rights,
@@ -1121,14 +1128,7 @@ impl Board {
             remaining_checks: None,
             halfmoves: board.halfmove_clock as u32,
             fullmoves: board.fullmove_number,
-        };
-
-        shakmaty::Chess::from_setup(setup, shakmaty::CastlingMode::Standard)
-            .or_else(|e| e.ignore_too_much_material())
-            .or_else(|e| e.ignore_impossible_check())
-            .or_else(|e| e.ignore_invalid_castling_rights())
-            .or_else(|e| e.ignore_invalid_ep_square())
-            .map_err(|e| pyo3::exceptions::PyValueError::new_err(format!("Invalid state: {:?}", e)))
+        })
     }
 
     fn empty() -> (Self, BaseBoard) {

@@ -10,4 +10,5 @@ crate-type = ["cdylib"]
 
 [dependencies]
 pyo3 = "0.28.2"
-shakmaty = "0.30.0"
+# waiting for `FEN::to_string_with_shredder` to be upstreamed
+shakmaty = {path = "../../shakmaty/shakmaty"}
