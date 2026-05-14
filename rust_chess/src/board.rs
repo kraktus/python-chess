@@ -4,7 +4,6 @@ use shakmaty::fen::Fen;
 use shakmaty::uci::UciMove;
 use shakmaty::{Bitboard, Chess, Color, FromSetup, MoveList, Position, PseudoLegal, Setup, Square};
 
-use std::fmt::Write;
 use std::num::NonZeroU32;
 use std::str::FromStr;
 
@@ -13,6 +12,22 @@ use crate::py_move::PyMove;
 use crate::util::{PyColor, PyRole, PySquare};
 use pyo3::prelude::*;
 use pyo3::types::{PyDict, PyTuple, PyType};
+
+#[pyclass(module = "rust_chess", name = "LegalMoveGeneratorIter")]
+pub struct LegalMoveGeneratorIter {
+    moves: std::vec::IntoIter<PyMove>,
+}
+
+#[pymethods]
+impl LegalMoveGeneratorIter {
+    fn __iter__(slf: PyRef<'_, Self>) -> PyRef<'_, Self> {
+        slf
+    }
+
+    fn __next__(mut slf: PyRefMut<'_, Self>) -> Option<PyMove> {
+        slf.moves.next()
+    }
+}
 
 #[pyclass(module = "rust_chess", name = "LegalMoveGenerator")]
 pub struct LegalMoveGenerator {
@@ -44,9 +59,12 @@ impl LegalMoveGenerator {
         Ok(chess.legal_moves().len())
     }
 
-    fn __iter__<'py>(&self, py: Python<'py>) -> PyResult<Vec<PyMove>> {
+    fn __iter__<'py>(&self, py: Python<'py>) -> PyResult<LegalMoveGeneratorIter> {
         let board = self.board.bind(py);
-        Board::generate_legal_moves(board, Bitboard::FULL.0, Bitboard::FULL.0)
+        let moves = Board::generate_legal_moves(board, Bitboard::FULL.0, Bitboard::FULL.0)?;
+        Ok(LegalMoveGeneratorIter {
+            moves: moves.into_iter(),
+        })
     }
 
     fn __contains__(&self, move_obj: PyMove, py: Python<'_>) -> PyResult<bool> {
@@ -484,7 +502,8 @@ impl Board {
 
     #[getter]
     fn legal_moves<'py>(slf: &Bound<'py, Self>, py: Python<'py>) -> PyResult<Bound<'py, PyAny>> {
-        todo!()
+        let generator = LegalMoveGenerator::py_new(slf.clone().unbind());
+        Ok(Bound::new(py, generator)?.into_any())
     }
 
     #[getter]
@@ -492,7 +511,8 @@ impl Board {
         slf: &Bound<'py, Self>,
         py: Python<'py>,
     ) -> PyResult<Bound<'py, PyAny>> {
-        todo!()
+        let generator = PseudoLegalMoveGenerator::py_new(slf.clone().unbind());
+        Ok(Bound::new(py, generator)?.into_any())
     }
 
     #[pyo3(signature = (from_mask=Bitboard::FULL.0, to_mask=Bitboard::FULL.0))]
@@ -1005,7 +1025,8 @@ impl Board {
 
     #[pyo3(signature = (move_obj))]
     fn is_pseudo_legal(slf: &Bound<'_, Self>, move_obj: PyMove) -> PyResult<bool> {
-        todo!()
+        let moves = Self::generate_pseudo_legal_moves(slf, Bitboard::FULL.0, Bitboard::FULL.0)?;
+        Ok(moves.iter().any(|m| *m == move_obj))
     }
 
     fn clear_stack(&mut self) {
@@ -1202,5 +1223,81 @@ impl Board {
             to_mask,
             filter,
         )
+    }
+}
+#[pyclass(module = "rust_chess", name = "PseudoLegalMoveGeneratorIter")]
+pub struct PseudoLegalMoveGeneratorIter {
+    moves: std::vec::IntoIter<PyMove>,
+}
+
+#[pymethods]
+impl PseudoLegalMoveGeneratorIter {
+    fn __iter__(slf: PyRef<'_, Self>) -> PyRef<'_, Self> {
+        slf
+    }
+
+    fn __next__(mut slf: PyRefMut<'_, Self>) -> Option<PyMove> {
+        slf.moves.next()
+    }
+}
+
+#[pyclass(module = "rust_chess", name = "PseudoLegalMoveGenerator")]
+pub struct PseudoLegalMoveGenerator {
+    board: Py<Board>,
+}
+
+#[pymethods]
+impl PseudoLegalMoveGenerator {
+    #[new]
+    fn py_new(board: Py<Board>) -> Self {
+        Self { board }
+    }
+
+    fn __bool__(&self, py: Python<'_>) -> PyResult<bool> {
+        let board = self.board.bind(py);
+        let moves = Board::generate_pseudo_legal_moves(board, Bitboard::FULL.0, Bitboard::FULL.0)?;
+        Ok(!moves.is_empty())
+    }
+
+    fn __len__(&self, py: Python<'_>) -> PyResult<usize> {
+        self.count(py)
+    }
+
+    fn count(&self, py: Python<'_>) -> PyResult<usize> {
+        let board = self.board.bind(py);
+        let moves = Board::generate_pseudo_legal_moves(board, Bitboard::FULL.0, Bitboard::FULL.0)?;
+        Ok(moves.len())
+    }
+
+    fn __iter__<'py>(&self, py: Python<'py>) -> PyResult<PseudoLegalMoveGeneratorIter> {
+        let board = self.board.bind(py);
+        let moves = Board::generate_pseudo_legal_moves(board, Bitboard::FULL.0, Bitboard::FULL.0)?;
+        Ok(PseudoLegalMoveGeneratorIter {
+            moves: moves.into_iter(),
+        })
+    }
+
+    fn __contains__(&self, move_obj: PyMove, py: Python<'_>) -> PyResult<bool> {
+        let board = self.board.bind(py);
+        Board::is_pseudo_legal(board, move_obj)
+    }
+
+    fn __repr__(slf: &Bound<'_, Self>) -> PyResult<String> {
+        let py = slf.py();
+        let self_rust = slf.borrow();
+        let board = self_rust.board.bind(py);
+        let chess = Board::try_shakmaty(&board)?;
+        let mut sans = Vec::new();
+        // Since they are pseudo legal, we can't easily format them using SAN since shakmaty will panic.
+        // We'll format them using UCI.
+        let moves = Board::generate_pseudo_legal_moves(&board, Bitboard::FULL.0, Bitboard::FULL.0)?;
+        for m in moves {
+            sans.push(m.inner.to_string());
+        }
+        Ok(format!(
+            "<PseudoLegalMoveGenerator at {:#x} ({})>",
+            slf.as_ptr() as usize,
+            sans.join(", ")
+        ))
     }
 }

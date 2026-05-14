@@ -23,6 +23,7 @@ fn rust_chess(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<OccupiedCo>()?;
     m.add_class::<board::Board>()?;
     m.add_class::<board::LegalMoveGenerator>()?;
+    m.add_class::<board::PseudoLegalMoveGenerator>()?;
 
     Ok(())
 }
