@@ -903,6 +903,7 @@ class BoardTestCase(unittest.TestCase):
         self.assertNotIn(illegal_move, list(board.legal_moves))
         self.assertNotIn(illegal_move, board.pseudo_legal_moves)
         self.assertNotIn(illegal_move, list(board.pseudo_legal_moves))
+        self.assertEqual(33, len(list(board.pseudo_legal_moves)))
 
         # Make a move.
         board.push_san("exd4")

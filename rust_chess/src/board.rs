@@ -2,7 +2,7 @@
 use pyo3::exceptions::PyValueError;
 use shakmaty::fen::Fen;
 use shakmaty::uci::UciMove;
-use shakmaty::{Bitboard, Chess, Color, FromSetup, Position, Setup, Square};
+use shakmaty::{Bitboard, Chess, Color, FromSetup, MoveList, Position, PseudoLegal, Setup, Square};
 
 use std::fmt::Write;
 use std::num::NonZeroU32;
@@ -44,32 +44,19 @@ impl LegalMoveGenerator {
         Ok(chess.legal_moves().len())
     }
 
-    fn __iter__<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, pyo3::PyAny>> {
+    fn __iter__<'py>(&self, py: Python<'py>) -> PyResult<Vec<PyMove>> {
         let board = self.board.bind(py);
-        let chess = Board::try_shakmaty(&board)?;
-
-        let mode = shakmaty::CastlingMode::Standard; // TODO: support chess960
-        let mut py_moves = Vec::new();
-        for m in chess.legal_moves() {
-            let pm = PyMove {
-                inner: m.to_uci(mode),
-            };
-            py_moves.push(Bound::new(py, pm)?.into_any());
-        }
-
-        let list = pyo3::types::PyList::new(py, py_moves)?;
-        list.call_method0("__iter__")
+        Board::generate_legal_moves(board, Bitboard::FULL.0, Bitboard::FULL.0)
     }
 
-    fn __contains__(&self, move_obj: &Bound<'_, pyo3::PyAny>, py: Python<'_>) -> PyResult<bool> {
-        if let Ok(m) = move_obj.extract::<PyRef<'_, PyMove>>() {
-            let board = self.board.bind(py);
-            let chess = Board::try_shakmaty(&board)?;
-            if let Ok(sm_move) = m.inner.to_move(&chess) {
-                return Ok(chess.is_legal(sm_move));
-            }
-        }
-        Ok(false)
+    fn __contains__(&self, move_obj: PyMove, py: Python<'_>) -> PyResult<bool> {
+        let board = self.board.bind(py);
+        let chess = Board::try_shakmaty(&board)?;
+        Ok(move_obj
+            .inner
+            .to_move(&chess)
+            .map(|m| chess.is_legal(m))
+            .unwrap_or_default())
     }
 
     fn __repr__(slf: &Bound<'_, Self>) -> PyResult<String> {
@@ -404,14 +391,20 @@ impl Board {
     }
 
     #[pyo3(signature = (*, shredder=false, en_passant="legal", promoted=None))]
-    #[allow(unused_variables)]
     fn fen(
         slf: &Bound<'_, Self>,
         shredder: bool,
         en_passant: &str,
         promoted: Option<bool>,
     ) -> PyResult<String> {
-        let setup = Self::try_setup_with_promoted(slf, promoted.unwrap_or_default())?;
+        let mut setup = Self::try_setup_with_promoted(slf, promoted.unwrap_or_default())?;
+        let chess = Self::try_shakmaty(slf)?;
+        setup.ep_square = match en_passant {
+            "fen" => setup.ep_square,
+            "xfen" => chess.ep_square(shakmaty::EnPassantMode::PseudoLegal),
+            _ => chess.ep_square(shakmaty::EnPassantMode::Legal),
+        };
+
         let fen = Fen::try_from_setup(setup)
             .map_err(|e| PyValueError::new_err(format!("unable to gen FEN: {e:?}")))?;
         Ok(if shredder {
@@ -422,7 +415,6 @@ impl Board {
     }
 
     #[pyo3(signature = (*, en_passant="legal", promoted=None))]
-    #[allow(unused_variables)]
     fn shredder_fen(
         slf: &Bound<'_, Self>,
         en_passant: &str,
@@ -509,7 +501,7 @@ impl Board {
         from_mask: u64,
         to_mask: u64,
     ) -> PyResult<Vec<PyMove>> {
-        Self::generate_x_moves(slf, from_mask, to_mask, |_| true)
+        Self::gen_pseudo_moves_and_filter(slf, from_mask, to_mask, |_| true)
     }
 
     #[pyo3(signature = (from_mask=Bitboard::FULL.0, to_mask=Bitboard::FULL.0))]
@@ -518,7 +510,7 @@ impl Board {
         from_mask: u64,
         to_mask: u64,
     ) -> PyResult<Vec<PyMove>> {
-        Self::generate_x_moves(slf, from_mask, to_mask, |_| true)
+        Self::gen_legal_moves_and_filter(slf, from_mask, to_mask, |_| true)
     }
 
     #[pyo3(signature = (from_mask=Bitboard::FULL.0, to_mask=Bitboard::FULL.0))]
@@ -527,7 +519,7 @@ impl Board {
         from_mask: u64,
         to_mask: u64,
     ) -> PyResult<Vec<PyMove>> {
-        Self::generate_x_moves(slf, from_mask, to_mask, |m| m.is_castle())
+        Self::gen_legal_moves_and_filter(slf, from_mask, to_mask, |m| m.is_castle())
     }
 
     #[pyo3(signature = (from_mask=Bitboard::FULL.0, to_mask=Bitboard::FULL.0))]
@@ -536,7 +528,7 @@ impl Board {
         from_mask: u64,
         to_mask: u64,
     ) -> PyResult<Vec<PyMove>> {
-        Self::generate_x_moves(slf, from_mask, to_mask, |m| m.is_en_passant())
+        Self::gen_pseudo_moves_and_filter(slf, from_mask, to_mask, |m| m.is_en_passant())
     }
 
     #[pyo3(signature = (from_mask=Bitboard::FULL.0, to_mask=Bitboard::FULL.0))]
@@ -545,7 +537,7 @@ impl Board {
         from_mask: u64,
         to_mask: u64,
     ) -> PyResult<Vec<PyMove>> {
-        Self::generate_x_moves(slf, from_mask, to_mask, |m| m.is_capture())
+        Self::gen_legal_moves_and_filter(slf, from_mask, to_mask, |m| m.is_capture())
     }
 
     #[pyo3(signature = (from_mask=Bitboard::FULL.0, to_mask=Bitboard::FULL.0))]
@@ -554,7 +546,7 @@ impl Board {
         from_mask: u64,
         to_mask: u64,
     ) -> PyResult<Vec<PyMove>> {
-        Self::generate_x_moves(slf, from_mask, to_mask, |m| m.is_en_passant())
+        Self::gen_legal_moves_and_filter(slf, from_mask, to_mask, |m| m.is_en_passant())
     }
 
     fn is_check(slf: &Bound<'_, Self>) -> PyResult<bool> {
@@ -1063,7 +1055,7 @@ impl Board {
             let mut rust_board = slf.borrow_mut();
             rust_board.turn = chess.turn();
             rust_board.castling_rights = chess.castles().castling_rights();
-            rust_board.ep_square = chess.ep_square(shakmaty::EnPassantMode::Legal);
+            rust_board.ep_square = chess.ep_square(shakmaty::EnPassantMode::Always);
             rust_board.halfmove_clock = chess.halfmoves() as u16;
             rust_board.fullmove_number = chess.fullmoves();
         }
@@ -1153,26 +1145,62 @@ impl Board {
     }
 
     // Private helper for move generation
-    fn generate_x_moves<F>(
+    fn generate_x_moves_legal_or_pseudo_impl<F, G>(
+        slf: &Bound<'_, Self>,
+        pseudo_or_legal: G,
+        from_mask: u64,
+        to_mask: u64,
+        mut filter: F,
+    ) -> PyResult<Vec<PyMove>>
+    where
+        F: FnMut(&shakmaty::Move) -> bool,
+        G: Fn(&Chess) -> MoveList,
+    {
+        let chess = Self::try_shakmaty(slf)?;
+        let from = Bitboard(from_mask);
+        let to = Bitboard(to_mask);
+        let mut moves = chess.legal_moves();
+        moves.retain(|m| {
+            m.from().is_none_or(|sq| from.contains(sq)) && to.contains(m.to()) && filter(m)
+        });
+        Ok(moves.into_iter().map(Into::into).collect())
+    }
+
+    // Private helper for move generation
+    fn gen_pseudo_moves_and_filter<F>(
         slf: &Bound<'_, Self>,
         from_mask: u64,
         to_mask: u64,
         filter: F,
     ) -> PyResult<Vec<PyMove>>
     where
-        F: Fn(&shakmaty::Move) -> bool,
+        F: FnMut(&shakmaty::Move) -> bool,
     {
-        let chess = Self::try_shakmaty(slf)?;
-        let from = Bitboard(from_mask);
-        let to = Bitboard(to_mask);
-        // FIXME this is slow use arrayvec retain
-        let mut py_moves = Vec::new();
-        for m in chess.legal_moves() {
-            let from_ok = m.from().is_none_or(|sq| from.contains(sq));
-            if from_ok && to.contains(m.to()) && filter(&m) {
-                py_moves.push(m.into());
-            }
-        }
-        Ok(py_moves)
+        Self::generate_x_moves_legal_or_pseudo_impl(
+            slf,
+            |x| x.pseudo_legal_moves().0,
+            from_mask,
+            to_mask,
+            filter,
+        )
+    }
+
+    // Private helper for move generation
+    fn gen_legal_moves_and_filter<F>(
+        slf: &Bound<'_, Self>,
+        from_mask: u64,
+        to_mask: u64,
+        filter: F,
+    ) -> PyResult<Vec<PyMove>>
+    where
+        F: FnMut(&shakmaty::Move) -> bool,
+    {
+        Self::generate_x_moves_legal_or_pseudo_impl(
+            slf,
+            Chess::legal_moves,
+            from_mask,
+            to_mask,
+            filter,
+        )
     }
 }

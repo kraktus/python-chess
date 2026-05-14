@@ -3,12 +3,10 @@ name = "rust_chess"
 version = "0.1.0"
 edition = "2024"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 [lib]
 name = "rust_chess"
 crate-type = ["cdylib"]
 
 [dependencies]
 pyo3 = "0.28.2"
-# waiting for `FEN::to_string_with_shredder` to be upstreamed
-shakmaty = {path = "../../shakmaty/shakmaty"}
+shakmaty = {path = "../shakmaty/shakmaty"}
