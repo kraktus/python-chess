@@ -25,3 +25,4 @@ release-v*.txt
 target/
 .asv/
 *.so
+shakmaty/

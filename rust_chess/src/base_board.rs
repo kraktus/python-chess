@@ -422,6 +422,93 @@ impl BaseBoard {
         builder
     }
 
+    #[pyo3(signature = (*, invert_color=false, borders=false, empty_square="\u{2b58}", orientation=true))]
+    fn unicode(
+        &self,
+        invert_color: bool,
+        borders: bool,
+        empty_square: &str,
+        orientation: bool,
+    ) -> PyResult<String> {
+        let mut builder = String::new();
+
+        let ranks: Vec<i8> = if orientation {
+            (0..8).rev().collect()
+        } else {
+            (0..8).collect()
+        };
+        let files: Vec<i8> = if orientation {
+            (0..8).collect()
+        } else {
+            (0..8).rev().collect()
+        };
+
+        for &rank in &ranks {
+            if borders {
+                builder.push_str("  -----------------\n");
+                builder.push_str(&format!("{} ", rank + 1));
+            }
+
+            for (i, &file) in files.iter().enumerate() {
+                let square = shakmaty::Square::from_coords(
+                    shakmaty::File::new(file as u32),
+                    shakmaty::Rank::new(rank as u32),
+                );
+
+                if borders {
+                    builder.push('|');
+                } else if i > 0 {
+                    builder.push(' ');
+                }
+
+                let mask = 1u64 << (square as u8);
+                if ((self.by_color.white | self.by_color.black).0 & mask) == 0 {
+                    builder.push_str(empty_square);
+                } else {
+                    let is_white = self.color_at(PySquare(square)).unwrap();
+                    let role = self.piece_type_at(PySquare(square)).unwrap();
+                    let use_white_char = is_white ^ invert_color;
+                    let symbol = match (role, use_white_char) {
+                        (1, true) => "♙",
+                        (2, true) => "♘",
+                        (3, true) => "♗",
+                        (4, true) => "♖",
+                        (5, true) => "♕",
+                        (6, true) => "♔",
+                        (1, false) => "♟",
+                        (2, false) => "♞",
+                        (3, false) => "♝",
+                        (4, false) => "♜",
+                        (5, false) => "♛",
+                        (6, false) => "♚",
+                        _ => "?",
+                    };
+                    builder.push_str(symbol);
+                }
+            }
+
+            if borders {
+                builder.push('|');
+            }
+
+            let is_last_rank = if orientation { rank == 0 } else { rank == 7 };
+            if borders || !is_last_rank {
+                builder.push('\n');
+            }
+        }
+
+        if borders {
+            builder.push_str("  -----------------\n");
+            if orientation {
+                builder.push_str("   a b c d e f g h");
+            } else {
+                builder.push_str("   h g f e d c b a");
+            }
+        }
+
+        Ok(builder)
+    }
+
     pub fn apply_transform(&mut self, f: &Bound<'_, PyAny>) -> PyResult<()> {
         let _ = f;
         Err(PyNotImplementedError::new_err(

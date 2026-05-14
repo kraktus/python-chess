@@ -1,6 +1,7 @@
 #![allow(unused_variables)]
 use pyo3::exceptions::PyValueError;
 use shakmaty::fen::Fen;
+use shakmaty::san::SanPlus;
 use shakmaty::uci::UciMove;
 use shakmaty::{Bitboard, Chess, Color, FromSetup, MoveList, Position, PseudoLegal, Setup, Square};
 
@@ -85,7 +86,7 @@ impl LegalMoveGenerator {
         let moves = chess.legal_moves();
         let mut sans = Vec::new();
         for m in moves.iter() {
-            sans.push(shakmaty::san::San::from_move(&chess, m.clone()).to_string());
+            sans.push(shakmaty::san::SanPlus::from_move(chess.clone(), m.clone()).to_string());
         }
         Ok(format!(
             "<LegalMoveGenerator at {:#x} ({})>",
@@ -658,7 +659,7 @@ impl Board {
             .inner
             .to_move(&chess)
             .map_err(|_| PyValueError::new_err("illegal move"))?;
-        Ok(shakmaty::san::San::from_move(&chess, smove).to_string())
+        Ok(shakmaty::san::SanPlus::from_move(chess, smove).to_string())
     }
 
     fn lan(slf: &Bound<'_, Self>, move_obj: PyMove) -> PyResult<String> {
@@ -910,17 +911,6 @@ impl Board {
         let board = Bound::new(py, (board, base))?;
         let tuple = PyTuple::new(py, [board.into_any(), PyDict::new(py).into_any()])?;
         Ok(tuple.into_any().unbind())
-    }
-
-    #[pyo3(signature = (*, invert_color=false, borders=false, empty_square="\u{2b58}", orientation=true))]
-    fn unicode(
-        slf: &Bound<'_, Self>,
-        invert_color: bool,
-        borders: bool,
-        empty_square: &str,
-        orientation: bool,
-    ) -> PyResult<String> {
-        todo!()
     }
 
     fn is_checkmate(slf: &Bound<'_, Self>) -> PyResult<bool> {
@@ -1287,13 +1277,19 @@ impl PseudoLegalMoveGenerator {
         let self_rust = slf.borrow();
         let board = self_rust.board.bind(py);
         let chess = Board::try_shakmaty(&board)?;
+
+        let moves = chess.pseudo_legal_moves().0;
+        // inefficient but this is debug code...
         let mut sans = Vec::new();
-        // Since they are pseudo legal, we can't easily format them using SAN since shakmaty will panic.
-        // We'll format them using UCI.
-        let moves = Board::generate_pseudo_legal_moves(&board, Bitboard::FULL.0, Bitboard::FULL.0)?;
-        for m in moves {
-            sans.push(m.inner.to_string());
-        }
+        moves.into_iter().for_each(|m| {
+            let c = chess.clone();
+            sans.push(if c.is_legal(m) {
+                SanPlus::from_move(c, m).to_string()
+            } else {
+                UciMove::from_move(m, shakmaty::CastlingMode::Chess960).to_string()
+            })
+        });
+
         Ok(format!(
             "<PseudoLegalMoveGenerator at {:#x} ({})>",
             slf.as_ptr() as usize,
