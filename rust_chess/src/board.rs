@@ -1171,32 +1171,6 @@ impl Board {
         )
     }
 
-    fn chess_from_state(state: &StateBoard) -> PyResult<Chess> {
-        let setup = Setup {
-            board: shakmaty::Board::try_from_bitboards(
-                state.by_role.clone(),
-                state.by_color.clone(),
-            )
-            .map_err(|e| {
-                pyo3::exceptions::PyValueError::new_err(format!("Invalid bitboards: {:?}", e))
-            })?,
-            promoted: state.promoted,
-            pockets: None,
-            turn: state.turn,
-            castling_rights: state.castling_rights,
-            ep_square: state.ep_square,
-            remaining_checks: None,
-            halfmoves: u32::from(state.halfmove_clock),
-            fullmoves: state.fullmove_number,
-        };
-        Chess::from_setup(setup, shakmaty::CastlingMode::Standard)
-            .or_else(shakmaty::PositionError::ignore_too_much_material)
-            .or_else(shakmaty::PositionError::ignore_impossible_check)
-            .or_else(shakmaty::PositionError::ignore_invalid_castling_rights)
-            .or_else(shakmaty::PositionError::ignore_invalid_ep_square)
-            .map_err(|e| pyo3::exceptions::PyValueError::new_err(format!("Invalid state: {:?}", e)))
-    }
-
     fn from_chess_but_stack(slf: &Bound<'_, Self>, chess: &shakmaty::Chess) {
         {
             let mut rust_board = slf.borrow_mut();
