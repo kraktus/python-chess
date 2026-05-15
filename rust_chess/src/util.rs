@@ -50,7 +50,9 @@ impl FromPyObject<'_, '_> for PySquare {
 
     fn extract(obj: Borrowed<'_, '_, PyAny>) -> Result<Self, Self::Error> {
         let int: i32 = obj.extract()?;
-        Ok(Self(int.try_into().map_err(|_| PyTypeError::new_err(format!("Square out of bounds: {int}")))?))
+        Ok(Self(int.try_into().map_err(|_| {
+            PyTypeError::new_err(format!("Square out of bounds: {int}"))
+        })?))
     }
 }
 
@@ -61,9 +63,9 @@ impl FromPyObject<'_, '_> for PyRole {
 
     fn extract(obj: Borrowed<'_, '_, PyAny>) -> Result<Self, Self::Error> {
         let int: i32 = obj.extract()?;
-        Ok(Self(int.try_into().map_err(|_| PyAssertionError::new_err(format!(
-                "Role out of bounds: {int}"
-            )))?))
+        Ok(Self(int.try_into().map_err(|_| {
+            PyAssertionError::new_err(format!("Role out of bounds: {int}"))
+        })?))
     }
 }
 

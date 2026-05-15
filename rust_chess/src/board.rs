@@ -5,6 +5,7 @@ use shakmaty::san::SanPlus;
 use shakmaty::uci::UciMove;
 use shakmaty::{Bitboard, Chess, Color, FromSetup, MoveList, Position, PseudoLegal, Setup, Square};
 
+use std::collections::HashMap;
 use std::num::NonZeroU32;
 use std::str::FromStr;
 
@@ -95,6 +96,15 @@ impl LegalMoveGenerator {
     }
 }
 
+pub type TranspositionKey = (
+    shakmaty::ByRole<Bitboard>,
+    shakmaty::ByColor<Bitboard>,
+    Bitboard,
+    Color,
+    Bitboard,
+    Option<Square>,
+);
+
 #[derive(Clone, PartialEq, Eq)]
 pub struct StateBoard {
     pub by_role: shakmaty::ByRole<Bitboard>,
@@ -109,17 +119,8 @@ pub struct StateBoard {
 
 impl StateBoard {
     // used for checking repetitions
-    #[must_use] 
-    pub fn epd_tuple(
-        &self,
-    ) -> (
-        shakmaty::ByRole<Bitboard>,
-        shakmaty::ByColor<Bitboard>,
-        Bitboard,
-        Color,
-        Bitboard,
-        Option<Square>,
-    ) {
+    #[must_use]
+    fn transposition_key(&self) -> TranspositionKey {
         (
             self.by_role,
             self.by_color,
@@ -235,9 +236,7 @@ impl Board {
 
         let base_board = if let Some(f) = fen {
             let setup = shakmaty::fen::Fen::from_ascii(f.as_bytes())
-                .map_err(|e| {
-                    pyo3::exceptions::PyValueError::new_err(format!("invalid fen: {e}"))
-                })?
+                .map_err(|e| pyo3::exceptions::PyValueError::new_err(format!("invalid fen: {e}")))?
                 .into_setup();
 
             turn = setup.turn;
@@ -253,7 +252,6 @@ impl Board {
                 promoted: setup.promoted,
             }
         } else {
-            
             BaseBoard::empty()
         };
 
@@ -276,9 +274,7 @@ impl Board {
     fn __init__(mut slf: PyRefMut<'_, Self>, fen: Option<&str>, chess960: bool) -> PyResult<()> {
         if let Some(f) = fen {
             let setup = shakmaty::fen::Fen::from_ascii(f.as_bytes())
-                .map_err(|e| {
-                    pyo3::exceptions::PyValueError::new_err(format!("invalid fen: {e}"))
-                })?
+                .map_err(|e| pyo3::exceptions::PyValueError::new_err(format!("invalid fen: {e}")))?
                 .into_setup();
 
             slf.turn = setup.turn;
@@ -840,13 +836,36 @@ impl Board {
 
     fn is_fifty_moves(slf: &Bound<'_, Self>) -> PyResult<bool> {
         let chess = Self::try_shakmaty(slf)?;
-        Ok(chess.halfmoves() >= 100)
+        Ok(chess.halfmoves() >= 100 && !chess.legal_moves().is_empty())
     }
 
+    fn is_seventyfive_moves(slf: &Bound<'_, Self>) -> PyResult<bool> {
+        let chess = Self::try_shakmaty(slf)?;
+        Ok(chess.halfmoves() >= 150 && !chess.legal_moves().is_empty())
+    }
+
+    // is only about current position
     #[pyo3(signature = (count=3))]
     fn is_repetition(slf: &Bound<'_, Self>, count: usize) -> PyResult<bool> {
-        // TODO: This should check the actual repetitions in python-chess
-        // Since we don't have the history stack, we return false for now
+        if count <= 1 {
+            return Ok(true);
+        }
+
+        let board = slf.borrow();
+        let base_board = slf.as_super().borrow();
+        let key = StateBoard::from((&*board, &*base_board)).transposition_key();
+        let mut seen = 1;
+
+        // heuristic, last position come first
+        for stack in board._stack.iter().rev() {
+            if key == stack.transposition_key() {
+                seen += 1;
+                if seen == count {
+                    return Ok(true);
+                }
+            }
+        }
+
         Ok(false)
     }
 
@@ -860,31 +879,71 @@ impl Board {
     }
 
     fn can_claim_fifty_moves(slf: &Bound<'_, Self>) -> PyResult<bool> {
-        // According to shakmaty, can claim fifty moves when halfmoves >= 100
         let chess = Self::try_shakmaty(slf)?;
-        Ok(chess.halfmoves() >= 100)
+        if chess.legal_moves().is_empty() {
+            return Ok(false);
+        }
+        if chess.halfmoves() >= 100 {
+            return Ok(true);
+        }
+        Ok(false)
     }
 
     fn is_fivefold_repetition(slf: &Bound<'_, Self>) -> PyResult<bool> {
-        Ok(false)
+        Self::is_repetition(slf, 5)
     }
 
     fn can_claim_threefold_repetition(slf: &Bound<'_, Self>) -> PyResult<bool> {
+        let board = slf.borrow();
+        let base_board = slf.as_super().borrow();
+        let current_key = StateBoard::from((&*board, &*base_board)).transposition_key();
+
+        let mut transpositions: HashMap<TranspositionKey, usize> =
+            HashMap::with_capacity(board._stack.len() * 2);
+        for stack in board._stack.iter().rev() {
+            *transpositions
+                .entry(stack.transposition_key().clone())
+                .or_insert(0) += 1;
+        }
+
+        if *transpositions.get(&current_key).unwrap_or(&0) >= 3 {
+            return Ok(true);
+        }
+        let chess = Self::try_shakmaty(slf)?;
+        for m in chess.legal_moves() {
+            let mut next_chess = chess.clone();
+            next_chess.play_unchecked(m);
+            let next_key = Self::get_transposition_key(&next_chess);
+
+            if *transpositions.get(&next_key).unwrap_or(&0) >= 2 {
+                return Ok(true);
+            }
+        }
+
         Ok(false)
+    }
+
+    fn can_claim_draw(slf: &Bound<'_, Self>) -> PyResult<bool> {
+        Ok(Self::can_claim_fifty_moves(slf)? || Self::can_claim_threefold_repetition(slf)?)
     }
 
     #[pyo3(signature = (*, claim_draw=false))]
     fn result(slf: &Bound<'_, Self>, claim_draw: bool) -> PyResult<String> {
         let chess = Self::try_shakmaty(slf)?;
-        let _ = claim_draw;
-        if !chess.is_game_over() {
-            return Ok("*".to_string());
+
+        let mut outcome = chess.outcome();
+
+        if outcome == shakmaty::Outcome::Unknown {
+            if Self::is_seventyfive_moves(slf)? || Self::is_fivefold_repetition(slf)? {
+                outcome = shakmaty::Outcome::Known(shakmaty::KnownOutcome::Draw);
+            } else if claim_draw
+                && (Self::can_claim_fifty_moves(slf)? || Self::can_claim_threefold_repetition(slf)?)
+            {
+                outcome = shakmaty::Outcome::Known(shakmaty::KnownOutcome::Draw);
+            }
         }
-        match chess.outcome().winner() {
-            Some(Color::White) => Ok("1-0".to_string()),
-            Some(Color::Black) => Ok("0-1".to_string()),
-            None => Ok("1/2-1/2".to_string()),
-        }
+
+        Ok(outcome.to_string())
     }
 
     #[pyo3(signature = (epd))]
@@ -1072,13 +1131,72 @@ impl Board {
     }
 
     #[pyo3(signature = (*, claim_draw=None))]
-    #[allow(unused_variables)]
     fn is_game_over(slf: &Bound<'_, Self>, claim_draw: Option<bool>) -> PyResult<bool> {
-        Ok(Board::try_shakmaty(slf)?.is_game_over())
+        let chess = Self::try_shakmaty(slf)?;
+        if chess.is_game_over() {
+            return Ok(true);
+        }
+
+        if Self::is_seventyfive_moves(slf)? {
+            return Ok(true);
+        }
+
+        if Self::is_fivefold_repetition(slf)? {
+            return Ok(true);
+        }
+
+        if claim_draw.unwrap_or(false) {
+            if Self::can_claim_fifty_moves(slf)? {
+                return Ok(true);
+            }
+            if Self::can_claim_threefold_repetition(slf)? {
+                return Ok(true);
+            }
+        }
+
+        Ok(false)
     }
 }
 
 impl Board {
+    fn get_transposition_key(chess: &shakmaty::Chess) -> TranspositionKey {
+        let (by_role, by_color) = chess.board().clone().into_bitboards();
+        (
+            by_role,
+            by_color,
+            chess.promoted(),
+            chess.turn(),
+            chess.castles().castling_rights(),
+            chess.ep_square(shakmaty::EnPassantMode::Legal),
+        )
+    }
+
+    fn chess_from_state(state: &StateBoard) -> PyResult<Chess> {
+        let setup = Setup {
+            board: shakmaty::Board::try_from_bitboards(
+                state.by_role.clone(),
+                state.by_color.clone(),
+            )
+            .map_err(|e| {
+                pyo3::exceptions::PyValueError::new_err(format!("Invalid bitboards: {:?}", e))
+            })?,
+            promoted: state.promoted,
+            pockets: None,
+            turn: state.turn,
+            castling_rights: state.castling_rights,
+            ep_square: state.ep_square,
+            remaining_checks: None,
+            halfmoves: u32::from(state.halfmove_clock),
+            fullmoves: state.fullmove_number,
+        };
+        Chess::from_setup(setup, shakmaty::CastlingMode::Standard)
+            .or_else(shakmaty::PositionError::ignore_too_much_material)
+            .or_else(shakmaty::PositionError::ignore_impossible_check)
+            .or_else(shakmaty::PositionError::ignore_invalid_castling_rights)
+            .or_else(shakmaty::PositionError::ignore_invalid_ep_square)
+            .map_err(|e| pyo3::exceptions::PyValueError::new_err(format!("Invalid state: {:?}", e)))
+    }
+
     fn from_chess_but_stack(slf: &Bound<'_, Self>, chess: &shakmaty::Chess) {
         {
             let mut rust_board = slf.borrow_mut();

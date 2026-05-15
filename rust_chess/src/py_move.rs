@@ -175,7 +175,7 @@ impl PyMove {
         self.inner.to_string()
     }
 
-    #[must_use] 
+    #[must_use]
     pub fn xboard(&self) -> String {
         match self.inner {
             // because shakmaty consider null move to be 0000
@@ -205,7 +205,9 @@ impl PyMove {
 
     #[classmethod]
     fn from_uci(cls: &Bound<'_, PyType>, uci: &str) -> PyResult<Self> {
-        if let Ok(inner) = UciMove::from_str(uci) { Ok(PyMove { inner }) } else {
+        if let Ok(inner) = UciMove::from_str(uci) {
+            Ok(PyMove { inner })
+        } else {
             let py = cls.py();
             let chess_module = py.import("chess")?;
             let invalid_move_error = chess_module.getattr("InvalidMoveError")?;

@@ -533,7 +533,7 @@ impl BaseBoard {
         self.by_color.black = Bitboard(value);
     }
 
-    #[must_use] 
+    #[must_use]
     pub fn occupied(&self) -> Bitboard {
         self.by_color.white | self.by_color.black
     }
@@ -553,7 +553,7 @@ impl BaseBoard {
 }
 
 impl BaseBoard {
-    #[must_use] 
+    #[must_use]
     pub fn attacks_mask(&self, square: shakmaty::Square) -> Bitboard {
         let occ = self.by_color.white | self.by_color.black;
         let role = self.by_role.find(|r| r.contains(square));
@@ -565,7 +565,7 @@ impl BaseBoard {
         }
     }
 
-    #[must_use] 
+    #[must_use]
     pub fn empty() -> Self {
         let (roles, colors) = Board::empty().into_bitboards();
         Self {
@@ -600,7 +600,7 @@ impl BaseBoard {
         self.promoted = shakmaty::Bitboard(0);
     }
 
-    #[must_use] 
+    #[must_use]
     pub fn king(&self, color: Color) -> Option<Square> {
         (*self.by_role.get(Role::King) & *self.by_color.get(color) & !self.promoted).single_square()
     }
@@ -629,9 +629,9 @@ impl BaseBoard {
                         & (self.by_color.white | self.by_color.black)
                         & !Bitboard::from(square))
                     .is_empty()
-                    {
-                        return ray;
-                    }
+                {
+                    return ray;
+                }
             }
         }
         Bitboard::FULL

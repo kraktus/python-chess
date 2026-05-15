@@ -29,5 +29,3 @@ fn rust_chess(m: &Bound<'_, PyModule>) -> PyResult<()> {
 
     Ok(())
 }
-pub mod test_ep;
-pub mod test_fen2;
