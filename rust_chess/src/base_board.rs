@@ -445,8 +445,7 @@ impl BaseBoard {
 
         for rank in ranks {
             if borders {
-                builder.push_str("  -----------------\n");
-                builder.push_str(&(rank.to_usize() + 1).to_string());
+                builder.push_str(&format!("  -----------------\n{} ", rank.to_usize() + 1));
             }
 
             for (i, &file) in files.iter().enumerate() {
