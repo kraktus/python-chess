@@ -70,7 +70,7 @@ impl Default for BaseBoard {
 
 impl BaseBoard {
     pub fn board(&self) -> PyResult<Board> {
-        Board::try_from_bitboards(self.by_role.clone(), self.by_color.clone())
+        Board::try_from_bitboards(self.by_role, self.by_color)
             .map_err(|e| PyValueError::new_err(format!("Invalid board state: {e}")))
     }
 }
@@ -235,7 +235,7 @@ impl BaseBoard {
     fn color_at(&self, square: PySquare) -> Option<bool> {
         self.by_color
             .find(|c| c.contains(square.0))
-            .map(|c| c.is_white())
+            .map(shakmaty::Color::is_white)
     }
 
     fn piece_at(&self, square: PySquare) -> Option<PyPiece> {
@@ -325,9 +325,9 @@ impl BaseBoard {
         mask: Option<u64>,
     ) -> PyResult<Bound<'py, pyo3::types::PyDict>> {
         let board = self.board()?;
-        let mask_bb = mask.map(Bitboard).unwrap_or(Bitboard::FULL);
+        let mask_bb = mask.map_or(Bitboard::FULL, Bitboard);
         let dict = pyo3::types::PyDict::new(py);
-        for (sq, piece) in board.iter() {
+        for (sq, piece) in &board {
             if mask_bb.contains(sq) {
                 let py_piece = PyPiece(piece);
                 dict.set_item(u32::from(sq), py_piece.into_pyobject(py)?)?;
@@ -533,6 +533,7 @@ impl BaseBoard {
         self.by_color.black = Bitboard(value);
     }
 
+    #[must_use] 
     pub fn occupied(&self) -> Bitboard {
         self.by_color.white | self.by_color.black
     }
@@ -552,6 +553,7 @@ impl BaseBoard {
 }
 
 impl BaseBoard {
+    #[must_use] 
     pub fn attacks_mask(&self, square: shakmaty::Square) -> Bitboard {
         let occ = self.by_color.white | self.by_color.black;
         let role = self.by_role.find(|r| r.contains(square));
@@ -563,6 +565,7 @@ impl BaseBoard {
         }
     }
 
+    #[must_use] 
     pub fn empty() -> Self {
         let (roles, colors) = Board::empty().into_bitboards();
         Self {
@@ -597,6 +600,7 @@ impl BaseBoard {
         self.promoted = shakmaty::Bitboard(0);
     }
 
+    #[must_use] 
     pub fn king(&self, color: Color) -> Option<Square> {
         (*self.by_role.get(Role::King) & *self.by_color.get(color) & !self.promoted).single_square()
     }
@@ -620,15 +624,14 @@ impl BaseBoard {
             let ray = shakmaty::attacks::ray(king_sq, sniper_sq);
             if ray.contains(square) {
                 let between = shakmaty::attacks::between(king_sq, sniper_sq);
-                if between.contains(square) {
-                    if (between
+                if between.contains(square)
+                    && (between
                         & (self.by_color.white | self.by_color.black)
                         & !Bitboard::from(square))
                     .is_empty()
                     {
                         return ray;
                     }
-                }
             }
         }
         Bitboard::FULL

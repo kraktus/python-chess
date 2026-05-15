@@ -1,3 +1,5 @@
+#![warn(clippy::pedantic)]
+
 pub mod base_board;
 pub mod board;
 pub mod piece;

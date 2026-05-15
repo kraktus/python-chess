@@ -46,7 +46,7 @@ impl LegalMoveGenerator {
 
     fn __bool__(&self, py: Python<'_>) -> PyResult<bool> {
         let board = self.board.bind(py);
-        let chess = Board::try_shakmaty(&board)?;
+        let chess = Board::try_shakmaty(board)?;
         Ok(!chess.legal_moves().is_empty())
     }
 
@@ -56,11 +56,11 @@ impl LegalMoveGenerator {
 
     fn count(&self, py: Python<'_>) -> PyResult<usize> {
         let board = self.board.bind(py);
-        let chess = Board::try_shakmaty(&board)?;
+        let chess = Board::try_shakmaty(board)?;
         Ok(chess.legal_moves().len())
     }
 
-    fn __iter__<'py>(&self, py: Python<'py>) -> PyResult<LegalMoveGeneratorIter> {
+    fn __iter__(&self, py: Python<'_>) -> PyResult<LegalMoveGeneratorIter> {
         let board = self.board.bind(py);
         let moves = Board::generate_legal_moves(board, Bitboard::FULL.0, Bitboard::FULL.0)?;
         Ok(LegalMoveGeneratorIter {
@@ -70,23 +70,22 @@ impl LegalMoveGenerator {
 
     fn __contains__(&self, move_obj: PyMove, py: Python<'_>) -> PyResult<bool> {
         let board = self.board.bind(py);
-        let chess = Board::try_shakmaty(&board)?;
+        let chess = Board::try_shakmaty(board)?;
         Ok(move_obj
             .inner
             .to_move(&chess)
-            .map(|m| chess.is_legal(m))
-            .unwrap_or_default())
+            .is_ok_and(|m| chess.is_legal(m)))
     }
 
     fn __repr__(slf: &Bound<'_, Self>) -> PyResult<String> {
         let py = slf.py();
         let self_rust = slf.borrow();
         let board = self_rust.board.bind(py);
-        let chess = Board::try_shakmaty(&board)?;
+        let chess = Board::try_shakmaty(board)?;
         let moves = chess.legal_moves();
         let mut sans = Vec::new();
-        for m in moves.iter() {
-            sans.push(shakmaty::san::SanPlus::from_move(chess.clone(), m.clone()).to_string());
+        for m in &moves {
+            sans.push(shakmaty::san::SanPlus::from_move(chess.clone(), *m).to_string());
         }
         Ok(format!(
             "<LegalMoveGenerator at {:#x} ({})>",
@@ -110,6 +109,7 @@ pub struct StateBoard {
 
 impl StateBoard {
     // used for checking repetitions
+    #[must_use] 
     pub fn epd_tuple(
         &self,
     ) -> (
@@ -150,8 +150,8 @@ impl From<&Board> for StateBoard {
 impl From<(&Board, &BaseBoard)> for StateBoard {
     fn from((board, base): (&Board, &BaseBoard)) -> Self {
         let mut state = StateBoard::from(board);
-        state.by_role = base.by_role.clone();
-        state.by_color = base.by_color.clone();
+        state.by_role = base.by_role;
+        state.by_color = base.by_color;
         state.promoted = base.promoted;
         state
     }
@@ -236,7 +236,7 @@ impl Board {
         let base_board = if let Some(f) = fen {
             let setup = shakmaty::fen::Fen::from_ascii(f.as_bytes())
                 .map_err(|e| {
-                    pyo3::exceptions::PyValueError::new_err(format!("invalid fen: {}", e))
+                    pyo3::exceptions::PyValueError::new_err(format!("invalid fen: {e}"))
                 })?
                 .into_setup();
 
@@ -244,7 +244,7 @@ impl Board {
             castling_rights = setup.castling_rights;
             ep_square = setup.ep_square;
             halfmove_clock = setup.halfmoves as u16;
-            fullmove_number = setup.fullmoves.into();
+            fullmove_number = setup.fullmoves;
 
             let (roles, colors) = setup.board.into_bitboards();
             BaseBoard {
@@ -253,8 +253,8 @@ impl Board {
                 promoted: setup.promoted,
             }
         } else {
-            let b = BaseBoard::empty();
-            b
+            
+            BaseBoard::empty()
         };
 
         let board = Self {
@@ -277,7 +277,7 @@ impl Board {
         if let Some(f) = fen {
             let setup = shakmaty::fen::Fen::from_ascii(f.as_bytes())
                 .map_err(|e| {
-                    pyo3::exceptions::PyValueError::new_err(format!("invalid fen: {}", e))
+                    pyo3::exceptions::PyValueError::new_err(format!("invalid fen: {e}"))
                 })?
                 .into_setup();
 
@@ -319,7 +319,7 @@ impl Board {
 
     #[setter]
     fn set_turn(&mut self, turn: PyColor) {
-        self.turn = turn.0
+        self.turn = turn.0;
     }
 
     #[getter]
@@ -334,7 +334,7 @@ impl Board {
 
     #[getter]
     fn ep_square(&self) -> Option<u32> {
-        self.ep_square.map(|sq| u32::from(sq))
+        self.ep_square.map(u32::from)
     }
 
     #[setter]
@@ -371,7 +371,7 @@ impl Board {
         slf.clear_stack();
 
         let mut base = slf.into_super();
-        (&mut *base).clear_board();
+        base.clear_board();
         Ok(())
     }
 
@@ -384,20 +384,20 @@ impl Board {
         slf.clear_stack();
 
         let mut base = slf.into_super();
-        (&mut *base).reset_board();
+        base.reset_board();
         Ok(())
     }
 
     fn set_fen(mut slf: PyRefMut<'_, Self>, fen: &str) -> PyResult<()> {
         let setup = shakmaty::fen::Fen::from_ascii(fen.as_bytes())
-            .map_err(|e| pyo3::exceptions::PyValueError::new_err(format!("invalid fen: {}", e)))?
+            .map_err(|e| pyo3::exceptions::PyValueError::new_err(format!("invalid fen: {e}")))?
             .into_setup();
 
         slf.turn = setup.turn;
         slf.castling_rights = setup.castling_rights;
         slf.ep_square = setup.ep_square;
         slf.halfmove_clock = setup.halfmoves as u16;
-        slf.fullmove_number = setup.fullmoves.into();
+        slf.fullmove_number = setup.fullmoves;
         slf.clear_stack();
 
         let mut base = slf.into_super();
@@ -517,8 +517,8 @@ impl Board {
     }
 
     #[pyo3(signature = (from_mask=Bitboard::FULL.0, to_mask=Bitboard::FULL.0))]
-    fn generate_pseudo_legal_moves<'py>(
-        slf: &Bound<'py, Self>,
+    fn generate_pseudo_legal_moves(
+        slf: &Bound<'_, Self>,
         from_mask: u64,
         to_mask: u64,
     ) -> PyResult<Vec<PyMove>> {
@@ -526,8 +526,8 @@ impl Board {
     }
 
     #[pyo3(signature = (from_mask=Bitboard::FULL.0, to_mask=Bitboard::FULL.0))]
-    fn generate_legal_moves<'py>(
-        slf: &Bound<'py, Self>,
+    fn generate_legal_moves(
+        slf: &Bound<'_, Self>,
         from_mask: u64,
         to_mask: u64,
     ) -> PyResult<Vec<PyMove>> {
@@ -535,8 +535,8 @@ impl Board {
     }
 
     #[pyo3(signature = (from_mask=Bitboard::FULL.0, to_mask=Bitboard::FULL.0))]
-    fn generate_castling_moves<'py>(
-        slf: &Bound<'py, Self>,
+    fn generate_castling_moves(
+        slf: &Bound<'_, Self>,
         from_mask: u64,
         to_mask: u64,
     ) -> PyResult<Vec<PyMove>> {
@@ -544,8 +544,8 @@ impl Board {
     }
 
     #[pyo3(signature = (from_mask=Bitboard::FULL.0, to_mask=Bitboard::FULL.0))]
-    fn generate_pseudo_legal_ep<'py>(
-        slf: &Bound<'py, Self>,
+    fn generate_pseudo_legal_ep(
+        slf: &Bound<'_, Self>,
         from_mask: u64,
         to_mask: u64,
     ) -> PyResult<Vec<PyMove>> {
@@ -553,8 +553,8 @@ impl Board {
     }
 
     #[pyo3(signature = (from_mask=Bitboard::FULL.0, to_mask=Bitboard::FULL.0))]
-    fn generate_legal_captures<'py>(
-        slf: &Bound<'py, Self>,
+    fn generate_legal_captures(
+        slf: &Bound<'_, Self>,
         from_mask: u64,
         to_mask: u64,
     ) -> PyResult<Vec<PyMove>> {
@@ -562,8 +562,8 @@ impl Board {
     }
 
     #[pyo3(signature = (from_mask=Bitboard::FULL.0, to_mask=Bitboard::FULL.0))]
-    fn generate_legal_ep<'py>(
-        slf: &Bound<'py, Self>,
+    fn generate_legal_ep(
+        slf: &Bound<'_, Self>,
         from_mask: u64,
         to_mask: u64,
     ) -> PyResult<Vec<PyMove>> {
@@ -685,9 +685,9 @@ impl Board {
                 out.push(' ');
             }
             if white_to_move {
-                out.push_str(&format!("{}. {}", move_number, san));
+                out.push_str(&format!("{move_number}. {san}"));
             } else {
-                out.push_str(&format!("{}... {}", move_number, san));
+                out.push_str(&format!("{move_number}... {san}"));
             }
 
             chess.play_unchecked(smove);
@@ -1028,14 +1028,13 @@ impl Board {
         Ok(move_obj
             .inner
             .to_move(&chess)
-            .map(|m| chess.is_legal(m))
-            .unwrap_or_default())
+            .is_ok_and(|m| chess.is_legal(m)))
     }
 
     #[pyo3(signature = (move_obj))]
     fn is_pseudo_legal(slf: &Bound<'_, Self>, move_obj: PyMove) -> PyResult<bool> {
         let moves = Self::generate_pseudo_legal_moves(slf, Bitboard::FULL.0, Bitboard::FULL.0)?;
-        Ok(moves.iter().any(|m| *m == move_obj))
+        Ok(moves.contains(&move_obj))
     }
 
     fn clear_stack(&mut self) {
@@ -1110,19 +1109,19 @@ impl Board {
         }
 
         let mut base = slf.as_super().borrow_mut();
-        base.by_role = state.by_role.clone();
-        base.by_color = state.by_color.clone();
+        base.by_role = state.by_role;
+        base.by_color = state.by_color;
         base.promoted = state.promoted;
     }
 
     // &Bound<'_, Self> to be able to acess BaseBoard
     fn try_shakmaty(slf: &Bound<'_, Self>) -> PyResult<Chess> {
         Chess::from_setup(Self::try_setup(slf)?, shakmaty::CastlingMode::Standard)
-            .or_else(|e| e.ignore_too_much_material())
-            .or_else(|e| e.ignore_impossible_check())
-            .or_else(|e| e.ignore_invalid_castling_rights())
-            .or_else(|e| e.ignore_invalid_ep_square())
-            .map_err(|e| pyo3::exceptions::PyValueError::new_err(format!("Invalid state: {:?}", e)))
+            .or_else(shakmaty::PositionError::ignore_too_much_material)
+            .or_else(shakmaty::PositionError::ignore_impossible_check)
+            .or_else(shakmaty::PositionError::ignore_invalid_castling_rights)
+            .or_else(shakmaty::PositionError::ignore_invalid_ep_square)
+            .map_err(|e| pyo3::exceptions::PyValueError::new_err(format!("Invalid state: {e:?}")))
     }
 
     // &Bound<'_, Self> to be able to acess BaseBoard
@@ -1148,7 +1147,7 @@ impl Board {
             castling_rights: board.castling_rights,
             ep_square: board.ep_square,
             remaining_checks: None,
-            halfmoves: board.halfmove_clock as u32,
+            halfmoves: u32::from(board.halfmove_clock),
             fullmoves: board.fullmove_number,
         })
     }
@@ -1278,7 +1277,7 @@ impl PseudoLegalMoveGenerator {
         Ok(moves.len())
     }
 
-    fn __iter__<'py>(&self, py: Python<'py>) -> PyResult<PseudoLegalMoveGeneratorIter> {
+    fn __iter__(&self, py: Python<'_>) -> PyResult<PseudoLegalMoveGeneratorIter> {
         let board = self.board.bind(py);
         let moves = Board::generate_pseudo_legal_moves(board, Bitboard::FULL.0, Bitboard::FULL.0)?;
         Ok(PseudoLegalMoveGeneratorIter {
@@ -1295,7 +1294,7 @@ impl PseudoLegalMoveGenerator {
         let py = slf.py();
         let self_rust = slf.borrow();
         let board = self_rust.board.bind(py);
-        let chess = Board::try_shakmaty(&board)?;
+        let chess = Board::try_shakmaty(board)?;
 
         let moves = chess.pseudo_legal_moves().0;
         // inefficient but this is debug code...
@@ -1306,7 +1305,7 @@ impl PseudoLegalMoveGenerator {
                 SanPlus::from_move(c, m).to_string()
             } else {
                 UciMove::from_move(m, shakmaty::CastlingMode::Chess960).to_string()
-            })
+            });
         });
 
         Ok(format!(

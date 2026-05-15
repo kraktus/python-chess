@@ -138,7 +138,7 @@ impl SquareSet {
 
     #[pyo3(signature = (*others))]
     fn update(&mut self, others: &Bound<'_, PyTuple>) -> PyResult<()> {
-        for other in others.into_iter() {
+        for other in others {
             self.bb = self.bb.with(extract_mask(&other)?);
         }
         Ok(())
@@ -151,7 +151,7 @@ impl SquareSet {
 
     #[pyo3(signature = (*others))]
     fn intersection_update(&mut self, others: &Bound<'_, PyTuple>) -> PyResult<()> {
-        for other in others.into_iter() {
+        for other in others {
             self.bb = self.bb.intersect(extract_mask(&other)?);
         }
         Ok(())
@@ -164,7 +164,7 @@ impl SquareSet {
 
     #[pyo3(signature = (*others))]
     fn difference_update(&mut self, others: &Bound<'_, PyTuple>) -> PyResult<()> {
-        for other in others.into_iter() {
+        for other in others {
             self.bb = self.bb.without(extract_mask(&other)?);
         }
         Ok(())
@@ -177,7 +177,7 @@ impl SquareSet {
 
     #[pyo3(signature = (*others))]
     fn symmetric_difference_update(&mut self, others: &Bound<'_, PyTuple>) -> PyResult<()> {
-        for other in others.into_iter() {
+        for other in others {
             self.bb = self.bb.toggled(extract_mask(&other)?);
         }
         Ok(())

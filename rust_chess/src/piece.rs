@@ -21,7 +21,7 @@ impl PyPiece {
     #[pyo3(signature = (piece_type, color))]
     pub fn py_new(piece_type: u8, color: bool) -> PyResult<Self> {
         let role = Role::try_from(piece_type)
-            .map_err(|_| PyValueError::new_err(format!("invalid piece type: {}", piece_type)))?;
+            .map_err(|_| PyValueError::new_err(format!("invalid piece type: {piece_type}")))?;
         let color = if color { Color::White } else { Color::Black };
         Ok(PyPiece(Piece { role, color }))
     }
@@ -38,7 +38,7 @@ impl PyPiece {
     #[setter]
     fn set_piece_type(&mut self, piece_type: u8) -> PyResult<()> {
         let role = Role::try_from(piece_type)
-            .map_err(|_| PyValueError::new_err(format!("invalid piece type: {}", piece_type)))?;
+            .map_err(|_| PyValueError::new_err(format!("invalid piece type: {piece_type}")))?;
         self.0.role = role;
         Ok(())
     }
