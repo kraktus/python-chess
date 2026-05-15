@@ -1280,7 +1280,7 @@ impl Board {
         let chess = Self::try_shakmaty(slf)?;
         let from = Bitboard(from_mask);
         let to = Bitboard(to_mask);
-        let mut moves = chess.legal_moves();
+        let mut moves = pseudo_or_legal(&chess);
         moves.retain(|m| {
             m.from().is_none_or(|sq| from.contains(sq)) && to.contains(m.to()) && filter(m)
         });
