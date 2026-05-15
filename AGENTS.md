@@ -53,4 +53,4 @@ else:
 
 - Never modify chess/\*.py
 - Never modify test.py
-- All your temporary scripts/tests should be in a tmp/ folder.
+- All your temporary scripts/tests should be in a `tmp/` folder, create it if it does not exist.

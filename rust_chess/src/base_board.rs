@@ -4,7 +4,7 @@ use crate::util::{IntoSquareSet, PyColor, PyRole, PySquare};
 use pyo3::exceptions::{PyIndexError, PyNotImplementedError, PyValueError};
 use pyo3::prelude::*;
 use pyo3::types::PyType;
-use shakmaty::{Bitboard, Board, Color, Piece, Role, Square};
+use shakmaty::{Bitboard, Board, Color, File, Piece, Rank, Role, Square};
 use std::str::FromStr;
 
 #[pyclass(module = "rust_chess", name = "OccupiedCo")]
@@ -432,28 +432,25 @@ impl BaseBoard {
     ) -> PyResult<String> {
         let mut builder = String::new();
 
-        let ranks: Vec<i8> = if orientation {
-            (0..8).rev().collect()
+        let ranks: Vec<_> = if orientation {
+            Rank::ALL.into_iter().rev().collect()
         } else {
-            (0..8).collect()
+            Rank::ALL.into_iter().collect()
         };
-        let files: Vec<i8> = if orientation {
-            (0..8).collect()
+        let files: Vec<_> = if orientation {
+            File::ALL.into_iter().collect()
         } else {
-            (0..8).rev().collect()
+            File::ALL.into_iter().rev().collect()
         };
 
-        for &rank in &ranks {
+        for rank in ranks {
             if borders {
                 builder.push_str("  -----------------\n");
-                builder.push_str(&format!("{} ", rank + 1));
+                builder.push_str(&(rank.to_usize() + 1).to_string());
             }
 
             for (i, &file) in files.iter().enumerate() {
-                let square = shakmaty::Square::from_coords(
-                    shakmaty::File::new(file as u32),
-                    shakmaty::Rank::new(rank as u32),
-                );
+                let square = Square::from_coords(file, rank);
 
                 if borders {
                     builder.push('|');
@@ -461,29 +458,11 @@ impl BaseBoard {
                     builder.push(' ');
                 }
 
-                let mask = 1u64 << (square as u8);
-                if ((self.by_color.white | self.by_color.black).0 & mask) == 0 {
-                    builder.push_str(empty_square);
+                if let Some(PyPiece(piece)) = self.piece_at(PySquare(square)) {
+                    let symbol = piece.role.of(piece.color ^ invert_color).unicode_char();
+                    builder.push(symbol);
                 } else {
-                    let is_white = self.color_at(PySquare(square)).unwrap();
-                    let role = self.piece_type_at(PySquare(square)).unwrap();
-                    let use_white_char = is_white ^ invert_color;
-                    let symbol = match (role, use_white_char) {
-                        (1, true) => "♙",
-                        (2, true) => "♘",
-                        (3, true) => "♗",
-                        (4, true) => "♖",
-                        (5, true) => "♕",
-                        (6, true) => "♔",
-                        (1, false) => "♟",
-                        (2, false) => "♞",
-                        (3, false) => "♝",
-                        (4, false) => "♜",
-                        (5, false) => "♛",
-                        (6, false) => "♚",
-                        _ => "?",
-                    };
-                    builder.push_str(symbol);
+                    builder.push_str(empty_square);
                 }
             }
 
@@ -491,7 +470,11 @@ impl BaseBoard {
                 builder.push('|');
             }
 
-            let is_last_rank = if orientation { rank == 0 } else { rank == 7 };
+            let is_last_rank = if orientation {
+                rank == Rank::First
+            } else {
+                rank == Rank::Eighth
+            };
             if borders || !is_last_rank {
                 builder.push('\n');
             }

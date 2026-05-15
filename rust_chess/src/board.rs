@@ -845,12 +845,31 @@ impl Board {
 
     #[pyo3(signature = (count=3))]
     fn is_repetition(slf: &Bound<'_, Self>, count: usize) -> PyResult<bool> {
-        let _ = (slf, count);
+        // TODO: This should check the actual repetitions in python-chess
+        // Since we don't have the history stack, we return false for now
+        Ok(false)
+    }
+
+    #[pyo3(name = "is_insufficient_material")]
+    fn py_is_insufficient_material(slf: &Bound<'_, Self>) -> PyResult<bool> {
+        Ok(Self::try_shakmaty(slf)?.is_insufficient_material())
+    }
+
+    fn is_stalemate(slf: &Bound<'_, Self>) -> PyResult<bool> {
+        Ok(Self::try_shakmaty(slf)?.is_stalemate())
+    }
+
+    fn can_claim_fifty_moves(slf: &Bound<'_, Self>) -> PyResult<bool> {
+        // According to shakmaty, can claim fifty moves when halfmoves >= 100
+        let chess = Self::try_shakmaty(slf)?;
+        Ok(chess.halfmoves() >= 100)
+    }
+
+    fn is_fivefold_repetition(slf: &Bound<'_, Self>) -> PyResult<bool> {
         Ok(false)
     }
 
     fn can_claim_threefold_repetition(slf: &Bound<'_, Self>) -> PyResult<bool> {
-        let _ = slf;
         Ok(false)
     }
 
