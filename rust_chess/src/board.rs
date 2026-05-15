@@ -809,8 +809,16 @@ impl Board {
     }
 
     fn clean_castling_rights(slf: &Bound<'_, Self>) -> PyResult<u64> {
-        let chess = Self::try_shakmaty(slf)?;
-        Ok(chess.castles().castling_rights().0)
+        let board = slf.borrow();
+        let setup = Self::try_setup(slf)?;
+        let mode = if board.chess960 {
+            shakmaty::CastlingMode::Chess960
+        } else {
+            shakmaty::CastlingMode::Standard
+        };
+
+        let castles = shakmaty::Castles::from_setup(&setup, mode).unwrap_or_else(|c| c);
+        Ok(castles.castling_rights().0)
     }
 
     fn has_kingside_castling_rights(slf: &Bound<'_, Self>, color: PyColor) -> PyResult<bool> {
