@@ -66,10 +66,15 @@ impl IntOrBool {
     pub fn stack_len(self, if_true: usize) -> usize {
         match self {
             Self::Int(i) => i,
-            Self::Bool(b) => if b { if_true } else { 0 },
+            Self::Bool(b) => {
+                if b {
+                    if_true
+                } else {
+                    0
+                }
+            }
         }
     }
-    
 }
 
 impl FromPyObject<'_, '_> for IntOrBool {

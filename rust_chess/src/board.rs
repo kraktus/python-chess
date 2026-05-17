@@ -475,27 +475,6 @@ impl Board {
         Bound::new(py, (new_board, new_base))
     }
 
-    #[pyo3(signature = (*, stack=None))]
-    fn __copy__<'py>(
-        slf: &Bound<'py, Self>,
-        py: Python<'py>,
-        stack: Option<Bound<'py, PyAny>>,
-    ) -> PyResult<Bound<'py, Self>> {
-        Self::copy(slf, py, stack)
-    }
-
-    #[pyo3(signature = (memo, *, stack=None))]
-    fn __deepcopy__<'py>(
-        slf: &Bound<'py, Self>,
-        _py: Python<'py>,
-        memo: Bound<'py, PyAny>,
-        stack: Option<Bound<'py, PyAny>>,
-    ) -> PyResult<Bound<'py, Self>> {
-        let _ = memo;
-        // deepcopy in python uses copy() essentially, we'll just do shallow for _stack.
-        Self::copy(slf, slf.py(), stack)
-    }
-
     #[getter]
     fn legal_moves<'py>(slf: &Bound<'py, Self>, py: Python<'py>) -> PyResult<Bound<'py, PyAny>> {
         let generator = LegalMoveGenerator::py_new(slf.clone().unbind());

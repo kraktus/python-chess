@@ -148,6 +148,7 @@ dependencies = [
 name = "rust_chess"
 version = "0.1.0"
 dependencies = [
+ "bitflags",
  "pyo3",
  "shakmaty",
 ]

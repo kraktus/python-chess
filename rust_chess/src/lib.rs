@@ -2,11 +2,11 @@
 
 pub mod base_board;
 pub mod board;
+pub mod board_status;
 pub mod piece;
 pub mod py_move;
 pub mod square_set;
 pub mod util;
-pub mod board_status;
 
 use base_board::{BaseBoard, OccupiedCo};
 use piece::PyPiece;
