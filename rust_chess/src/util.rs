@@ -56,6 +56,39 @@ impl FromPyObject<'_, '_> for PySquare {
     }
 }
 
+#[derive(Clone, Copy)]
+pub enum IntOrBool {
+    Int(usize),
+    Bool(bool),
+}
+
+impl IntOrBool {
+    pub fn stack_len(self, if_true: usize) -> usize {
+        match self {
+            Self::Int(i) => i,
+            Self::Bool(b) => if b { if_true } else { 0 },
+        }
+    }
+    
+}
+
+impl FromPyObject<'_, '_> for IntOrBool {
+    type Error = PyErr;
+
+    fn extract(obj: Borrowed<'_, '_, PyAny>) -> Result<Self, Self::Error> {
+        if let Ok(i) = obj.extract::<usize>() {
+            assert!(obj.extract::<bool>().is_err(), "Ambiguous int/bool: {i}");
+            Ok(Self::Int(i))
+        } else if let Ok(b) = obj.extract::<bool>() {
+            Ok(Self::Bool(b))
+        } else {
+            Err(PyTypeError::new_err(
+                "Expected int or bool for Board.copy `stack` parameter",
+            ))
+        }
+    }
+}
+
 pub struct PyRole(pub Role);
 
 impl FromPyObject<'_, '_> for PyRole {

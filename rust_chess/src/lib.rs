@@ -6,12 +6,17 @@ pub mod piece;
 pub mod py_move;
 pub mod square_set;
 pub mod util;
+pub mod board_status;
 
 use base_board::{BaseBoard, OccupiedCo};
 use piece::PyPiece;
 use py_move::PyMove;
+use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
+
 use square_set::{CarryRipplerIter, SquareSet, SquareSetIter, SquareSetRevIter};
+
+pyo3::create_exception!(rust_chess, IllegalMoveError, PyValueError);
 
 #[pymodule]
 fn rust_chess(m: &Bound<'_, PyModule>) -> PyResult<()> {
@@ -26,6 +31,7 @@ fn rust_chess(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<board::Board>()?;
     m.add_class::<board::LegalMoveGenerator>()?;
     m.add_class::<board::PseudoLegalMoveGenerator>()?;
+    m.add("IllegalMoveError", m.py().get_type::<IllegalMoveError>())?;
 
     Ok(())
 }

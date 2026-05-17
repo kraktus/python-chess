@@ -1,17 +1,21 @@
 #![allow(unused_variables)]
-use pyo3::exceptions::PyValueError;
+use pyo3::exceptions::{PyException, PyValueError};
 use shakmaty::fen::Fen;
 use shakmaty::san::SanPlus;
 use shakmaty::uci::UciMove;
-use shakmaty::{Bitboard, Chess, Color, FromSetup, MoveList, Position, PseudoLegal, Setup, Square};
+use shakmaty::{
+    Bitboard, Castles, CastlingSide, Chess, Color, FromSetup, MoveList, Position, PseudoLegal,
+    Setup, Square,
+};
 
 use std::collections::HashMap;
 use std::num::NonZeroU32;
 use std::str::FromStr;
 
+use crate::IllegalMoveError;
 use crate::base_board::BaseBoard;
 use crate::py_move::PyMove;
-use crate::util::{PyColor, PyRole, PySquare};
+use crate::util::{IntOrBool, PyColor, PyRole, PySquare};
 use pyo3::prelude::*;
 use pyo3::types::{PyDict, PyTuple, PyType};
 
@@ -385,8 +389,8 @@ impl Board {
     }
 
     fn set_fen(mut slf: PyRefMut<'_, Self>, fen: &str) -> PyResult<()> {
-        let setup = shakmaty::fen::Fen::from_ascii(fen.as_bytes())
-            .map_err(|e| pyo3::exceptions::PyValueError::new_err(format!("invalid fen: {e}")))?
+        let setup = Fen::from_ascii(fen.as_bytes())
+            .map_err(|e| PyValueError::new_err(format!("invalid fen: {e}")))?
             .into_setup();
 
         slf.turn = setup.turn;
@@ -413,6 +417,8 @@ impl Board {
         promoted: Option<bool>,
     ) -> PyResult<String> {
         let mut setup = Self::try_setup_with_promoted(slf, promoted.unwrap_or_default())?;
+
+        let board = slf.borrow();
         let chess = Self::try_shakmaty(slf)?;
         setup.ep_square = match en_passant {
             "fen" => setup.ep_square,
@@ -438,40 +444,33 @@ impl Board {
         Self::fen(slf, true, en_passant, promoted)
     }
 
-    #[pyo3(signature = (*, stack=None))]
+    #[pyo3(signature = (*, stack=IntOrBool::Bool(true)))]
     fn copy<'py>(
         slf: &Bound<'py, Self>,
         py: Python<'py>,
-        stack: Option<Bound<'py, PyAny>>,
+        // stack can be option<int|bool>
+        stack: IntOrBool,
     ) -> PyResult<Bound<'py, Self>> {
-        let board_rust = slf.borrow();
-        let base_rust = slf.as_super().borrow();
+        let board = slf.borrow();
+        let base_board = slf.as_super().borrow();
 
-        let mut stack_len = board_rust.move_stack.len();
-        if let Some(s) = stack {
-            if let Ok(b) = s.extract::<bool>() {
-                if !b {
-                    stack_len = 0;
-                }
-            } else if let Ok(i) = s.extract::<usize>() {
-                stack_len = i;
-            }
-        }
+        assert_eq!(board.move_stack.len(), board._stack.len());
+        let stack_len = stack.stack_len(board.move_stack.len());
 
-        let move_stack_start = board_rust.move_stack.len().saturating_sub(stack_len);
-        let state_stack_start = board_rust._stack.len().saturating_sub(stack_len);
+        let move_stack_start = board.move_stack.len().saturating_sub(stack_len);
+        let state_stack_start = board._stack.len().saturating_sub(stack_len);
 
         let new_board = Board {
-            turn: board_rust.turn,
-            castling_rights: board_rust.castling_rights,
-            ep_square: board_rust.ep_square,
-            halfmove_clock: board_rust.halfmove_clock,
-            fullmove_number: board_rust.fullmove_number,
-            move_stack: board_rust.move_stack[move_stack_start..].to_vec(),
-            _stack: board_rust._stack[state_stack_start..].to_vec(),
-            chess960: board_rust.chess960,
+            turn: board.turn,
+            castling_rights: board.castling_rights,
+            ep_square: board.ep_square,
+            halfmove_clock: board.halfmove_clock,
+            fullmove_number: board.fullmove_number,
+            move_stack: board.move_stack[move_stack_start..].to_vec(),
+            _stack: board._stack[state_stack_start..].to_vec(),
+            chess960: board.chess960,
         };
-        let new_base = base_rust.clone();
+        let new_base = base_board.clone();
 
         Bound::new(py, (new_board, new_base))
     }
@@ -793,44 +792,50 @@ impl Board {
     ) -> PyResult<PyMove> {
         let chess = Self::try_shakmaty(slf)?;
         let wanted_promotion = promotion.map(|r| r.0);
+        let uci = UciMove::Normal {
+            from: from_square.0,
+            to: to_square.0,
+            promotion: wanted_promotion,
+        };
 
         for m in chess.legal_moves() {
             if m.from() == Some(from_square.0)
                 && m.to() == to_square.0
                 && m.promotion() == wanted_promotion
             {
-                return Ok(PyMove {
-                    inner: m.to_uci(shakmaty::CastlingMode::Standard),
-                });
+                return Ok(PyMove { inner: uci });
             }
         }
 
-        Err(PyValueError::new_err("no matching legal move found"))
-    }
-
-    fn clean_castling_rights(slf: &Bound<'_, Self>) -> PyResult<u64> {
-        let board = slf.borrow();
-        let setup = Self::try_setup(slf)?;
-        let mode = if board.chess960 {
-            shakmaty::CastlingMode::Chess960
-        } else {
-            shakmaty::CastlingMode::Standard
-        };
-
-        let castles = shakmaty::Castles::from_setup(&setup, mode).unwrap_or_else(|c| c);
-        Ok(castles.castling_rights().0)
-    }
-
-    fn has_kingside_castling_rights(slf: &Bound<'_, Self>, color: PyColor) -> PyResult<bool> {
-        let chess = Self::try_shakmaty(slf)?;
-        Ok(chess
-            .castles()
-            .has(color.0, shakmaty::CastlingSide::KingSide))
+        Err(IllegalMoveError::new_err(format!(
+            "no matching legal move for {:?} ({:?} -> {:?}) in {}",
+            uci,
+            from_square.0,
+            to_square.0,
+            Self::fen(slf, false, "legal", None)?,
+        )))
     }
 
     fn has_insufficient_material(slf: &Bound<'_, Self>, color: PyColor) -> PyResult<bool> {
         let chess = Self::try_shakmaty(slf)?;
         Ok(chess.has_insufficient_material(color.0))
+    }
+
+    fn has_castling_rights(slf: &Bound<'_, Self>, color: PyColor) -> PyResult<bool> {
+        Self::clean_castling_rights(slf).map(|c| c.any())
+    }
+
+    fn has_kingside_castling_rights(slf: &Bound<'_, Self>, color: PyColor) -> PyResult<bool> {
+        Self::clean_castling_rights(slf).map(|c| c.has(color.0, CastlingSide::KingSide))
+    }
+
+    #[pyo3(name = "clean_castling_rights")]
+    fn py_clean_castling_rights(slf: &Bound<'_, Self>) -> PyResult<u64> {
+        Self::clean_castling_rights(slf).map(|c| c.castling_rights().0)
+    }
+
+    fn has_queenside_castling_rights(slf: &Bound<'_, Self>, color: PyColor) -> PyResult<bool> {
+        Self::clean_castling_rights(slf).map(|c| c.has(color.0, CastlingSide::QueenSide))
     }
 
     fn status(slf: &Bound<'_, Self>) -> PyResult<u32> {
@@ -1003,10 +1008,6 @@ impl Board {
         Ok(Self::try_shakmaty(slf)?.is_checkmate())
     }
 
-    fn __int__(slf: &Bound<'_, Self>) -> PyResult<u64> {
-        todo!()
-    }
-
     fn clear_board(mut slf: PyRefMut<'_, Self>) {
         slf.clear_stack();
         slf.into_super().clear_board();
@@ -1167,6 +1168,18 @@ impl Board {
 }
 
 impl Board {
+    fn clean_castling_rights(slf: &Bound<'_, Self>) -> PyResult<Castles> {
+        let board = slf.borrow();
+        let setup = Self::try_setup(slf)?;
+        let mode = if board.chess960 {
+            shakmaty::CastlingMode::Chess960
+        } else {
+            shakmaty::CastlingMode::Standard
+        };
+
+        Ok(Castles::from_setup(&setup, mode).unwrap_or_else(|c| c))
+    }
+
     fn get_transposition_key(chess: &shakmaty::Chess) -> TranspositionKey {
         let (by_role, by_color) = chess.board().clone().into_bitboards();
         (
