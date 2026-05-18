@@ -1,27 +1,14 @@
 // All the code here is forked from shakmaty to address the fact python-chess has more detailed errors
 
-use pyo3::exceptions::{PyException, PyValueError};
-use shakmaty::fen::Fen;
-use shakmaty::san::SanPlus;
-use shakmaty::uci::UciMove;
 use shakmaty::{
-    Bitboard, Board, ByColor, ByRole, Castles, CastlingMode, CastlingSide, Chess, Color, EnPassant,
-    FromSetup, MoveList, Position, PseudoLegal, Role, Setup, Square, attacks,
+    Bitboard, Board, Castles, CastlingMode, Color, EnPassant,
+    FromSetup, Position, Role, Setup, Square, attacks,
 };
 
-use std::collections::HashMap;
-use std::num::NonZeroU32;
-use std::str::FromStr;
 
-use crate::IllegalMoveError;
-use crate::base_board::BaseBoard;
-use crate::py_move::PyMove;
-use crate::util::{IntOrBool, PyColor, PyRole, PySquare};
 use pyo3::prelude::*;
-use pyo3::types::{PyDict, PyTuple, PyType};
 
 use bitflags::bitflags;
-use shakmaty::PositionErrorKinds;
 
 bitflags! {
     #[derive(Default, Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -50,7 +37,7 @@ bitflags! {
 }
 
 // from shakmaty, renamed from Chess::from_setup_unchecked
-fn status(setup: Setup, mode: CastlingMode) -> Status {
+pub fn status(setup: Setup, mode: CastlingMode) -> Status {
     let mut errors = Status::empty();
 
     let castling_rights = match Castles::from_setup(&setup, mode) {

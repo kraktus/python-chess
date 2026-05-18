@@ -1,5 +1,5 @@
 #![allow(unused_variables)]
-use pyo3::exceptions::{PyException, PyValueError};
+use pyo3::exceptions::PyValueError;
 use shakmaty::fen::Fen;
 use shakmaty::san::SanPlus;
 use shakmaty::uci::UciMove;
@@ -824,10 +824,10 @@ impl Board {
         } else {
             shakmaty::CastlingMode::Standard
         };
-        
-        let status = crate::board_status::status(setup, mode, setup.promoted);
-        
-        Ok(status)
+
+        let status = crate::board_status::status(setup, mode);
+
+        Ok(status.bits())
     }
 
     fn is_valid(slf: &Bound<'_, Self>) -> PyResult<bool> {
