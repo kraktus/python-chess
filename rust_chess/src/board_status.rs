@@ -25,7 +25,7 @@ use shakmaty::PositionErrorKinds;
 
 bitflags! {
     #[derive(Default, Debug, Clone, Copy, PartialEq, Eq, Hash)]
-    struct Status: u32 {
+    pub struct Status: u32 {
     const VALID = 0;
     const NO_WHITE_KING = 1 << 0;
     const NO_BLACK_KING = 1 << 1;

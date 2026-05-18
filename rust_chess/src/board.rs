@@ -818,8 +818,16 @@ impl Board {
     }
 
     fn status(slf: &Bound<'_, Self>) -> PyResult<u32> {
-        let _ = slf;
-        Ok(0)
+        let setup = Self::try_setup(slf)?;
+        let mode = if slf.borrow().chess960 {
+            shakmaty::CastlingMode::Chess960
+        } else {
+            shakmaty::CastlingMode::Standard
+        };
+        
+        let status = crate::board_status::status(setup, mode, setup.promoted);
+        
+        Ok(status)
     }
 
     fn is_valid(slf: &Bound<'_, Self>) -> PyResult<bool> {
