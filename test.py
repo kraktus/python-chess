@@ -4174,7 +4174,10 @@ class SyzygyTestCase(unittest.TestCase):
             board = Board()
 
             for line, epd in enumerate(epds):
-                extra = board.set_epd(epd)
+                try: 
+                    extra = board.set_epd(epd)
+                except:
+                    self.fail(f"Failed to parse EPD on line {line + 1}: {epd.strip()}")
 
                 wdl_table = tables.probe_wdl_table(board)
                 self.assertEqual(

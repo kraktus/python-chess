@@ -3,6 +3,7 @@
 pub mod base_board;
 pub mod board;
 pub mod board_status;
+pub mod epd_ops;
 pub mod piece;
 pub mod py_move;
 pub mod square_set;

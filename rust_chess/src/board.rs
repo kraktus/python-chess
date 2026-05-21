@@ -1,11 +1,11 @@
 #![allow(unused_variables)]
 use pyo3::exceptions::PyValueError;
-use shakmaty::fen::Fen;
+use shakmaty::fen::{Epd, Fen};
 use shakmaty::san::SanPlus;
 use shakmaty::uci::UciMove;
 use shakmaty::{
-    Bitboard, Castles, CastlingSide, Chess, Color, FromSetup, MoveList, Position, PseudoLegal,
-    Setup, Square,
+    Bitboard, Castles, CastlingMode, CastlingSide, Chess, Color, FromSetup, Move, MoveList,
+    Position, PseudoLegal, Role, Setup, Square,
 };
 
 use std::collections::HashMap;
@@ -239,7 +239,7 @@ impl Board {
         let mut fullmove_number = ONE;
 
         let base_board = if let Some(f) = fen {
-            let setup = shakmaty::fen::Fen::from_ascii(f.as_bytes())
+            let setup = Fen::from_ascii(f.as_bytes())
                 .map_err(|e| pyo3::exceptions::PyValueError::new_err(format!("invalid fen: {e}")))?
                 .into_setup();
 
@@ -277,7 +277,7 @@ impl Board {
     #[allow(unused_variables)]
     fn __init__(mut slf: PyRefMut<'_, Self>, fen: Option<&str>, chess960: bool) -> PyResult<()> {
         if let Some(f) = fen {
-            let setup = shakmaty::fen::Fen::from_ascii(f.as_bytes())
+            let setup = Fen::from_ascii(f.as_bytes())
                 .map_err(|e| pyo3::exceptions::PyValueError::new_err(format!("invalid fen: {e}")))?
                 .into_setup();
 
@@ -416,15 +416,14 @@ impl Board {
         en_passant: &str,
         promoted: Option<bool>,
     ) -> PyResult<String> {
-        let mut setup = Self::try_setup_with_promoted(slf, promoted.unwrap_or_default())?;
-
         let board = slf.borrow();
-        let chess = Self::try_shakmaty(slf)?;
-        setup.ep_square = match en_passant {
-            "fen" => setup.ep_square,
-            "xfen" => chess.ep_square(shakmaty::EnPassantMode::PseudoLegal),
-            _ => chess.ep_square(shakmaty::EnPassantMode::Legal),
-        };
+        let chess = Self::try_shakmaty_with_promoted(slf, promoted.unwrap_or_default())?;
+        let setup = chess.clone().to_setup(match en_passant {
+             "legal" => shakmaty::EnPassantMode::Legal,
+            "xfen" => shakmaty::EnPassantMode::PseudoLegal,
+            // fen mode
+            _ => shakmaty::EnPassantMode::Always,
+        });
 
         let fen = Fen::try_from_setup(setup)
             .map_err(|e| PyValueError::new_err(format!("unable to gen FEN: {e:?}")))?;
@@ -433,6 +432,31 @@ impl Board {
         } else {
             fen.to_string()
         })
+    }
+
+    #[pyo3(signature = (*, shredder=false, en_passant="legal", promoted=None, **operations))]
+    fn epd(
+        slf: &Bound<'_, Self>,
+        shredder: bool,
+        en_passant: &str,
+        promoted: Option<bool>,
+        operations: Option<Bound<'_, PyDict>>,
+    ) -> PyResult<String> {
+        let fen = Self::fen(slf, shredder, en_passant, promoted)?;
+        let mut parts = fen.split_whitespace();
+        let board_part = parts.next().unwrap_or_default();
+        let turn_part = parts.next().unwrap_or_default();
+        let castling_part = parts.next().unwrap_or_default();
+        let ep_part = parts.next().unwrap_or_default();
+
+        let mut epd = format!("{board_part} {turn_part} {castling_part} {ep_part}");
+        let operations = crate::epd_ops::py_to_epd_operations(slf, operations.as_ref())?;
+        let ops = crate::epd_ops::format_epd_operations(slf, &operations)?;
+        if !ops.is_empty() {
+            epd.push(' ');
+            epd.push_str(&ops);
+        }
+        Ok(epd)
     }
 
     #[pyo3(signature = (*, en_passant="legal", promoted=None))]
@@ -633,11 +657,52 @@ impl Board {
             .inner
             .to_move(&chess)
             .map_err(|_| PyValueError::new_err("illegal move"))?;
-        Ok(shakmaty::san::SanPlus::from_move(chess, smove).to_string())
+        Ok(SanPlus::from_move(chess, smove).to_string())
     }
 
     fn lan(slf: &Bound<'_, Self>, move_obj: PyMove) -> PyResult<String> {
-        Self::san(slf, move_obj)
+        if move_obj.inner.is_null() {
+            return Ok(move_obj.uci());
+        }
+        let chess = Self::try_shakmaty(slf)?;
+        let smove = move_obj.inner.to_move(&chess).map_err(|_| {
+            PyValueError::new_err(format!(
+                "illegal move {move_obj:?} in position {}",
+                Fen::from_position(&chess, shakmaty::EnPassantMode::Always)
+            ))
+        })?;
+        let san = SanPlus::from_move(chess.clone(), smove);
+        let san_str = san.to_string();
+        if let Some(from_sq) = smove.from()
+            && let Some(piece) = chess.board().piece_at(from_sq)
+            && !smove.is_castle()
+        {
+            let role = if smove.role() != Role::Pawn {
+                piece.char().to_string()
+            } else {
+                "".to_string()
+            };
+
+            let promotion = if let Some(promote_to) = smove.promotion() {
+                format!("={}", promote_to.char())
+            } else {
+                "".to_string()
+            };
+
+            let delimiter = if smove.is_capture() { "x" } else { "-" };
+            let check_or_mate = san
+                .suffix
+                .as_ref()
+                .map(ToString::to_string)
+                .unwrap_or_default();
+            Ok(format!(
+                "{role}{from_sq}{delimiter}{}{promotion}{check_or_mate}",
+                smove.to()
+            ))
+        } else {
+            assert!(smove.is_drop(), "this is a bug in the lib, please report");
+            Ok(san_str)
+        }
     }
 
     fn variation_san(slf: &Bound<'_, Self>, variation: &Bound<'_, PyAny>) -> PyResult<String> {
@@ -716,23 +781,7 @@ impl Board {
     }
 
     fn xboard(slf: &Bound<'_, Self>, move_obj: PyMove) -> PyResult<String> {
-        let chess = Self::try_shakmaty(slf)?;
-        let smove = move_obj
-            .inner
-            .to_move(&chess)
-            .map_err(|_| PyValueError::new_err("illegal move"))?;
-        if smove.castling_side().is_some() {
-            if smove.castling_side() == Some(shakmaty::CastlingSide::KingSide) {
-                Ok("O-O".to_string())
-            } else {
-                Ok("O-O-O".to_string())
-            }
-        } else {
-            Ok(match move_obj.inner {
-                UciMove::Null => "@@@@".to_string(),
-                _ => move_obj.inner.to_string(),
-            })
-        }
+        Self::uci(slf, move_obj, None)
     }
 
     fn is_capture(slf: &Bound<'_, Self>, move_obj: PyMove) -> PyResult<bool> {
@@ -836,12 +885,12 @@ impl Board {
 
     fn is_fifty_moves(slf: &Bound<'_, Self>) -> PyResult<bool> {
         let chess = Self::try_shakmaty(slf)?;
-        Ok(chess.halfmoves() >= 100 && !chess.legal_moves().is_empty())
+        Ok(chess.halfmoves() >= 100 && chess.outcome().is_unknown())
     }
 
     fn is_seventyfive_moves(slf: &Bound<'_, Self>) -> PyResult<bool> {
         let chess = Self::try_shakmaty(slf)?;
-        Ok(chess.halfmoves() >= 150 && !chess.legal_moves().is_empty())
+        Ok(chess.halfmoves() >= 150 && chess.outcome().is_unknown())
     }
 
     // is only about current position
@@ -880,11 +929,22 @@ impl Board {
 
     fn can_claim_fifty_moves(slf: &Bound<'_, Self>) -> PyResult<bool> {
         let chess = Self::try_shakmaty(slf)?;
-        if chess.legal_moves().is_empty() {
-            return Ok(false);
-        }
-        if chess.halfmoves() >= 100 {
+        let moves = chess.legal_moves();
+        // slight p
+        if chess.halfmoves() >= 100 && !moves.is_empty() {
             return Ok(true);
+        }
+        if chess.halfmoves() == 99 {
+            for m in moves.iter() {
+                if !m.is_zeroing() {
+                    let mut after = chess.clone();
+                    after.play_unchecked(*m);
+                    if after.outcome().is_unknown() {
+                        return Ok(true);
+                    }
+                }
+
+            }
         }
         Ok(false)
     }
@@ -949,13 +1009,31 @@ impl Board {
     #[pyo3(signature = (epd))]
     fn set_epd(slf: &Bound<'_, Self>, epd: &str) -> PyResult<Py<PyAny>> {
         let py = slf.py();
-        let parsed = shakmaty::fen::Epd::from_str(epd)
-            .map_err(|e| PyValueError::new_err(format!("invalid epd: {e}")))?;
-        let chess = parsed
-            .into_position::<shakmaty::Chess>(shakmaty::CastlingMode::Standard)
-            .map_err(|e| PyValueError::new_err(format!("invalid epd position: {e}")))?;
-        Self::from_chess_but_stack(slf, &chess);
-        Ok(PyDict::new(py).into_any().unbind())
+        let parts = crate::epd_ops::split_epd_fields(epd);
+
+        if parts.len() < 4 {
+            return Err(PyValueError::new_err("invalid epd: expected at least 4 fields"));
+        }
+
+        if parts.len() > 4 {
+            let parse_fen = format!("{} {} {} {} 0 1", parts[0], parts[1], parts[2], parts[3]);
+            let (parse_board, parse_base) = Self::__new__(py, Some(&parse_fen), slf.borrow().chess960)?;
+            let parse_board = Bound::new(py, (parse_board, parse_base))?;
+            let operations = crate::epd_ops::parse_epd_ops(&parse_board, parts[4])?;
+            let hmvc = crate::epd_ops::hmvc(&operations)?;
+            let fmvn = crate::epd_ops::fmvn(&operations)?;
+
+            let fen = format!(
+                "{} {} {} {} {} {}",
+                parts[0], parts[1], parts[2], parts[3], hmvc, fmvn
+            );
+            Self::set_fen(slf.borrow_mut(), &fen)?;
+            Ok(crate::epd_ops::epd_operations_to_pydict(py, &operations)?.into_any())
+        } else {
+            let fen = format!("{} {} {} {} 0 1", parts[0], parts[1], parts[2], parts[3]);
+            Self::set_fen(slf.borrow_mut(), &fen)?;
+            Ok(PyDict::new(py).into_any().unbind())
+        }
     }
 
     #[classmethod]
@@ -966,28 +1044,28 @@ impl Board {
         epd: &str,
         chess960: bool,
     ) -> PyResult<Py<PyAny>> {
-        let parsed = shakmaty::fen::Epd::from_str(epd)
-            .map_err(|e| PyValueError::new_err(format!("invalid epd: {e}")))?;
-        let chess = parsed
-            .into_position::<shakmaty::Chess>(shakmaty::CastlingMode::Standard)
-            .map_err(|e| PyValueError::new_err(format!("invalid epd position: {e}")))?;
-
-        let (mut board, mut base) = Self::empty();
-        board.chess960 = chess960;
-        {
-            let (roles, colors) = chess.board().clone().into_bitboards();
-            base.by_role = roles;
-            base.by_color = colors;
-            base.promoted = chess.promoted();
-            board.turn = chess.turn();
-            board.castling_rights = chess.castles().castling_rights();
-            board.ep_square = chess.ep_square(shakmaty::EnPassantMode::Legal);
-            board.halfmove_clock = chess.halfmoves() as u16;
-            board.fullmove_number = chess.fullmoves();
+        let parts = crate::epd_ops::split_epd_fields(epd);
+        if parts.len() < 4 {
+            return Err(PyValueError::new_err("invalid epd: expected at least 4 fields"));
         }
 
+        let fen = format!("{} {} {} {} 0 1", parts[0], parts[1], parts[2], parts[3]);
+
+        let (board, base) = Self::__new__(py, Some(&fen), chess960)?;
         let board = Bound::new(py, (board, base))?;
-        let tuple = PyTuple::new(py, [board.into_any(), PyDict::new(py).into_any()])?;
+
+        let operations = if parts.len() > 4 {
+            let operations = crate::epd_ops::parse_epd_ops(&board, parts[4])?;
+            board.borrow_mut().halfmove_clock = crate::epd_ops::hmvc(&operations)? as u16;
+            board.borrow_mut().fullmove_number = NonZeroU32::new(crate::epd_ops::fmvn(&operations)?)
+                .ok_or_else(|| PyValueError::new_err("invalid fmvn value: 0"))?;
+
+            crate::epd_ops::epd_operations_to_pydict(py, &operations)?.into_any()
+        } else {
+            PyDict::new(py).into_any().unbind()
+        };
+
+        let tuple = PyTuple::new(py, [board.into_any(), operations.bind(py).clone().into_any()])?;
         Ok(tuple.into_any().unbind())
     }
 
@@ -1214,14 +1292,24 @@ impl Board {
         base.promoted = state.promoted;
     }
 
+    fn try_shakmaty_with_promoted(
+        slf: &Bound<'_, Self>,
+        include_promoted: bool,
+    ) -> PyResult<Chess> {
+        Chess::from_setup(
+            Self::try_setup_with_promoted(slf, include_promoted)?,
+            shakmaty::CastlingMode::Chess960,
+        )
+        .or_else(shakmaty::PositionError::ignore_too_much_material)
+        .or_else(shakmaty::PositionError::ignore_impossible_check)
+        .or_else(shakmaty::PositionError::ignore_invalid_castling_rights)
+        .or_else(shakmaty::PositionError::ignore_invalid_ep_square)
+        .map_err(|e| pyo3::exceptions::PyValueError::new_err(format!("Invalid state: {e:?}")))
+    }
+
     // &Bound<'_, Self> to be able to acess BaseBoard
     fn try_shakmaty(slf: &Bound<'_, Self>) -> PyResult<Chess> {
-        Chess::from_setup(Self::try_setup(slf)?, shakmaty::CastlingMode::Standard)
-            .or_else(shakmaty::PositionError::ignore_too_much_material)
-            .or_else(shakmaty::PositionError::ignore_impossible_check)
-            .or_else(shakmaty::PositionError::ignore_invalid_castling_rights)
-            .or_else(shakmaty::PositionError::ignore_invalid_ep_square)
-            .map_err(|e| pyo3::exceptions::PyValueError::new_err(format!("Invalid state: {e:?}")))
+        Self::try_shakmaty_with_promoted(slf, true)
     }
 
     // &Bound<'_, Self> to be able to acess BaseBoard

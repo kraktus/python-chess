@@ -1,6 +1,6 @@
 use pyo3::exceptions::{PyAssertionError, PyTypeError};
 use pyo3::prelude::*;
-use pyo3::types::PyAny;
+use pyo3::types::{PyAny, PyBool};
 use shakmaty::{Bitboard, Color, Role, Square};
 
 use crate::square_set::SquareSet;
@@ -81,11 +81,11 @@ impl FromPyObject<'_, '_> for IntOrBool {
     type Error = PyErr;
 
     fn extract(obj: Borrowed<'_, '_, PyAny>) -> Result<Self, Self::Error> {
-        if let Ok(i) = obj.extract::<usize>() {
-            assert!(obj.extract::<bool>().is_err(), "Ambiguous int/bool: {i}");
-            Ok(Self::Int(i))
-        } else if let Ok(b) = obj.extract::<bool>() {
+        if obj.cast::<PyBool>().is_ok() {
+            let b = obj.extract::<bool>()?;
             Ok(Self::Bool(b))
+        } else if let Ok(i) = obj.extract::<usize>() {
+            Ok(Self::Int(i))
         } else {
             Err(PyTypeError::new_err(
                 "Expected int or bool for Board.copy `stack` parameter",

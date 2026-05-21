@@ -11,7 +11,7 @@ use shakmaty::{Move, Role, Square};
 use crate::util::{PyRole, PySquare};
 
 #[pyclass(module = "rust_chess", from_py_object, eq, name = "Move")]
-#[derive(Clone, PartialEq, Eq, Hash)]
+#[derive(Clone, PartialEq, Eq, Hash, Debug)]
 pub struct PyMove {
     pub inner: UciMove,
 }
@@ -171,7 +171,7 @@ impl PyMove {
         }
     }
 
-    fn uci(&self) -> String {
+    pub fn uci(&self) -> String {
         self.inner.to_string()
     }
 

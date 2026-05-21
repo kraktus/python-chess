@@ -1,10 +1,9 @@
 // All the code here is forked from shakmaty to address the fact python-chess has more detailed errors
 
 use shakmaty::{
-    Bitboard, Board, Castles, CastlingMode, Color, EnPassant,
-    FromSetup, Position, Role, Setup, Square, attacks,
+    Bitboard, Board, Castles, CastlingMode, Color, EnPassant, FromSetup, Position, Role, Setup,
+    Square, attacks,
 };
-
 
 use pyo3::prelude::*;
 
