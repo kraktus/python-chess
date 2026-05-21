@@ -34,7 +34,7 @@ impl From<&Move> for PyMove {
 impl PyMove {
     #[new]
     #[pyo3(signature = (from_square, to_square, promotion=None, drop=None))]
-    fn py_new(
+    pub fn py_new(
         from_square: PySquare,
         to_square: PySquare,
         promotion: Option<PyRole>,

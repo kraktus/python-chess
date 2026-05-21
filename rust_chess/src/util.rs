@@ -94,6 +94,7 @@ impl FromPyObject<'_, '_> for IntOrBool {
     }
 }
 
+#[derive(Clone, Copy)]
 pub struct PyRole(pub Role);
 
 impl FromPyObject<'_, '_> for PyRole {

@@ -784,6 +784,62 @@ impl Board {
         Self::uci(slf, move_obj, None)
     }
 
+    #[pyo3(signature = (chess960, from_square, to_square, promotion=None, drop=None))]
+    fn _from_chess960(
+        slf: &Bound<'_, Self>,
+        chess960: bool,
+        from_square: PySquare,
+        to_square: PySquare,
+        promotion: Option<PyRole>,
+        drop: Option<PyRole>,
+    ) -> PyResult<PyMove> {
+        if !chess960 && promotion.is_none() && drop.is_none() {
+            let kings = slf.as_super().borrow().by_role[Role::King];
+
+            if from_square.0 == Square::E1 && kings.contains(Square::E1) {
+                if to_square.0 == Square::H1 {
+                    return Ok(PyMove {
+                        inner: UciMove::Normal {
+                            from: Square::E1,
+                            to: Square::G1,
+                            promotion: None,
+                        },
+                    });
+                }
+                if to_square.0 == Square::A1 {
+                    return Ok(PyMove {
+                        inner: UciMove::Normal {
+                            from: Square::E1,
+                            to: Square::C1,
+                            promotion: None,
+                        },
+                    });
+                }
+            } else if from_square.0 == Square::E8 && kings.contains(Square::E8) {
+                if to_square.0 == Square::H8 {
+                    return Ok(PyMove {
+                        inner: UciMove::Normal {
+                            from: Square::E8,
+                            to: Square::G8,
+                            promotion: None,
+                        },
+                    });
+                }
+                if to_square.0 == Square::A8 {
+                    return Ok(PyMove {
+                        inner: UciMove::Normal {
+                            from: Square::E8,
+                            to: Square::C8,
+                            promotion: None,
+                        },
+                    });
+                }
+            }
+        }
+
+        PyMove::py_new(from_square, to_square, promotion, drop)
+    }
+
     fn is_capture(slf: &Bound<'_, Self>, move_obj: PyMove) -> PyResult<bool> {
         let chess = Self::try_shakmaty(slf)?;
         let smove = move_obj
@@ -819,25 +875,31 @@ impl Board {
         promotion: Option<PyRole>,
     ) -> PyResult<PyMove> {
         let chess = Self::try_shakmaty(slf)?;
-        let wanted_promotion = promotion.map(|r| r.0);
-        let uci = UciMove::Normal {
-            from: from_square.0,
-            to: to_square.0,
-            promotion: wanted_promotion,
-        };
+        let wanted_promotion = promotion.map(|r| r.0).or_else(|| {
+            let pawns = slf.as_super().borrow().by_role[Role::Pawn];
+            let backrank = Bitboard::BACKRANKS & to_square.0;
+            (pawns.contains(from_square.0) && backrank.any()).then_some(Role::Queen)
+        });
+        let board = slf.borrow();
+        let move_obj = Self::_from_chess960(
+            slf,
+            board.chess960,
+            from_square,
+            to_square,
+            promotion,
+            None,
+        )?;
+        
 
         for m in chess.legal_moves() {
-            if m.from() == Some(from_square.0)
-                && m.to() == to_square.0
-                && m.promotion() == wanted_promotion
-            {
-                return Ok(PyMove { inner: uci });
+            if PyMove::from(&m) == move_obj {
+                return Ok(move_obj);
             }
         }
 
         Err(IllegalMoveError::new_err(format!(
             "no matching legal move for {:?} ({:?} -> {:?}) in {}",
-            uci,
+            move_obj.inner,
             from_square.0,
             to_square.0,
             Self::fen(slf, false, "legal", None)?,
