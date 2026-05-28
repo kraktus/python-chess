@@ -1,11 +1,11 @@
 #![allow(unused_variables)]
 use pyo3::exceptions::PyValueError;
 use shakmaty::fen::{Epd, Fen};
-use shakmaty::san::{SanError, SanPlus};
+use shakmaty::san::{San, SanError, SanPlus};
 use shakmaty::uci::UciMove;
 use shakmaty::{
     Bitboard, Castles, CastlingMode, CastlingSide, Chess, Color, FromSetup, Move, MoveList,
-    Position, PseudoLegal, Role, San, Setup, Square,
+    Position, PseudoLegal, Role, Setup, Square,
 };
 
 use std::collections::HashMap;
@@ -710,7 +710,7 @@ impl Board {
                 .to_move(&chess)
                 .map_err(|_| PyValueError::new_err("illegal move in variation"))?;
 
-            let san = shakmaty::san::San::from_move(&chess, smove).to_string();
+            let san = San::from_move(&chess, smove).to_string();
 
             if !out.is_empty() {
                 out.push(' ');
@@ -760,7 +760,7 @@ impl Board {
         let smove = move_obj
             .inner
             .to_move(&chess)
-            .map_err(|_| PyValueError::new_err("illegal move"))?;
+            .map_err(|_| IllegalMoveError::new_err("illegal move"))?;
         let mode = if chess960.unwrap_or(slf.borrow().chess960) {
             shakmaty::CastlingMode::Chess960
         } else {
@@ -834,7 +834,7 @@ impl Board {
         let smove = move_obj
             .inner
             .to_move(&chess)
-            .map_err(|_| PyValueError::new_err("illegal move"))?;
+            .map_err(|_| IllegalMoveError::new_err("illegal move"))?;
         Ok(smove.is_capture())
     }
 
@@ -843,7 +843,7 @@ impl Board {
         let smove = move_obj
             .inner
             .to_move(&chess)
-            .map_err(|_| PyValueError::new_err("illegal move"))?;
+            .map_err(|_| IllegalMoveError::new_err("illegal move"))?;
         Ok(smove.is_castle())
     }
 
@@ -852,7 +852,7 @@ impl Board {
         let smove = move_obj
             .inner
             .to_move(&chess)
-            .map_err(|_| PyValueError::new_err("illegal move"))?;
+            .map_err(|_| IllegalMoveError::new_err("illegal move"))?;
         Ok(chess.is_irreversible(smove))
     }
 
@@ -1141,27 +1141,22 @@ impl Board {
         Self::push(slf, chess, sm_move)
     }
 
-    fn parse_uci(slf: &Bound<'_, Self>, _py: Python<'_>, uci: &str) -> PyResult<PyMove> {
-        let inner = UciMove::from_str(uci)
-            .map_err(|_| PyValueError::new_err(format!("invalid uci: {uci:?}")))?;
-
-        if !matches!(inner, UciMove::Null) {
-            let chess = Self::try_shakmaty(slf)?;
-            let smove = inner
-                .to_move(&chess)
-                .map_err(|_| PyValueError::new_err(format!("illegal uci: {uci:?}")))?;
-            if !chess.is_legal(smove) {
-                return Err(PyValueError::new_err(format!("illegal uci: {uci:?}")));
-            }
-        }
-
-        Ok(PyMove { inner })
+    #[pyo3(name = "parse_uci")]
+    fn py_parse_uci(slf: &Bound<'_, Self>, uci: &str) -> PyResult<PyMove> {
+        let chess = Self::try_shakmaty(slf)?;
+        Ok(Self::parse_uci(&chess, uci)?
+            .map(Into::into)
+            .unwrap_or(PyMove::NULL))
     }
 
-    fn push_uci(slf: &Bound<'_, Self>, uci: &str) -> PyResult<Py<PyAny>> {
-        let move_obj = slf.call_method1("parse_uci", (uci,))?;
-        slf.call_method1("push", (&move_obj,))?;
-        Ok(move_obj.into())
+    fn push_uci(slf: &Bound<'_, Self>, uci: &str) -> PyResult<PyMove> {
+        let chess = Self::try_shakmaty(slf)?;
+        let m_opt = Self::parse_uci(&chess, uci)?;
+        if let Some(m) = m_opt {
+            Self::push(slf, chess, m)?;
+        }
+
+        Ok(m_opt.map(Into::into).unwrap_or(PyMove::NULL))
     }
 
     #[pyo3(name = "pop")]
@@ -1296,10 +1291,23 @@ impl Board {
     fn parse_san(chess: &Chess, san: &str) -> PyResult<Move> {
         let parsed = San::from_str(san)
             .map_err(|e| InvalidMoveError::new_err(format!("invalid san: {e}")))?;
-        parsed.to_move(&chess).map_err(|e| match e {
+        parsed.to_move(chess).map_err(|e| match e {
             SanError::IllegalSan => IllegalMoveError::new_err(format!("illegal move: {san}")),
             SanError::AmbiguousSan => AmbiguousMoveError::new_err(format!("ambiguous move: {san}")),
         })
+    }
+
+    fn parse_uci(chess: &Chess, uci: &str) -> PyResult<Option<Move>> {
+        let inner = UciMove::from_str(uci)
+            .map_err(|_| InvalidMoveError::new_err(format!("invalid uci: {uci:?}")))?;
+
+        if !matches!(inner, UciMove::Null) {
+            // check if legal
+            return Ok(Some(inner.to_move(chess).map_err(|_| {
+                IllegalMoveError::new_err(format!("illegal uci: {uci:?}"))
+            })?));
+        }
+        Ok(None)
     }
 
     fn push(slf: &Bound<'_, Self>, chess: Chess, m: Move) -> PyResult<()> {

@@ -30,6 +30,12 @@ impl From<&Move> for PyMove {
     }
 }
 
+impl PyMove {
+    pub const NULL: Self = Self {
+        inner: UciMove::Null,
+    };
+}
+
 #[pymethods]
 impl PyMove {
     #[new]
