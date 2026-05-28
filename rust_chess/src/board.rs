@@ -955,14 +955,14 @@ impl Board {
         promotion: Option<PyRole>,
     ) -> PyResult<PyMove> {
         let chess = Self::try_shakmaty(slf)?;
-        let wanted_promotion = promotion.map(|r| r.0).or_else(|| {
+        let wanted_promotion = promotion.or_else(|| {
             let pawns = slf.as_super().borrow().by_role[Role::Pawn];
             let backrank = Bitboard::BACKRANKS & to_square.0;
-            (pawns.contains(from_square.0) && backrank.any()).then_some(Role::Queen)
+            (pawns.contains(from_square.0) && backrank.any()).then_some(PyRole(Role::Queen))
         });
         let board = slf.borrow();
         let move_obj =
-            Self::_from_chess960(slf, board.chess960, from_square, to_square, promotion, None)?;
+            Self::_from_chess960(slf, board.chess960, from_square, to_square, wanted_promotion, None)?;
 
         for m in chess.legal_moves() {
             if PyMove::from(&m) == move_obj {
