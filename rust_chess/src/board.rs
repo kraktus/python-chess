@@ -838,6 +838,15 @@ impl Board {
         Ok(smove.is_capture())
     }
 
+    fn is_en_passant(slf: &Bound<'_, Self>, move_obj: PyMove) -> PyResult<bool> {
+        let chess = Self::try_shakmaty(slf)?;
+        let smove = move_obj
+            .inner
+            .to_move(&chess)
+            .map_err(|_| IllegalMoveError::new_err("illegal move"))?;
+        Ok(smove.is_en_passant())
+    }
+
     fn is_castling(slf: &Bound<'_, Self>, move_obj: PyMove) -> PyResult<bool> {
         let chess = Self::try_shakmaty(slf)?;
         let smove = move_obj
