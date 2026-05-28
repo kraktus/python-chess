@@ -1474,7 +1474,12 @@ impl Board {
             // null move, just update turn and ep_square
             let mut rust_board = slf.borrow_mut();
             rust_board.turn = chess.turn().other();
-            rust_board.ep_square = None
+            rust_board.ep_square = None;
+            rust_board.halfmove_clock += 1;
+            // we've already swapped color at that point
+            if rust_board.turn == Color::White {
+                rust_board.fullmove_number = rust_board.fullmove_number.saturating_add(1);
+            }
         }
 
         let mut rust_board = slf.borrow_mut();
@@ -1543,9 +1548,14 @@ impl Board {
         slf: &Bound<'_, Self>,
         include_promoted: bool,
     ) -> PyResult<Chess> {
+        let is_960 = slf.borrow().chess960;
         Chess::from_setup(
             Self::try_setup_with_promoted(slf, include_promoted)?,
-            shakmaty::CastlingMode::Chess960,
+            if is_960 {
+                CastlingMode::Chess960
+            } else {
+                CastlingMode::Standard
+            },
         )
         .or_else(shakmaty::PositionError::ignore_too_much_material)
         .or_else(shakmaty::PositionError::ignore_impossible_check)
