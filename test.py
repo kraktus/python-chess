@@ -614,6 +614,7 @@ class BoardTestCase(unittest.TestCase):
         board.push_san("d1=Q+")
         self.assertEqual(board.fen(), "8/8/8/3R1P2/8/2k2K2/8/r2q4 w - - 0 83")
 
+    @unittest.skipIf(USE_RUST_CHESS, "Nd5 is not ambigous in shakmaty, but illegal because not parsed as a capture")
     def test_ambiguous_move(self):
         board = Board("8/8/1n6/3R1P2/1n6/2k2K2/3p4/r6r b - - 0 82")
         with self.assertRaises(chess.AmbiguousMoveError):

@@ -144,7 +144,8 @@ impl BaseBoard {
         self.by_role.bishop = Bitboard(value);
     }
     #[getter]
-    fn rooks(&self) -> u64 {
+    #[pyo3(name = "rooks")]
+    fn py_rooks(&self) -> u64 {
         self.by_role.rook.0
     }
     #[setter]
@@ -349,7 +350,9 @@ impl BaseBoard {
 
     pub fn set_chess960_pos(&mut self, scharnagl: u32) -> PyResult<()> {
         if scharnagl > 959 {
-            return Err(PyValueError::new_err("Chess960 position must be between 0 and 959"));
+            return Err(PyValueError::new_err(
+                "Chess960 position must be between 0 and 959",
+            ));
         }
         let board = Board::chess960(scharnagl);
         let (roles, colors) = board.into_bitboards();
@@ -609,6 +612,10 @@ impl BaseBoard {
         self.by_role = roles;
         self.by_color = colors;
         self.promoted = shakmaty::Bitboard(0);
+    }
+
+    pub fn rooks(&self) -> Bitboard {
+        self.by_role.rook
     }
 
     #[must_use]

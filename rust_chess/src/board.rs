@@ -331,38 +331,35 @@ impl Board {
         setup.castling_rights = Bitboard::EMPTY;
         // copied from shakmaty FEN
         // TODO, upstream as separate method
-        let sq_iter = castling_fen
-            .chars()
-            .map(|ch| {
-                let color = Color::from_white(ch.is_ascii_uppercase());
-                let rooks_and_kings = setup.board.by_color(color)
-                    & (setup.board.rooks() | setup.board.kings())
-                    & color.backrank();
-                let sq: PyResult<Square> = Ok(match ch.to_ascii_lowercase() {
-                    'k' => rooks_and_kings
-                        .last()
-                        .filter(|sq| setup.board.rooks().contains(*sq))
-                        .unwrap_or_else(|| Square::from_coords(File::H, color.backrank())),
-                    'q' => rooks_and_kings
-                        .first()
-                        .filter(|sq| setup.board.rooks().contains(*sq))
-                        .unwrap_or_else(|| Square::from_coords(File::A, color.backrank())),
-                    file => Square::from_coords(
-                        File::from_char(char::from(file)).ok_or_else(|| {
-                            PyValueError::new_err(format!(
-                                "invalid castling fen: invalid file '{file}'"
-                            ))
-                        })?,
-                        color.backrank(),
-                    ),
-                });
-                sq
+        let sq_iter = castling_fen.chars().map(|ch| {
+            let color = Color::from_white(ch.is_ascii_uppercase());
+            let rooks_and_kings = setup.board.by_color(color)
+                & (setup.board.rooks() | setup.board.kings())
+                & color.backrank();
+            let sq: PyResult<Square> = Ok(match ch.to_ascii_lowercase() {
+                'k' => rooks_and_kings
+                    .last()
+                    .filter(|sq| setup.board.rooks().contains(*sq))
+                    .unwrap_or_else(|| Square::from_coords(File::H, color.backrank())),
+                'q' => rooks_and_kings
+                    .first()
+                    .filter(|sq| setup.board.rooks().contains(*sq))
+                    .unwrap_or_else(|| Square::from_coords(File::A, color.backrank())),
+                file => Square::from_coords(
+                    File::from_char(char::from(file)).ok_or_else(|| {
+                        PyValueError::new_err(format!(
+                            "invalid castling fen: invalid file '{file}'"
+                        ))
+                    })?,
+                    color.backrank(),
+                ),
             });
+            sq
+        });
         for sq in sq_iter {
             setup.castling_rights |= sq?;
         }
         Self::mut_from_setup_but_stack_fullmove(slf, &setup);
-
 
         Ok(())
     }
@@ -656,17 +653,36 @@ impl Board {
         slf.into_super().set_board_fen(fen)
     }
 
-    fn set_chess960_pos(slf: PyRefMut<'_, Self>, scharnagl: u16) -> PyResult<()> {
-        todo!()
+    #[pyo3(name = "set_chess960_pos")]
+    fn py_set_chess960_pos(mut slf: PyRefMut<'_, Self>, scharnagl: u32) -> PyResult<()> {
+        slf.clear_stack();
+        slf.as_super().set_chess960_pos(scharnagl)?;
+        slf.chess960 = true;
+        slf.turn = Color::White;
+        slf.castling_rights = slf.as_super().rooks();
+        slf.ep_square = None;
+        slf.halfmove_clock = 0;
+        slf.fullmove_number = ONE;
+        Ok(())
     }
 
     #[classmethod]
     fn from_chess960_pos(
         _cls: &Bound<'_, PyType>,
         py: Python<'_>,
-        scharnagl: u16,
+        scharnagl: u32,
     ) -> PyResult<Py<Self>> {
-        todo!()
+
+        let (mut board, mut base_board) = Self::empty();
+        base_board.set_chess960_pos(scharnagl)?;
+        board.chess960 = true;
+        board.turn = Color::White;
+        board.castling_rights = base_board.rooks();
+        board.ep_square = None;
+        board.halfmove_clock = 0;
+        board.fullmove_number = ONE;
+        let class_obj = pyo3::PyClassInitializer::from(base_board).add_subclass(board);
+        Py::new(py, class_obj)
     }
 
     fn apply_mirror(slf: &Bound<'_, Self>, py: Python<'_>) -> PyResult<()> {
@@ -779,14 +795,16 @@ impl Board {
     fn py_parse_san(slf: &Bound<'_, Self>, san: &str) -> PyResult<PyMove> {
         let chess = Self::try_shakmaty(slf)?;
         let m = Self::parse_san(&chess, san)?;
-        Ok(m.into())
+        Ok(m.map(Into::into).unwrap_or(PyMove::NULL))
     }
 
     fn push_san(slf: &Bound<'_, Self>, san: &str) -> PyResult<PyMove> {
         let chess = Self::try_shakmaty(slf)?;
-        let m = Self::parse_san(&chess, san)?;
-        Self::push(slf, chess, m)?;
-        Ok(m.into())
+        let m_opt = Self::parse_san(&chess, san)?;
+        if let Some(m) = m_opt {
+            Self::push(slf, chess, m)?;
+        }
+        Ok(m_opt.map(Into::into).unwrap_or(PyMove::NULL))
     }
 
     fn parse_xboard(slf: &Bound<'_, Self>, xboard: &str) -> PyResult<PyMove> {
@@ -1368,13 +1386,18 @@ impl Board {
         )
     }
 
-    fn parse_san(chess: &Chess, san: &str) -> PyResult<Move> {
+    fn parse_san(chess: &Chess, san: &str) -> PyResult<Option<Move>> {
         let parsed = San::from_str(san)
             .map_err(|e| InvalidMoveError::new_err(format!("invalid san: {e}")))?;
-        parsed.to_move(chess).map_err(|e| match e {
+
+        if matches!(parsed, San::Null) {
+            return Ok(None);
+        }
+
+        Ok(Some(parsed.to_move(chess).map_err(|e| match e {
             SanError::IllegalSan => IllegalMoveError::new_err(format!("illegal move: {san}")),
             SanError::AmbiguousSan => AmbiguousMoveError::new_err(format!("ambiguous move: {san}")),
-        })
+        })?))
     }
 
     fn parse_uci(chess: &Chess, uci: &str) -> PyResult<Option<Move>> {
