@@ -29,7 +29,7 @@ if USE_RUST_CHESS:
         src_module=rust_chess,
     )
     from rust_chess import BaseBoard, Board
-    # chess.Board = rust_chess.Board
+    chess.Board = rust_chess.Board
     # from chess import Board
 else:
     from chess import BaseBoard, Board

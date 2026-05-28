@@ -902,6 +902,33 @@ impl Board {
         Ok(chess.has_insufficient_material(color.0))
     }
 
+    fn has_chess960_castling_rights(slf: &Bound<'_, Self>) -> PyResult<bool> {
+        let rights = Self::clean_castling_rights_with_960(slf, CastlingMode::Chess960)?.castling_rights();
+
+
+        // # If there are any castling rights in standard chess, the king must be
+        // # on e1 or e8.
+        // if castling_rights & BB_RANK_1 and not self.occupied_co[WHITE] & self.kings & BB_E1:
+        //     return True
+        // if castling_rights & BB_RANK_8 and not self.occupied_co[BLACK] & self.kings & BB_E8:
+        //     return True
+        if rights.intersects(!Bitboard::CORNERS) {
+            return Ok(true);
+        }
+        if let Some(white_king) = slf.as_super().borrow().king(Color::White)
+            && white_king != Square::E1
+         {            return Ok(true);
+
+        }
+        if let Some(black_king) = slf.as_super().borrow().king(Color::Black)
+            && black_king != Square::E8
+         {
+             return Ok(true);
+        }
+        Ok(false)
+
+    }
+
     fn has_castling_rights(slf: &Bound<'_, Self>, color: PyColor) -> PyResult<bool> {
         Self::clean_castling_rights(slf).map(|c| c.any())
     }
@@ -1275,12 +1302,17 @@ impl Board {
 impl Board {
     fn clean_castling_rights(slf: &Bound<'_, Self>) -> PyResult<Castles> {
         let board = slf.borrow();
-        let setup = Self::try_setup(slf)?;
         let mode = if board.chess960 {
-            shakmaty::CastlingMode::Chess960
+            CastlingMode::Chess960
         } else {
             shakmaty::CastlingMode::Standard
         };
+
+        Self::clean_castling_rights_with_960(slf, mode)
+    }
+
+    fn clean_castling_rights_with_960(slf: &Bound<'_, Self>, mode: CastlingMode) -> PyResult<Castles> {
+        let setup = Self::try_setup(slf)?;
 
         Ok(Castles::from_setup(&setup, mode).unwrap_or_else(|c| c))
     }
