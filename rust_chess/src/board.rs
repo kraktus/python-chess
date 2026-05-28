@@ -325,8 +325,7 @@ impl Board {
     }
 
     fn set_castling_fen(slf: &Bound<'_, Self>, castling_fen: &str) -> PyResult<()> {
-        let mut mut_slf = slf.borrow_mut();
-        mut_slf.clear_stack();
+        slf.borrow_mut().clear_stack();
         let mut setup = Self::try_setup(slf)?;
         setup.castling_rights = Bitboard::EMPTY;
         // copied from shakmaty FEN
