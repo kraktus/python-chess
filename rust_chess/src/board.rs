@@ -1,21 +1,21 @@
 #![allow(unused_variables)]
 use pyo3::exceptions::PyValueError;
 use shakmaty::fen::{Epd, Fen};
-use shakmaty::san::SanPlus;
+use shakmaty::san::{SanError, SanPlus};
 use shakmaty::uci::UciMove;
 use shakmaty::{
     Bitboard, Castles, CastlingMode, CastlingSide, Chess, Color, FromSetup, Move, MoveList,
-    Position, PseudoLegal, Role, Setup, Square,
+    Position, PseudoLegal, Role, San, Setup, Square,
 };
 
 use std::collections::HashMap;
 use std::num::NonZeroU32;
 use std::str::FromStr;
 
-use crate::IllegalMoveError;
 use crate::base_board::BaseBoard;
 use crate::py_move::PyMove;
 use crate::util::{IntOrBool, PyColor, PyRole, PySquare};
+use crate::{AmbiguousMoveError, IllegalMoveError, InvalidMoveError};
 use pyo3::prelude::*;
 use pyo3::types::{PyDict, PyTuple, PyType};
 
@@ -136,29 +136,21 @@ impl StateBoard {
     }
 }
 
-impl From<&Board> for StateBoard {
-    fn from(board: &Board) -> Self {
-        let (by_role, by_color) = shakmaty::Board::empty().into_bitboards();
+impl From<(&Board, &BaseBoard)> for StateBoard {
+    fn from((board, base): (&Board, &BaseBoard)) -> Self {
+        let by_role = base.by_role;
+        let by_color = base.by_color;
+        let promoted = base.promoted;
         Self {
             by_role,
             by_color,
-            promoted: Bitboard::EMPTY,
+            promoted,
             turn: board.turn,
             castling_rights: board.castling_rights,
             ep_square: board.ep_square,
             halfmove_clock: board.halfmove_clock,
             fullmove_number: board.fullmove_number,
         }
-    }
-}
-
-impl From<(&Board, &BaseBoard)> for StateBoard {
-    fn from((board, base): (&Board, &BaseBoard)) -> Self {
-        let mut state = StateBoard::from(board);
-        state.by_role = base.by_role;
-        state.by_color = base.by_color;
-        state.promoted = base.promoted;
-        state
     }
 }
 
@@ -419,7 +411,7 @@ impl Board {
         let board = slf.borrow();
         let chess = Self::try_shakmaty_with_promoted(slf, promoted.unwrap_or_default())?;
         let setup = chess.clone().to_setup(match en_passant {
-             "legal" => shakmaty::EnPassantMode::Legal,
+            "legal" => shakmaty::EnPassantMode::Legal,
             "xfen" => shakmaty::EnPassantMode::PseudoLegal,
             // fen mode
             _ => shakmaty::EnPassantMode::Always,
@@ -739,29 +731,26 @@ impl Board {
         Ok(out)
     }
 
-    fn parse_san(slf: &Bound<'_, Self>, san: &str) -> PyResult<Py<PyAny>> {
-        let py = slf.py();
+    // name parse_san for o3
+    #[pyo3(name = "parse_san")]
+    fn py_parse_san(slf: &Bound<'_, Self>, san: &str) -> PyResult<PyMove> {
         let chess = Self::try_shakmaty(slf)?;
-        let parsed = shakmaty::san::San::from_str(san)
-            .map_err(|e| PyValueError::new_err(format!("invalid san: {e}")))?;
-        let smove = parsed
-            .to_move(&chess)
-            .map_err(|e| PyValueError::new_err(format!("illegal san: {e}")))?;
-        let uci = smove.to_uci(shakmaty::CastlingMode::Standard);
-        Ok(Bound::new(py, PyMove { inner: uci })?.into_any().unbind())
+        let m = Self::parse_san(&chess, san)?;
+        Ok(m.into())
     }
 
-    fn push_san(slf: &Bound<'_, Self>, san: &str) -> PyResult<Py<PyAny>> {
-        let move_obj = slf.call_method1("parse_san", (san,))?;
-        slf.call_method1("push", (&move_obj,))?;
-        Ok(move_obj.into())
+    fn push_san(slf: &Bound<'_, Self>, san: &str) -> PyResult<PyMove> {
+        let chess = Self::try_shakmaty(slf)?;
+        let m = Self::parse_san(&chess, san)?;
+        Self::push(slf, chess, m)?;
+        Ok(m.into())
     }
 
-    fn parse_xboard(slf: &Bound<'_, Self>, xboard: &str) -> PyResult<Py<PyAny>> {
-        Self::parse_san(slf, xboard)
+    fn parse_xboard(slf: &Bound<'_, Self>, xboard: &str) -> PyResult<PyMove> {
+        Self::py_parse_san(slf, xboard)
     }
 
-    fn push_xboard(slf: &Bound<'_, Self>, xboard: &str) -> PyResult<Py<PyAny>> {
+    fn push_xboard(slf: &Bound<'_, Self>, xboard: &str) -> PyResult<PyMove> {
         Self::push_san(slf, xboard)
     }
 
@@ -881,15 +870,8 @@ impl Board {
             (pawns.contains(from_square.0) && backrank.any()).then_some(Role::Queen)
         });
         let board = slf.borrow();
-        let move_obj = Self::_from_chess960(
-            slf,
-            board.chess960,
-            from_square,
-            to_square,
-            promotion,
-            None,
-        )?;
-        
+        let move_obj =
+            Self::_from_chess960(slf, board.chess960, from_square, to_square, promotion, None)?;
 
         for m in chess.legal_moves() {
             if PyMove::from(&m) == move_obj {
@@ -1005,7 +987,6 @@ impl Board {
                         return Ok(true);
                     }
                 }
-
             }
         }
         Ok(false)
@@ -1074,12 +1055,15 @@ impl Board {
         let parts = crate::epd_ops::split_epd_fields(epd);
 
         if parts.len() < 4 {
-            return Err(PyValueError::new_err("invalid epd: expected at least 4 fields"));
+            return Err(PyValueError::new_err(
+                "invalid epd: expected at least 4 fields",
+            ));
         }
 
         if parts.len() > 4 {
             let parse_fen = format!("{} {} {} {} 0 1", parts[0], parts[1], parts[2], parts[3]);
-            let (parse_board, parse_base) = Self::__new__(py, Some(&parse_fen), slf.borrow().chess960)?;
+            let (parse_board, parse_base) =
+                Self::__new__(py, Some(&parse_fen), slf.borrow().chess960)?;
             let parse_board = Bound::new(py, (parse_board, parse_base))?;
             let operations = crate::epd_ops::parse_epd_ops(&parse_board, parts[4])?;
             let hmvc = crate::epd_ops::hmvc(&operations)?;
@@ -1108,7 +1092,9 @@ impl Board {
     ) -> PyResult<Py<PyAny>> {
         let parts = crate::epd_ops::split_epd_fields(epd);
         if parts.len() < 4 {
-            return Err(PyValueError::new_err("invalid epd: expected at least 4 fields"));
+            return Err(PyValueError::new_err(
+                "invalid epd: expected at least 4 fields",
+            ));
         }
 
         let fen = format!("{} {} {} {} 0 1", parts[0], parts[1], parts[2], parts[3]);
@@ -1119,15 +1105,19 @@ impl Board {
         let operations = if parts.len() > 4 {
             let operations = crate::epd_ops::parse_epd_ops(&board, parts[4])?;
             board.borrow_mut().halfmove_clock = crate::epd_ops::hmvc(&operations)? as u16;
-            board.borrow_mut().fullmove_number = NonZeroU32::new(crate::epd_ops::fmvn(&operations)?)
-                .ok_or_else(|| PyValueError::new_err("invalid fmvn value: 0"))?;
+            board.borrow_mut().fullmove_number =
+                NonZeroU32::new(crate::epd_ops::fmvn(&operations)?)
+                    .ok_or_else(|| PyValueError::new_err("invalid fmvn value: 0"))?;
 
             crate::epd_ops::epd_operations_to_pydict(py, &operations)?.into_any()
         } else {
             PyDict::new(py).into_any().unbind()
         };
 
-        let tuple = PyTuple::new(py, [board.into_any(), operations.bind(py).clone().into_any()])?;
+        let tuple = PyTuple::new(
+            py,
+            [board.into_any(), operations.bind(py).clone().into_any()],
+        )?;
         Ok(tuple.into_any().unbind())
     }
 
@@ -1143,28 +1133,12 @@ impl Board {
     #[pyo3(name = "push")]
     fn py_push(slf: &Bound<'_, Self>, move_obj: PyMove) -> PyResult<()> {
         let chess = Self::try_shakmaty(slf)?;
-        let board_state = {
-            let rust_board = slf.borrow();
-            let base_board = slf.as_super().borrow();
-            StateBoard::from((&*rust_board, &*base_board))
-        };
 
         let sm_move = move_obj
             .inner
             .to_move(&chess)
-            .map_err(|e| PyValueError::new_err(format!("Invalid move: {e}")))?;
-        let new_chess = chess
-            .play(sm_move)
-            .map_err(|e| PyValueError::new_err(format!("illegal move: {e}")))?;
-
-        {
-            let mut rust_board = slf.borrow_mut();
-            rust_board.move_stack.push(move_obj);
-            rust_board._stack.push(board_state);
-        }
-
-        Self::from_chess_but_stack(slf, &new_chess);
-        Ok(())
+            .map_err(|e| InvalidMoveError::new_err(format!("Invalid move: {e}")))?;
+        Self::push(slf, chess, sm_move)
     }
 
     fn parse_uci(slf: &Bound<'_, Self>, _py: Python<'_>, uci: &str) -> PyResult<PyMove> {
@@ -1254,7 +1228,7 @@ impl Board {
             Self::from_stateboard_but_stack(&root, &state);
         } else {
             let chess = Self::try_shakmaty(slf)?;
-            Self::from_chess_but_stack(&root, &chess);
+            Self::mut_from_chess_but_stack(&root, &chess);
         }
 
         Ok(root)
@@ -1319,7 +1293,36 @@ impl Board {
         )
     }
 
-    fn from_chess_but_stack(slf: &Bound<'_, Self>, chess: &shakmaty::Chess) {
+    fn parse_san(chess: &Chess, san: &str) -> PyResult<Move> {
+        let parsed = San::from_str(san)
+            .map_err(|e| InvalidMoveError::new_err(format!("invalid san: {e}")))?;
+        parsed.to_move(&chess).map_err(|e| match e {
+            SanError::IllegalSan => IllegalMoveError::new_err(format!("illegal move: {san}")),
+            SanError::AmbiguousSan => AmbiguousMoveError::new_err(format!("ambiguous move: {san}")),
+        })
+    }
+
+    fn push(slf: &Bound<'_, Self>, chess: Chess, m: Move) -> PyResult<()> {
+        let board_state = {
+            let rust_board = slf.borrow();
+            let base_board = slf.as_super().borrow();
+            StateBoard::from((&*rust_board, &*base_board))
+        };
+        let new_chess = chess
+            .play(m)
+            .map_err(|e| IllegalMoveError::new_err(format!("illegal move: {e}")))?;
+
+        {
+            let mut rust_board = slf.borrow_mut();
+            rust_board.move_stack.push(m.into());
+            rust_board._stack.push(board_state);
+        }
+
+        Self::mut_from_chess_but_stack(slf, &new_chess);
+        Ok(())
+    }
+
+    fn mut_from_chess_but_stack(slf: &Bound<'_, Self>, chess: &shakmaty::Chess) {
         {
             let mut rust_board = slf.borrow_mut();
             rust_board.turn = chess.turn();

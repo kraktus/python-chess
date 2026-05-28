@@ -17,7 +17,9 @@ use pyo3::prelude::*;
 
 use square_set::{CarryRipplerIter, SquareSet, SquareSetIter, SquareSetRevIter};
 
+pyo3::create_exception!(rust_chess, InvalidMoveError, PyValueError);
 pyo3::create_exception!(rust_chess, IllegalMoveError, PyValueError);
+pyo3::create_exception!(rust_chess, AmbiguousMoveError, PyValueError);
 
 #[pymodule]
 fn rust_chess(m: &Bound<'_, PyModule>) -> PyResult<()> {
@@ -33,6 +35,11 @@ fn rust_chess(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<board::LegalMoveGenerator>()?;
     m.add_class::<board::PseudoLegalMoveGenerator>()?;
     m.add("IllegalMoveError", m.py().get_type::<IllegalMoveError>())?;
+    m.add(
+        "AmbiguousMoveError",
+        m.py().get_type::<AmbiguousMoveError>(),
+    )?;
+    m.add("InvalidMoveError", m.py().get_type::<InvalidMoveError>())?;
 
     Ok(())
 }

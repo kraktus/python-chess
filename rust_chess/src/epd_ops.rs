@@ -44,9 +44,7 @@ pub fn split_epd_fields(epd: &str) -> Vec<&str> {
             return parts;
         }
 
-        let end = remainder
-            .find(is_epd_whitespace)
-            .unwrap_or(remainder.len());
+        let end = remainder.find(is_epd_whitespace).unwrap_or(remainder.len());
         parts.push(&remainder[..end]);
         remainder = &remainder[end..];
     }
@@ -128,7 +126,11 @@ fn parse_numeric_operand(opcode: &str, operand: &str) -> PyResult<EpdOperand> {
     }
 }
 
-fn parse_san_operand(board: &Bound<'_, Board>, opcode: &str, operand: &str) -> PyResult<EpdOperand> {
+fn parse_san_operand(
+    board: &Bound<'_, Board>,
+    opcode: &str,
+    operand: &str,
+) -> PyResult<EpdOperand> {
     if opcode == "pv" {
         let kwargs = PyDict::new(board.py());
         kwargs.set_item("stack", false)?;
@@ -162,7 +164,11 @@ pub fn parse_epd_ops(board: &Bound<'_, Board>, operation_part: &str) -> PyResult
     let mut opcode = String::new();
     let mut operand = String::new();
 
-    for ch in operation_part.chars().map(Some).chain(std::iter::once(None)) {
+    for ch in operation_part
+        .chars()
+        .map(Some)
+        .chain(std::iter::once(None))
+    {
         match state {
             ParseState::Opcode => {
                 if ch.is_some_and(is_epd_whitespace) {
@@ -267,9 +273,9 @@ pub fn parse_epd_ops(board: &Bound<'_, Board>, operation_part: &str) -> PyResult
 
 pub fn hmvc(operations: &EpdOperations) -> PyResult<u32> {
     match operations.get("hmvc") {
-        Some(EpdOperand::Integer(value)) => (*value).try_into().map_err(|_| {
-            PyValueError::new_err(format!("invalid hmvc value: {value}"))
-        }),
+        Some(EpdOperand::Integer(value)) => (*value)
+            .try_into()
+            .map_err(|_| PyValueError::new_err(format!("invalid hmvc value: {value}"))),
         Some(EpdOperand::Float(value)) => Err(PyValueError::new_err(format!(
             "invalid hmvc value: {value}"
         ))),
@@ -280,9 +286,9 @@ pub fn hmvc(operations: &EpdOperations) -> PyResult<u32> {
 
 pub fn fmvn(operations: &EpdOperations) -> PyResult<u32> {
     match operations.get("fmvn") {
-        Some(EpdOperand::Integer(value)) => (*value).try_into().map_err(|_| {
-            PyValueError::new_err(format!("invalid fmvn value: {value}"))
-        }),
+        Some(EpdOperand::Integer(value)) => (*value)
+            .try_into()
+            .map_err(|_| PyValueError::new_err(format!("invalid fmvn value: {value}"))),
         Some(EpdOperand::Float(value)) => Err(PyValueError::new_err(format!(
             "invalid fmvn value: {value}"
         ))),
@@ -322,7 +328,11 @@ pub fn format_epd_operations(
             EpdOperand::None => out.push(';'),
             EpdOperand::Move(move_obj) => {
                 out.push(' ');
-                out.push_str(&board.call_method1("san", (move_obj.clone(),))?.extract::<String>()?);
+                out.push_str(
+                    &board
+                        .call_method1("san", (move_obj.clone(),))?
+                        .extract::<String>()?,
+                );
                 out.push(';');
             }
             EpdOperand::Integer(value) => {
@@ -359,7 +369,11 @@ pub fn format_epd_operations(
             EpdOperand::MoveList(moves) if matches!(opcode.as_str(), "am" | "bm") => {
                 let mut sans = Vec::new();
                 for move_obj in moves {
-                    sans.push(board.call_method1("san", (move_obj.clone(),))?.extract::<String>()?);
+                    sans.push(
+                        board
+                            .call_method1("san", (move_obj.clone(),))?
+                            .extract::<String>()?,
+                    );
                 }
                 sans.sort();
                 for san in sans {
@@ -413,7 +427,9 @@ pub fn py_to_epd_operations(
                 )));
             }
             EpdOperand::Float(value)
-        } else if operand.cast::<PyString>().is_err() && matches!(opcode.as_str(), "pv" | "am" | "bm") {
+        } else if operand.cast::<PyString>().is_err()
+            && matches!(opcode.as_str(), "pv" | "am" | "bm")
+        {
             let mut moves = Vec::new();
             for item in operand.try_iter()? {
                 moves.push(item?.extract::<PyMove>()?);
@@ -429,7 +445,10 @@ pub fn py_to_epd_operations(
     Ok(out)
 }
 
-pub fn epd_operations_to_pydict(py: Python<'_>, operations: &EpdOperations) -> PyResult<Py<PyDict>> {
+pub fn epd_operations_to_pydict(
+    py: Python<'_>,
+    operations: &EpdOperations,
+) -> PyResult<Py<PyDict>> {
     let dict = PyDict::new(py);
     let mut items: Vec<_> = operations.iter().collect();
     items.sort_by(|(a, _), (b, _)| a.cmp(b));
