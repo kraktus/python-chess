@@ -6,8 +6,9 @@ use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 use pyo3::types::PyType;
 use shakmaty::uci::UciMove;
-use shakmaty::{Move, Role, Square};
+use shakmaty::{Chess, Move, Role, Square};
 
+use crate::IllegalMoveError;
 use crate::util::{PyRole, PySquare};
 
 #[pyclass(module = "rust_chess", from_py_object, eq, name = "Move")]
@@ -34,6 +35,17 @@ impl PyMove {
     pub const NULL: Self = Self {
         inner: UciMove::Null,
     };
+
+    pub fn to_move_unless_null(&self, chess: &Chess) -> PyResult<Option<Move>> {
+        match self.inner {
+            UciMove::Null => Ok(None),
+            _ => Ok(Some(
+                self.inner
+                    .to_move(chess)
+                    .map_err(|_| IllegalMoveError::new_err("illegal move"))?,
+            )),
+        }
+    }
 }
 
 #[pymethods]

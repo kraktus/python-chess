@@ -347,6 +347,18 @@ impl BaseBoard {
         Ok(())
     }
 
+    pub fn set_chess960_pos(&mut self, scharnagl: u32) -> PyResult<()> {
+        if scharnagl > 959 {
+            return Err(PyValueError::new_err("Chess960 position must be between 0 and 959"));
+        }
+        let board = Board::chess960(scharnagl);
+        let (roles, colors) = board.into_bitboards();
+        self.by_role = roles;
+        self.by_color = colors;
+        self.promoted = Bitboard::EMPTY;
+        Ok(())
+    }
+
     #[pyo3(signature = (promoted=None))]
     pub fn board_fen(&self, promoted: Option<bool>) -> PyResult<String> {
         self.board()?

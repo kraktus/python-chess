@@ -4,7 +4,7 @@ use shakmaty::fen::{Epd, Fen};
 use shakmaty::san::{San, SanError, SanPlus};
 use shakmaty::uci::UciMove;
 use shakmaty::{
-    Bitboard, Castles, CastlingMode, CastlingSide, Chess, Color, FromSetup, Move, MoveList,
+    Bitboard, Castles, CastlingMode, CastlingSide, Chess, Color, File, FromSetup, Move, MoveList,
     Position, PseudoLegal, Role, Setup, Square,
 };
 
@@ -322,6 +322,49 @@ impl Board {
     #[setter]
     fn set_castling_rights(&mut self, castling_rights: u64) {
         self.castling_rights = shakmaty::Bitboard(castling_rights);
+    }
+
+    fn set_castling_fen(slf: &Bound<'_, Self>, castling_fen: &str) -> PyResult<()> {
+        let mut mut_slf = slf.borrow_mut();
+        mut_slf.clear_stack();
+        let mut setup = Self::try_setup(slf)?;
+        setup.castling_rights = Bitboard::EMPTY;
+        // copied from shakmaty FEN
+        // TODO, upstream as separate method
+        let sq_iter = castling_fen
+            .chars()
+            .map(|ch| {
+                let color = Color::from_white(ch.is_ascii_uppercase());
+                let rooks_and_kings = setup.board.by_color(color)
+                    & (setup.board.rooks() | setup.board.kings())
+                    & color.backrank();
+                let sq: PyResult<Square> = Ok(match ch.to_ascii_lowercase() {
+                    'k' => rooks_and_kings
+                        .last()
+                        .filter(|sq| setup.board.rooks().contains(*sq))
+                        .unwrap_or_else(|| Square::from_coords(File::H, color.backrank())),
+                    'q' => rooks_and_kings
+                        .first()
+                        .filter(|sq| setup.board.rooks().contains(*sq))
+                        .unwrap_or_else(|| Square::from_coords(File::A, color.backrank())),
+                    file => Square::from_coords(
+                        File::from_char(char::from(file)).ok_or_else(|| {
+                            PyValueError::new_err(format!(
+                                "invalid castling fen: invalid file '{file}'"
+                            ))
+                        })?,
+                        color.backrank(),
+                    ),
+                });
+                sq
+            });
+        for sq in sq_iter {
+            setup.castling_rights |= sq?;
+        }
+        Self::mut_from_setup_but_stack_fullmove(slf, &setup);
+
+
+        Ok(())
     }
 
     #[getter]
@@ -840,29 +883,23 @@ impl Board {
 
     fn is_en_passant(slf: &Bound<'_, Self>, move_obj: PyMove) -> PyResult<bool> {
         let chess = Self::try_shakmaty(slf)?;
-        let smove = move_obj
-            .inner
-            .to_move(&chess)
-            .map_err(|_| IllegalMoveError::new_err("illegal move"))?;
-        Ok(smove.is_en_passant())
+        move_obj
+            .to_move_unless_null(&chess)
+            .map(|m_opt| m_opt.map(|m| m.is_en_passant()).unwrap_or_default())
     }
 
     fn is_castling(slf: &Bound<'_, Self>, move_obj: PyMove) -> PyResult<bool> {
         let chess = Self::try_shakmaty(slf)?;
-        let smove = move_obj
-            .inner
-            .to_move(&chess)
-            .map_err(|_| IllegalMoveError::new_err("illegal move"))?;
-        Ok(smove.is_castle())
+        move_obj
+            .to_move_unless_null(&chess)
+            .map(|m_opt| m_opt.map(|m| m.is_castle()).unwrap_or_default())
     }
 
     fn is_irreversible(slf: &Bound<'_, Self>, move_obj: PyMove) -> PyResult<bool> {
         let chess = Self::try_shakmaty(slf)?;
-        let smove = move_obj
-            .inner
-            .to_move(&chess)
-            .map_err(|_| IllegalMoveError::new_err("illegal move"))?;
-        Ok(chess.is_irreversible(smove))
+        move_obj
+            .to_move_unless_null(&chess)
+            .map(|m_opt| m_opt.map(|m| chess.is_irreversible(m)).unwrap_or_default())
     }
 
     #[pyo3(signature = (from_square, to_square, promotion=None))]
@@ -903,8 +940,8 @@ impl Board {
     }
 
     fn has_chess960_castling_rights(slf: &Bound<'_, Self>) -> PyResult<bool> {
-        let rights = Self::clean_castling_rights_with_960(slf, CastlingMode::Chess960)?.castling_rights();
-
+        let rights =
+            Self::clean_castling_rights_with_960(slf, CastlingMode::Chess960)?.castling_rights();
 
         // # If there are any castling rights in standard chess, the king must be
         // # on e1 or e8.
@@ -917,16 +954,15 @@ impl Board {
         }
         if let Some(white_king) = slf.as_super().borrow().king(Color::White)
             && white_king != Square::E1
-         {            return Ok(true);
-
+        {
+            return Ok(true);
         }
         if let Some(black_king) = slf.as_super().borrow().king(Color::Black)
             && black_king != Square::E8
-         {
-             return Ok(true);
+        {
+            return Ok(true);
         }
         Ok(false)
-
     }
 
     fn has_castling_rights(slf: &Bound<'_, Self>, color: PyColor) -> PyResult<bool> {
@@ -1311,7 +1347,10 @@ impl Board {
         Self::clean_castling_rights_with_960(slf, mode)
     }
 
-    fn clean_castling_rights_with_960(slf: &Bound<'_, Self>, mode: CastlingMode) -> PyResult<Castles> {
+    fn clean_castling_rights_with_960(
+        slf: &Bound<'_, Self>,
+        mode: CastlingMode,
+    ) -> PyResult<Castles> {
         let setup = Self::try_setup(slf)?;
 
         Ok(Castles::from_setup(&setup, mode).unwrap_or_else(|c| c))
@@ -1371,7 +1410,7 @@ impl Board {
         Ok(())
     }
 
-    fn mut_from_chess_but_stack(slf: &Bound<'_, Self>, chess: &shakmaty::Chess) {
+    fn mut_from_chess_but_stack(slf: &Bound<'_, Self>, chess: &Chess) {
         {
             let mut rust_board = slf.borrow_mut();
             rust_board.turn = chess.turn();
@@ -1383,6 +1422,24 @@ impl Board {
 
         let (roles, colors) = chess.board().clone().into_bitboards();
         let promoted = chess.promoted();
+
+        let mut base = slf.as_super().borrow_mut();
+        base.by_role = roles;
+        base.by_color = colors;
+        base.promoted = promoted;
+    }
+
+    fn mut_from_setup_but_stack_fullmove(slf: &Bound<'_, Self>, setup: &Setup) {
+        {
+            let mut rust_board = slf.borrow_mut();
+            rust_board.turn = setup.turn;
+            rust_board.castling_rights = setup.castling_rights;
+            rust_board.ep_square = setup.ep_square;
+            rust_board.halfmove_clock = setup.halfmoves as u16;
+        }
+
+        let (roles, colors) = setup.board.clone().into_bitboards();
+        let promoted = setup.promoted;
 
         let mut base = slf.as_super().borrow_mut();
         base.by_role = roles;

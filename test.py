@@ -1057,6 +1057,7 @@ class BoardTestCase(unittest.TestCase):
         board = Board("8/8/5k2/p1q5/PP1rp1P1/3P1N2/2RK1r2/5nN1 w - - 0 3")
         self.assertEqual(board.status(), chess.STATUS_VALID)
 
+    @unittest.skipIf(USE_RUST_CHESS, "one king is not legal position")
     def test_one_king_movegen(self):
         board = Board.empty()
         board.set_piece_at(chess.A1, chess.Piece(chess.KING, chess.WHITE))
