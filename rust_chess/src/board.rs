@@ -672,7 +672,6 @@ impl Board {
         py: Python<'_>,
         scharnagl: u32,
     ) -> PyResult<Py<Self>> {
-
         let (mut board, mut base_board) = Self::empty();
         base_board.set_chess960_pos(scharnagl)?;
         board.chess960 = true;
@@ -769,15 +768,17 @@ impl Board {
                 .to_move(&chess)
                 .map_err(|_| PyValueError::new_err("illegal move in variation"))?;
 
-            let san = San::from_move(&chess, smove).to_string();
+            let san = SanPlus::from_move(chess.clone(), smove).to_string();
 
             if !out.is_empty() {
                 out.push(' ');
             }
-            if white_to_move {
+            if out.is_empty() && !white_to_move {
+                out.push_str(&format!("{move_number}...{san}"));
+            } else if white_to_move {
                 out.push_str(&format!("{move_number}. {san}"));
             } else {
-                out.push_str(&format!("{move_number}... {san}"));
+                out.push_str(&san);
             }
 
             chess.play_unchecked(smove);
