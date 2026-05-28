@@ -700,7 +700,7 @@ impl Board {
                 smove.to()
             ))
         } else {
-            assert!(smove.is_drop(), "this is a bug in the lib, please report");
+            assert!(smove.is_put(), "this is a bug in the lib, please report");
             Ok(san_str)
         }
     }
