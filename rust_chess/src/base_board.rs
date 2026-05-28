@@ -7,6 +7,16 @@ use pyo3::types::PyType;
 use shakmaty::{Bitboard, Board, Color, File, Piece, Rank, Role, Square};
 use std::str::FromStr;
 
+const CHESS960_STARTING_POS: [Board; 960] = {
+    let mut boards = [const { Board::empty() }; 960];
+    let mut i = 0;
+    while i < 960 {
+        boards[i as usize] = Board::chess960(i);
+        i += 1;
+    }
+    boards
+};
+
 #[pyclass(module = "rust_chess", name = "OccupiedCo")]
 pub struct OccupiedCo {
     board: Py<BaseBoard>,
@@ -511,6 +521,16 @@ impl BaseBoard {
         Err(PyNotImplementedError::new_err(
             "BaseBoard.apply_transform() requires calling Python, unsupported in rust backend",
         ))
+    }
+
+    pub fn chess960_pos(&self) -> Option<u32> {
+        let board = self.board().ok()?;
+        for (i, b) in CHESS960_STARTING_POS.iter().enumerate() {
+            if b == &board {
+                return Some(i as u32);
+            }
+        }
+        None
     }
 
     fn transform(&self, f: &Bound<'_, PyAny>) -> PyResult<Self> {

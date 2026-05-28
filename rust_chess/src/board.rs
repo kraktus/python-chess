@@ -1,6 +1,6 @@
 #![allow(unused_variables)]
 use pyo3::exceptions::PyValueError;
-use shakmaty::fen::{Epd, Fen};
+use shakmaty::fen::Fen;
 use shakmaty::san::{San, SanError, SanPlus};
 use shakmaty::uci::UciMove;
 use shakmaty::{
@@ -666,6 +666,33 @@ impl Board {
         Ok(())
     }
 
+    #[pyo3(signature = (*, ignore_turn=false, ignore_castling=false, ignore_counters=true))]
+    fn chess960_pos(
+        slf: &Bound<'_, Self>,
+        ignore_turn: bool,
+        ignore_castling: bool,
+        ignore_counters: bool,
+    ) -> Option<u32> {
+        let board = slf.borrow();
+        if board.ep_square.is_some() {
+            return None;
+        }
+
+        if !ignore_turn && board.turn != Color::White {
+            return None;
+        }
+
+        if !ignore_castling && board.castling_rights != slf.borrow().as_super().rooks() {
+            return None;
+        }
+
+        if !ignore_counters && (board.fullmove_number != ONE || board.halfmove_clock != 0) {
+            return None;
+        }
+
+        slf.borrow().as_super().chess960_pos()
+    }
+
     #[classmethod]
     fn from_chess960_pos(
         _cls: &Bound<'_, PyType>,
@@ -774,6 +801,7 @@ impl Board {
                 out.push(' ');
             }
             if out.is_empty() && !white_to_move {
+                // TODO FIXME UPDATE IF python-chess behavior changes
                 out.push_str(&format!("{move_number}...{san}"));
             } else if white_to_move {
                 out.push_str(&format!("{move_number}. {san}"));
@@ -796,15 +824,14 @@ impl Board {
     fn py_parse_san(slf: &Bound<'_, Self>, san: &str) -> PyResult<PyMove> {
         let chess = Self::try_shakmaty(slf)?;
         let m = Self::parse_san(&chess, san)?;
+        // println!("san: {san}, move: {m:?}");
         Ok(m.map(Into::into).unwrap_or(PyMove::NULL))
     }
 
     fn push_san(slf: &Bound<'_, Self>, san: &str) -> PyResult<PyMove> {
         let chess = Self::try_shakmaty(slf)?;
         let m_opt = Self::parse_san(&chess, san)?;
-        if let Some(m) = m_opt {
-            Self::push(slf, chess, m)?;
-        }
+        Self::push(slf, chess, m_opt)?;
         Ok(m_opt.map(Into::into).unwrap_or(PyMove::NULL))
     }
 
@@ -1225,11 +1252,16 @@ impl Board {
     fn py_push(slf: &Bound<'_, Self>, move_obj: PyMove) -> PyResult<()> {
         let chess = Self::try_shakmaty(slf)?;
 
-        let sm_move = move_obj
-            .inner
-            .to_move(&chess)
-            .map_err(|e| InvalidMoveError::new_err(format!("Invalid move: {e}")))?;
-        Self::push(slf, chess, sm_move)
+        let m_opt = match move_obj.inner {
+            UciMove::Null => None,
+            _ => Some(move_obj.inner.to_move(&chess).map_err(|_| {
+                IllegalMoveError::new_err(format!(
+                    "illegal move {move_obj:?} in position {}",
+                    Fen::from_position(&chess, shakmaty::EnPassantMode::Always)
+                ))
+            })?),
+        };
+        Self::push(slf, chess, m_opt)
     }
 
     #[pyo3(name = "parse_uci")]
@@ -1243,9 +1275,7 @@ impl Board {
     fn push_uci(slf: &Bound<'_, Self>, uci: &str) -> PyResult<PyMove> {
         let chess = Self::try_shakmaty(slf)?;
         let m_opt = Self::parse_uci(&chess, uci)?;
-        if let Some(m) = m_opt {
-            Self::push(slf, chess, m)?;
-        }
+        Self::push(slf, chess, m_opt)?;
 
         Ok(m_opt.map(Into::into).unwrap_or(PyMove::NULL))
     }
@@ -1388,16 +1418,30 @@ impl Board {
     }
 
     fn parse_san(chess: &Chess, san: &str) -> PyResult<Option<Move>> {
+        // python-chess parser is very lenient and accepts uci as san, so we try to parse as uci first to avoid that
+        let uci_parsed = UciMove::from_str(san);
+        if let Ok(uci_move) = uci_parsed {
+            if !matches!(uci_move, UciMove::Null) {
+                // check if legal
+                return Ok(Some(uci_move.to_move(chess).map_err(|_| {
+                    IllegalMoveError::new_err(format!("illegal san as valid uci: {san:?}"))
+                })?));
+            } else {
+                return Ok(None);
+            }
+        }
         let parsed = San::from_str(san)
-            .map_err(|e| InvalidMoveError::new_err(format!("invalid san: {e}")))?;
+            .map_err(|_| InvalidMoveError::new_err(format!("invalid san: {san:?}")))?;
 
         if matches!(parsed, San::Null) {
             return Ok(None);
         }
 
         Ok(Some(parsed.to_move(chess).map_err(|e| match e {
-            SanError::IllegalSan => IllegalMoveError::new_err(format!("illegal move: {san}")),
-            SanError::AmbiguousSan => AmbiguousMoveError::new_err(format!("ambiguous move: {san}")),
+            SanError::IllegalSan => IllegalMoveError::new_err(format!("illegal san move: {san}")),
+            SanError::AmbiguousSan => {
+                AmbiguousMoveError::new_err(format!("ambiguous san move: {san}"))
+            }
         })?))
     }
 
@@ -1414,23 +1458,31 @@ impl Board {
         Ok(None)
     }
 
-    fn push(slf: &Bound<'_, Self>, chess: Chess, m: Move) -> PyResult<()> {
+    // m None is NullMove
+    fn push(slf: &Bound<'_, Self>, chess: Chess, m_opt: Option<Move>) -> PyResult<()> {
         let board_state = {
             let rust_board = slf.borrow();
             let base_board = slf.as_super().borrow();
             StateBoard::from((&*rust_board, &*base_board))
         };
-        let new_chess = chess
-            .play(m)
-            .map_err(|e| IllegalMoveError::new_err(format!("illegal move: {e}")))?;
-
-        {
+        if let Some(m) = m_opt {
+            let new_chess = chess
+                .play(m)
+                .map_err(|e| IllegalMoveError::new_err(format!("illegal move: {e}")))?;
+            Self::mut_from_chess_but_stack(slf, &new_chess);
+        } else {
+            // null move, just update turn and ep_square
             let mut rust_board = slf.borrow_mut();
-            rust_board.move_stack.push(m.into());
-            rust_board._stack.push(board_state);
+            rust_board.turn = chess.turn().other();
+            rust_board.ep_square = None
         }
 
-        Self::mut_from_chess_but_stack(slf, &new_chess);
+        let mut rust_board = slf.borrow_mut();
+        rust_board
+            .move_stack
+            .push(m_opt.map(Into::into).unwrap_or(PyMove::NULL));
+        rust_board._stack.push(board_state);
+
         Ok(())
     }
 

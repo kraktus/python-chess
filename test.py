@@ -2744,6 +2744,7 @@ class PgnTestCase(unittest.TestCase):
         self.assertEqual(list(reversed(game.mainline_moves())), list(reversed(moves)))
         self.assertEqual(str(game.mainline_moves()), "1. d3 Nf6 2. e4")
 
+    @unittest.skipUnless(USE_RUST_CHESS, "LAN support is not suppored for PGN parsing")
     def test_lan(self):
         pgn = io.StringIO("1. e2-e4")
         game = chess.pgn.read_game(pgn)
