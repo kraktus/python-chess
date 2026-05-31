@@ -1428,8 +1428,7 @@ impl Board {
         }
 
         // python-chess parser is very lenient and accepts uci as san, so we try to parse as uci first to avoid that
-        let uci_parsed = UciMove::from_str(san);
-        if let Ok(uci_move) = uci_parsed {
+        if let Ok(uci_move) = UciMove::from_str(san) {
             if !matches!(uci_move, UciMove::Null) {
                 // check if legal
                 return Ok(Some(uci_move.to_move(chess).map_err(|_| {

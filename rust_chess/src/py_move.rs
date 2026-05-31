@@ -6,7 +6,7 @@ use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 use pyo3::types::PyType;
 use shakmaty::uci::UciMove;
-use shakmaty::{Chess, Move, Role, Square};
+use shakmaty::{CastlingMode, Chess, Move, Role, Square};
 
 use crate::IllegalMoveError;
 use crate::util::{PyRole, PySquare};
@@ -17,17 +17,11 @@ pub struct PyMove {
     pub inner: UciMove,
 }
 
-impl From<Move> for PyMove {
-    fn from(value: Move) -> Self {
+impl PyMove {
+    fn from_move(value: Move, mode: CastlingMode) -> Self {
         Self {
-            inner: value.to_uci(shakmaty::CastlingMode::Standard),
+            inner: value.to_uci(mode),
         }
-    }
-}
-
-impl From<&Move> for PyMove {
-    fn from(value: &Move) -> Self {
-        (*value).into()
     }
 }
 
