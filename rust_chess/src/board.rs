@@ -1417,6 +1417,16 @@ impl Board {
     }
 
     fn parse_san(chess: &Chess, san: &str) -> PyResult<Option<Move>> {
+        // if finishes with promotion but without =, add it
+        if let Some(last) = san.chars().last()
+            && matches!(last.to_ascii_lowercase(), 'n' | 'b' | 'r' | 'q')
+            && !san.contains('=')
+        {
+            let mut san_with_equal = san.to_string();
+            san_with_equal.insert(san_with_equal.len() - 1, '=');
+            return Self::parse_san(chess, &san_with_equal);
+        }
+
         // python-chess parser is very lenient and accepts uci as san, so we try to parse as uci first to avoid that
         let uci_parsed = UciMove::from_str(san);
         if let Ok(uci_move) = uci_parsed {
