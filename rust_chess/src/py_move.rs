@@ -18,9 +18,13 @@ pub struct PyMove {
 }
 
 impl PyMove {
-    fn from_move(value: Move, mode: CastlingMode) -> Self {
+    pub fn from_move(value: Move, chess960: bool) -> Self {
         Self {
-            inner: value.to_uci(mode),
+            inner: value.to_uci(if chess960 {
+                CastlingMode::Chess960
+            } else {
+                CastlingMode::Standard
+            }),
         }
     }
 }
