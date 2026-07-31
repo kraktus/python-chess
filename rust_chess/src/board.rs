@@ -789,10 +789,12 @@ impl Board {
 
         for item in variation.try_iter()? {
             let move_obj: PyMove = item?.extract()?;
-            let smove = move_obj
-                .inner
-                .to_move(&chess)
-                .map_err(|_| PyValueError::new_err("illegal move in variation"))?;
+            let smove = move_obj.inner.to_move(&chess).map_err(|_| {
+                IllegalMoveError::new_err(format!(
+                    "illegal move {move_obj:?} in position {}, inside variation: {variation:?}",
+                    Fen::from_position(&chess, shakmaty::EnPassantMode::Always)
+                ))
+            })?;
 
             let san = SanPlus::from_move(chess.clone(), smove).to_string();
 
@@ -824,14 +826,18 @@ impl Board {
         let chess = Self::try_shakmaty(slf)?;
         let m_opt = Self::parse_san(&chess, san)?;
         // println!("san: {san}, move: {m:?}");
-        Ok(m_opt.map(|m| PyMove::from_move(m, slf.borrow().chess960)).unwrap_or(PyMove::NULL))
+        Ok(m_opt
+            .map(|m| PyMove::from_move(m, slf.borrow().chess960))
+            .unwrap_or(PyMove::NULL))
     }
 
     fn push_san(slf: &Bound<'_, Self>, san: &str) -> PyResult<PyMove> {
         let chess = Self::try_shakmaty(slf)?;
         let m_opt = Self::parse_san(&chess, san)?;
         Self::push(slf, chess, m_opt)?;
-        Ok(m_opt.map(|m| PyMove::from_move(m, slf.borrow().chess960)).unwrap_or(PyMove::NULL))
+        Ok(m_opt
+            .map(|m| PyMove::from_move(m, slf.borrow().chess960))
+            .unwrap_or(PyMove::NULL))
     }
 
     fn parse_xboard(slf: &Bound<'_, Self>, xboard: &str) -> PyResult<PyMove> {
@@ -961,8 +967,14 @@ impl Board {
             (pawns.contains(from_square.0) && backrank.any()).then_some(PyRole(Role::Queen))
         });
         let board = slf.borrow();
-        let move_obj =
-            Self::_from_chess960(slf, board.chess960, from_square, to_square, wanted_promotion, None)?;
+        let move_obj = Self::_from_chess960(
+            slf,
+            board.chess960,
+            from_square,
+            to_square,
+            wanted_promotion,
+            None,
+        )?;
 
         for m in chess.legal_moves() {
             if PyMove::from_move(m, board.chess960) == move_obj {
@@ -1027,7 +1039,7 @@ impl Board {
         Self::clean_castling_rights(slf).map(|c| c.has(color.0, CastlingSide::QueenSide))
     }
 
-    fn status(slf: &Bound<'_, Self>) -> PyResult<u32> {
+    fn status(slf: &Bound<'_, Self>) -> PyResult<crate::board_status::Status> {
         let setup = Self::try_setup(slf)?;
         let mode = if slf.borrow().chess960 {
             shakmaty::CastlingMode::Chess960
@@ -1037,7 +1049,7 @@ impl Board {
 
         let status = crate::board_status::status(setup, mode);
 
-        Ok(status.bits())
+        Ok(status)
     }
 
     fn is_valid(slf: &Bound<'_, Self>) -> PyResult<bool> {
@@ -1276,7 +1288,9 @@ impl Board {
         let m_opt = Self::parse_uci(&chess, uci)?;
         Self::push(slf, chess, m_opt)?;
 
-        Ok(m_opt.map(|m| PyMove::from_move(m, slf.borrow().chess960)).unwrap_or(PyMove::NULL))
+        Ok(m_opt
+            .map(|m| PyMove::from_move(m, slf.borrow().chess960))
+            .unwrap_or(PyMove::NULL))
     }
 
     #[pyo3(name = "pop")]
@@ -1492,9 +1506,11 @@ impl Board {
 
         let mut rust_board = slf.borrow_mut();
         let is_chess960 = rust_board.chess960;
-        rust_board
-            .move_stack
-            .push(m_opt.map(|m| PyMove::from_move(m, is_chess960)).unwrap_or(PyMove::NULL));
+        rust_board.move_stack.push(
+            m_opt
+                .map(|m| PyMove::from_move(m, is_chess960))
+                .unwrap_or(PyMove::NULL),
+        );
         rust_board._stack.push(board_state);
 
         Ok(())
@@ -1647,7 +1663,10 @@ impl Board {
             m.from().is_none_or(|sq| from.contains(sq)) && to.contains(m.to()) && filter(m)
         });
         let is_960 = slf.borrow().chess960;
-        Ok(moves.into_iter().map(|m| PyMove::from_move(m, is_960)).collect())
+        Ok(moves
+            .into_iter()
+            .map(|m| PyMove::from_move(m, is_960))
+            .collect())
     }
 
     // Private helper for move generation

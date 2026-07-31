@@ -1,13 +1,25 @@
 // All the code here is forked from shakmaty to address the fact python-chess has more detailed errors
 
 use shakmaty::{
-    Bitboard, Board, Castles, CastlingMode, Color, EnPassant, FromSetup, Position, Role, Setup,
-    Square, attacks,
+    Bitboard, Board, Castles, CastlingMode, Color, EnPassant, Rank, Role, Setup, Square, attacks,
 };
 
 use pyo3::prelude::*;
+use std::sync::OnceLock;
 
 use bitflags::bitflags;
+
+static STATUS_CLS: OnceLock<Py<PyAny>> = OnceLock::new();
+
+pub fn get_status_cls(py: Python<'_>) -> PyResult<&Bound<'_, PyAny>> {
+    if let Some(py_obj) = STATUS_CLS.get() {
+        return Ok(py_obj.bind(py));
+    }
+    let chess = py.import("chess")?;
+    let status_cls = chess.getattr("Status")?;
+    let py_obj = STATUS_CLS.get_or_init(|| status_cls.into_any().unbind());
+    Ok(py_obj.bind(py))
+}
 
 bitflags! {
     #[derive(Default, Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -35,17 +47,53 @@ bitflags! {
     }
 }
 
+impl<'py> IntoPyObject<'py> for Status {
+    type Target = PyAny;
+    type Output = Bound<'py, PyAny>;
+    type Error = PyErr;
+
+    fn into_pyobject(self, py: Python<'py>) -> Result<Self::Output, Self::Error> {
+        let status_cls = get_status_cls(py)?;
+        status_cls.call1((self.bits(),))
+    }
+}
+
+// python-chess considers castling rights valid if at least one king is on e1/e8,
+// whereas shakmaty requires a unique king (`king_of()`).
+// Example: "RNBKKBNR w KQkq - 0 1" has 2 white kings (e1, f1). Shakmaty strips castling
+// rights to 0 causing false BAD_CASTLING_RIGHTS, but python-chess preserves 'KQ'.
+fn clean_castling_rights(setup: &Setup, mode: CastlingMode) -> Bitboard {
+    let castling = setup.castling_rights & setup.board.rooks();
+    let mut white_castling = castling & Rank::First & setup.board.white();
+    let mut black_castling = castling & Rank::Eighth & setup.board.black();
+
+    if mode == CastlingMode::Standard {
+        white_castling &= Bitboard::from(Square::A1) | Bitboard::from(Square::H1);
+        black_castling &= Bitboard::from(Square::A8) | Bitboard::from(Square::H8);
+
+        if (setup.board.white() & setup.board.kings() & Bitboard::from(Square::E1)).is_empty() {
+            white_castling = Bitboard::EMPTY;
+        }
+        if (setup.board.black() & setup.board.kings() & Bitboard::from(Square::E8)).is_empty() {
+            black_castling = Bitboard::EMPTY;
+        }
+
+        white_castling | black_castling
+    } else {
+        Castles::from_setup(setup, mode)
+            .map_or_else(|c| c.castling_rights(), |c| c.castling_rights())
+    }
+}
+
 // from shakmaty, renamed from Chess::from_setup_unchecked
 pub fn status(setup: Setup, mode: CastlingMode) -> Status {
     let mut errors = Status::empty();
 
-    let castling_rights = match Castles::from_setup(&setup, mode) {
-        Ok(castles) => castles.castling_rights(),
-        Err(castles) => {
-            errors |= Status::BAD_CASTLING_RIGHTS;
-            castles.castling_rights()
-        }
-    };
+    let clean_rights = clean_castling_rights(&setup, mode);
+
+    if setup.castling_rights != clean_rights {
+        errors |= Status::BAD_CASTLING_RIGHTS;
+    }
 
     let ep = match EnPassant::from_setup(&setup) {
         Ok(e) => e,
@@ -56,7 +104,7 @@ pub fn status(setup: Setup, mode: CastlingMode) -> Status {
     };
 
     let checked_setup = Setup {
-        castling_rights,
+        castling_rights: clean_rights,
         ep_square: ep.map(Into::into),
         ..setup
     };
