@@ -599,6 +599,22 @@ impl Board {
         Self::gen_legal_moves_and_filter(slf, from_mask, to_mask, |m| m.is_en_passant())
     }
 
+    fn has_pseudo_legal_en_passant(slf: &Bound<'_, Self>) -> PyResult<bool> {
+        if slf.borrow().ep_square.is_none() {
+            return Ok(false);
+        }
+        let ep_moves = Self::generate_pseudo_legal_ep(slf, Bitboard::FULL.0, Bitboard::FULL.0)?;
+        Ok(!ep_moves.is_empty())
+    }
+
+    fn has_legal_en_passant(slf: &Bound<'_, Self>) -> PyResult<bool> {
+        if slf.borrow().ep_square.is_none() {
+            return Ok(false);
+        }
+        let ep_moves = Self::generate_legal_ep(slf, Bitboard::FULL.0, Bitboard::FULL.0)?;
+        Ok(!ep_moves.is_empty())
+    }
+
     fn is_check(slf: &Bound<'_, Self>) -> PyResult<bool> {
         Ok(Self::try_shakmaty(slf)?.is_check())
     }
