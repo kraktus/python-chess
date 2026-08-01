@@ -372,6 +372,16 @@ impl BaseBoard {
         Ok(())
     }
 
+    #[classmethod]
+    fn from_chess960_pos(
+        _cls: &Bound<'_, PyType>,
+        scharnagl: u32,
+    ) -> PyResult<Self> {
+        let mut b = Self::empty();
+        b.set_chess960_pos(scharnagl)?;
+        Ok(b)
+    }
+
     #[pyo3(signature = (promoted=None))]
     pub fn board_fen(&self, promoted: Option<bool>) -> PyResult<String> {
         self.board()?
@@ -608,6 +618,36 @@ impl BaseBoard {
         base_board.by_color.black = white;
         base_board
     }
+
+    pub fn apply_mirror(&mut self) -> PyResult<()> {
+        self.by_role.as_mut().for_each(|r| *r = r.flip_vertical());
+        self.by_color.as_mut().for_each(|c| *c = c.flip_vertical());
+        self.promoted = self.promoted.flip_vertical();
+        let white = self.by_color.white;
+        let black = self.by_color.black;
+        self.by_color.white = black;
+        self.by_color.black = white;
+        Ok(())
+    }
+
+    pub fn clear_board(&mut self) {
+        let (roles, colors) = shakmaty::Board::empty().into_bitboards();
+        self.by_role = roles;
+        self.by_color = colors;
+        self.promoted = shakmaty::Bitboard(0);
+    }
+
+    pub fn reset_board(&mut self) {
+        let (roles, colors) = shakmaty::Board::new().into_bitboards();
+        self.by_role = roles;
+        self.by_color = colors;
+        self.promoted = shakmaty::Bitboard(0);
+    }
+
+    #[pyo3(name = "pin_mask")]
+    pub fn py_pin_mask(&self, color: PyColor, square: PySquare) -> u64 {
+        self.pin_mask(color.0, square.0).0
+    }
 }
 
 impl BaseBoard {
@@ -658,31 +698,6 @@ impl BaseBoard {
             by_color: colors,
             promoted: Bitboard::EMPTY,
         }
-    }
-
-    pub fn apply_mirror(&mut self) -> PyResult<()> {
-        self.by_role.as_mut().for_each(|r| *r = r.flip_vertical());
-        self.by_color.as_mut().for_each(|c| *c = c.flip_vertical());
-        self.promoted = self.promoted.flip_vertical();
-        let white = self.by_color.white;
-        let black = self.by_color.black;
-        self.by_color.white = black;
-        self.by_color.black = white;
-        Ok(())
-    }
-
-    pub fn clear_board(&mut self) {
-        let (roles, colors) = shakmaty::Board::empty().into_bitboards();
-        self.by_role = roles;
-        self.by_color = colors;
-        self.promoted = shakmaty::Bitboard(0);
-    }
-
-    pub fn reset_board(&mut self) {
-        let (roles, colors) = shakmaty::Board::new().into_bitboards();
-        self.by_role = roles;
-        self.by_color = colors;
-        self.promoted = shakmaty::Bitboard(0);
     }
 
     pub fn rooks(&self) -> Bitboard {
