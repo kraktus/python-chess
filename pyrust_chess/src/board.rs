@@ -68,7 +68,11 @@ impl LegalMoveGenerator {
 
     fn __iter__(&self, py: Python<'_>) -> PyResult<LegalMoveGeneratorIter> {
         let board = self.board.bind(py);
-        let moves = Board::generate_legal_moves(board, IntoSquareSet(Bitboard::FULL), IntoSquareSet(Bitboard::FULL))?;
+        let moves = Board::generate_legal_moves(
+            board,
+            IntoSquareSet(Bitboard::FULL),
+            IntoSquareSet(Bitboard::FULL),
+        )?;
         Ok(LegalMoveGeneratorIter {
             moves: moves.into_iter(),
         })
@@ -169,12 +173,6 @@ pub struct Board {
 
 #[pymethods]
 impl Board {
-    // #[getter]
-    // fn __class__<'py>(slf: &Bound<'py, Self>) -> PyResult<Bound<'py, PyAny>> {
-    //     let chess = slf.py().import("chess")?;
-    //     chess.getattr("Board")
-    // }
-
     // #[classmethod]
     // fn __subclasscheck__(_cls: &Bound<'_, PyType>, subclass: &Bound<'_, PyType>) -> PyResult<bool> {
     //     let name = subclass.name()?;
@@ -501,13 +499,10 @@ impl Board {
         })
     }
 
-    fn __repr__(slf: &Bound<'_, Self>,) -> String {
+    fn __repr__(slf: &Bound<'_, Self>) -> String {
         let board = slf.borrow();
-        let fen = Self::fen(slf, false, "legal", None)
-            .unwrap_or_else(|e| format!("{e:?}"));
-        format!(
-            "Board('{fen}')",
-        )
+        let fen = Self::fen(slf, false, "legal", None).unwrap_or_else(|e| format!("{e:?}"));
+        format!("Board('{fen}')",)
     }
 
     #[pyo3(signature = (*, shredder=false, en_passant="legal", promoted=None, **operations))]
@@ -648,7 +643,11 @@ impl Board {
         if slf.borrow().ep_square.is_none() {
             return Ok(false);
         }
-        let ep_moves = Self::generate_pseudo_legal_ep(slf, IntoSquareSet(Bitboard::FULL), IntoSquareSet(Bitboard::FULL))?;
+        let ep_moves = Self::generate_pseudo_legal_ep(
+            slf,
+            IntoSquareSet(Bitboard::FULL),
+            IntoSquareSet(Bitboard::FULL),
+        )?;
         Ok(!ep_moves.is_empty())
     }
 
@@ -656,7 +655,11 @@ impl Board {
         if slf.borrow().ep_square.is_none() {
             return Ok(false);
         }
-        let ep_moves = Self::generate_legal_ep(slf, IntoSquareSet(Bitboard::FULL), IntoSquareSet(Bitboard::FULL))?;
+        let ep_moves = Self::generate_legal_ep(
+            slf,
+            IntoSquareSet(Bitboard::FULL),
+            IntoSquareSet(Bitboard::FULL),
+        )?;
         Ok(!ep_moves.is_empty())
     }
 
@@ -1392,7 +1395,11 @@ impl Board {
 
     #[pyo3(signature = (move_obj))]
     fn is_pseudo_legal(slf: &Bound<'_, Self>, move_obj: PyMove) -> PyResult<bool> {
-        let moves = Self::generate_pseudo_legal_moves(slf, IntoSquareSet(Bitboard::FULL), IntoSquareSet(Bitboard::FULL))?;
+        let moves = Self::generate_pseudo_legal_moves(
+            slf,
+            IntoSquareSet(Bitboard::FULL),
+            IntoSquareSet(Bitboard::FULL),
+        )?;
         Ok(moves.contains(&move_obj))
     }
 
@@ -1984,7 +1991,11 @@ impl PseudoLegalMoveGenerator {
 
     fn __bool__(&self, py: Python<'_>) -> PyResult<bool> {
         let board = self.board.bind(py);
-        let moves = Board::generate_pseudo_legal_moves(board, IntoSquareSet(Bitboard::FULL), IntoSquareSet(Bitboard::FULL))?;
+        let moves = Board::generate_pseudo_legal_moves(
+            board,
+            IntoSquareSet(Bitboard::FULL),
+            IntoSquareSet(Bitboard::FULL),
+        )?;
         Ok(!moves.is_empty())
     }
 
@@ -1994,13 +2005,21 @@ impl PseudoLegalMoveGenerator {
 
     fn count(&self, py: Python<'_>) -> PyResult<usize> {
         let board = self.board.bind(py);
-        let moves = Board::generate_pseudo_legal_moves(board, IntoSquareSet(Bitboard::FULL), IntoSquareSet(Bitboard::FULL))?;
+        let moves = Board::generate_pseudo_legal_moves(
+            board,
+            IntoSquareSet(Bitboard::FULL),
+            IntoSquareSet(Bitboard::FULL),
+        )?;
         Ok(moves.len())
     }
 
     fn __iter__(&self, py: Python<'_>) -> PyResult<PseudoLegalMoveGeneratorIter> {
         let board = self.board.bind(py);
-        let moves = Board::generate_pseudo_legal_moves(board, IntoSquareSet(Bitboard::FULL), IntoSquareSet(Bitboard::FULL))?;
+        let moves = Board::generate_pseudo_legal_moves(
+            board,
+            IntoSquareSet(Bitboard::FULL),
+            IntoSquareSet(Bitboard::FULL),
+        )?;
         Ok(PseudoLegalMoveGeneratorIter {
             moves: moves.into_iter(),
         })

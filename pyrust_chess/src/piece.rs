@@ -93,16 +93,6 @@ impl PyPiece {
         self.symbol()
     }
 
-    // do not implement for now
-    // fn _repr_svg_(slf: PyRef<'_, Self>, py: Python<'_>) -> PyResult<String> {
-    //     let chess_svg = py.import("chess.svg")?;
-    //     let p = slf.into_py_any(py)?;
-    //     let kwargs = pyo3::types::PyDict::new(py);
-    //     kwargs.set_item("size", 45)?;
-    //     let svg = chess_svg.call_method("piece", (p,), Some(&kwargs))?;
-    //     svg.extract()
-    // }
-
     #[classmethod]
     fn from_symbol(_cls: &Bound<'_, PyType>, ch: char) -> PyResult<Self> {
         match Piece::from_char(ch) {

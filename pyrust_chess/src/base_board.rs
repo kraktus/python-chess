@@ -87,12 +87,6 @@ impl BaseBoard {
 
 #[pymethods]
 impl BaseBoard {
-    #[getter]
-    fn __class__<'py>(slf: &Bound<'py, Self>) -> PyResult<Bound<'py, PyAny>> {
-        let chess = slf.py().import("chess")?;
-        chess.getattr("BaseBoard")
-    }
-
     #[new]
     #[pyo3(signature = (board_fen=Some("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR")))]
     fn py_new(board_fen: Option<&str>) -> PyResult<Self> {

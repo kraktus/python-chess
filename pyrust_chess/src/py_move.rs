@@ -8,8 +8,8 @@ use pyo3::types::PyType;
 use shakmaty::uci::UciMove;
 use shakmaty::{CastlingMode, Chess, Move, Role, Square};
 
-use crate::IllegalMoveError;
 use crate::util::{PyRole, PySquare};
+use crate::{IllegalMoveError, InvalidMoveError};
 
 #[pyclass(module = "pyrust_chess", from_py_object, eq, name = "Move")]
 #[derive(Clone, PartialEq, Eq, Hash, Debug)]
@@ -224,12 +224,7 @@ impl PyMove {
         if let Ok(inner) = UciMove::from_str(uci) {
             Ok(PyMove { inner })
         } else {
-            let py = cls.py();
-            let chess_module = py.import("chess")?;
-            let invalid_move_error = chess_module.getattr("InvalidMoveError")?;
-            Err(PyErr::from_value(
-                invalid_move_error.call1((format!("invalid uci: {uci:?}"),))?,
-            ))
+            Err(InvalidMoveError::new_err(format!("invalid uci: {uci:?}")))
         }
     }
 

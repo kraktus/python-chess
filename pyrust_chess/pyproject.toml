@@ -12,10 +12,6 @@ classifiers = [
 ]
 dynamic = ["version"]
 
-dependencies = [
-    "python-chess>=1",
-]
-
 [dependency-groups]
 dev = [
     "maturin>=1.14.1",

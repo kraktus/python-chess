@@ -5,23 +5,11 @@ use shakmaty::{
 };
 
 use pyo3::prelude::*;
-use std::sync::OnceLock;
 
 use bitflags::bitflags;
 
-static STATUS_CLS: OnceLock<Py<PyAny>> = OnceLock::new();
-
-pub fn get_status_cls(py: Python<'_>) -> PyResult<&Bound<'_, PyAny>> {
-    if let Some(py_obj) = STATUS_CLS.get() {
-        return Ok(py_obj.bind(py));
-    }
-    let chess = py.import("chess")?;
-    let status_cls = chess.getattr("Status")?;
-    let py_obj = STATUS_CLS.get_or_init(|| status_cls.into_any().unbind());
-    Ok(py_obj.bind(py))
-}
-
 bitflags! {
+    #[pyclass(from_py_object)]
     #[derive(Default, Debug, Clone, Copy, PartialEq, Eq, Hash)]
     pub struct Status: u32 {
     const VALID = 0;
@@ -47,14 +35,109 @@ bitflags! {
     }
 }
 
-impl<'py> IntoPyObject<'py> for Status {
-    type Target = PyAny;
-    type Output = Bound<'py, PyAny>;
-    type Error = PyErr;
+#[pymethods]
+impl Status {
+    #[classattr]
+    const STATUS_VALID: Self = Self::VALID;
+    #[classattr]
+    const STATUS_NO_WHITE_KING: Self = Self::NO_WHITE_KING;
+    #[classattr]
+    const STATUS_NO_BLACK_KING: Self = Self::NO_BLACK_KING;
+    #[classattr]
+    const STATUS_TOO_MANY_KINGS: Self = Self::TOO_MANY_KINGS;
+    #[classattr]
+    const STATUS_TOO_MANY_WHITE_PAWNS: Self = Self::TOO_MANY_WHITE_PAWNS;
+    #[classattr]
+    const STATUS_TOO_MANY_BLACK_PAWNS: Self = Self::TOO_MANY_BLACK_PAWNS;
+    #[classattr]
+    const STATUS_PAWNS_ON_BACKRANK: Self = Self::PAWNS_ON_BACKRANK;
+    #[classattr]
+    const STATUS_TOO_MANY_WHITE_PIECES: Self = Self::TOO_MANY_WHITE_PIECES;
+    #[classattr]
+    const STATUS_TOO_MANY_BLACK_PIECES: Self = Self::TOO_MANY_BLACK_PIECES;
+    #[classattr]
+    const STATUS_BAD_CASTLING_RIGHTS: Self = Self::BAD_CASTLING_RIGHTS;
+    #[classattr]
+    const STATUS_INVALID_EP_SQUARE: Self = Self::INVALID_EP_SQUARE;
+    #[classattr]
+    const STATUS_OPPOSITE_CHECK: Self = Self::OPPOSITE_CHECK;
+    #[classattr]
+    const STATUS_EMPTY: Self = Self::EMPTY;
+    #[classattr]
+    const STATUS_RACE_CHECK: Self = Self::RACE_CHECK;
+    #[classattr]
+    const STATUS_RACE_OVER: Self = Self::RACE_OVER;
+    #[classattr]
+    const STATUS_RACE_MATERIAL: Self = Self::RACE_MATERIAL;
+    #[classattr]
+    const STATUS_TOO_MANY_CHECKERS: Self = Self::TOO_MANY_CHECKERS;
+    #[classattr]
+    const STATUS_IMPOSSIBLE_CHECK: Self = Self::IMPOSSIBLE_CHECK;
 
-    fn into_pyobject(self, py: Python<'py>) -> Result<Self::Output, Self::Error> {
-        let status_cls = get_status_cls(py)?;
-        status_cls.call1((self.bits(),))
+    pub fn __eq__(&self, other: &Self) -> bool {
+        self == other
+    }
+
+    pub fn __and__(&self, other: &Self) -> Self {
+        self.intersection(*other)
+    }
+
+    pub fn __rand__(&self, other: &Self) -> Self {
+        self.intersection(*other)
+    }
+
+    pub fn __or__(&self, other: &Self) -> Self {
+        self.union(*other)
+    }
+
+    pub fn __ror__(&self, other: &Self) -> Self {
+        self.union(*other)
+    }
+
+    pub fn __xor__(&self, other: &Self) -> Self {
+        Self::from_bits_retain(self.bits() ^ other.bits())
+    }
+
+    pub fn __rxor__(&self, other: &Self) -> Self {
+        Self::from_bits_retain(self.bits() ^ other.bits())
+    }
+
+    pub fn __invert__(&self) -> Self {
+        Self::from_bits_retain(!self.bits())
+    }
+
+    pub fn __bool__(&self) -> bool {
+        !self.is_empty()
+    }
+
+    pub fn __int__(&self) -> u32 {
+        self.bits()
+    }
+
+    pub fn __repr__(&self) -> String {
+        let bits = self.bits();
+        let mut names: Vec<String> = Vec::new();
+        let mut known = 0u32;
+        for (name, flag) in self.iter_names() {
+            names.push(name.to_owned());
+            known |= flag.bits();
+        }
+        let extra = bits & !known;
+        if names.is_empty() {
+            if bits == 0 {
+                return "<Status.VALID: 0>".to_string();
+            }
+            return format!("<Status: {bits}>");
+        }
+        let mut body = names.join("|");
+        if extra != 0 {
+            body.push_str(&format!("|{extra}"));
+        }
+        format!("<Status.{body}: {bits}>")
+    }
+
+    pub fn __str__(&self) -> String {
+        format!("{}", self.bits())
     }
 }
 

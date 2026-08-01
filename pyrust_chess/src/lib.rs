@@ -11,6 +11,7 @@ pub mod square_set;
 pub mod util;
 
 use base_board::{BaseBoard, OccupiedCo};
+use board_status::Status;
 use outcome::{PyOutcome, PyTermination};
 use piece::PyPiece;
 use py_move::PyMove;
@@ -26,6 +27,7 @@ pyo3::create_exception!(pyrust_chess, AmbiguousMoveError, PyValueError);
 #[pymodule]
 fn pyrust_chess(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<SquareSet>()?;
+    m.add_class::<Status>()?;
     m.add_class::<SquareSetIter>()?;
     m.add_class::<SquareSetRevIter>()?;
     m.add_class::<CarryRipplerIter>()?;

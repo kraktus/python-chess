@@ -11,6 +11,17 @@ def _patch_from_module(dst_module, src_module, names):
         except Exception as e:
             print(f"Couldn't monkey-patch [{name}], err: {e}")
 
+
+def patch_status(src_module, dst_module):
+    """
+    Replace the STATUS_* module-level constants on dst_module with the ones
+    defined on the pyrust_chess.Status class.
+    """
+    status_cls = getattr(src_module, "Status")
+    names = [name for name in dir(dst_module) if name.startswith("STATUS_")]
+    _patch_from_module(dst_module=dst_module, src_module=status_cls, names=names)
+
+
 # cannot reference itself as module
 def patch_supported(src_module, dst_module):
     _patch_from_module(
@@ -19,3 +30,4 @@ def patch_supported(src_module, dst_module):
         # DO NOT MONKEY-PATCH Board and BaseBoard
         names=["SquareSet", "Piece", "Move", "InvalidMoveError", "AmbiguousMoveError", "IllegalMoveError", "Termination", "Outcome"],
     )
+    patch_status(src_module=src_module, dst_module=dst_module)
