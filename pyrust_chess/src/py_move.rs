@@ -220,7 +220,7 @@ impl PyMove {
     }
 
     #[classmethod]
-    fn from_uci(_cls: &Bound<'_, PyType>,uci: &str) -> PyResult<Self> {
+    fn from_uci(_cls: &Bound<'_, PyType>, uci: &str) -> PyResult<Self> {
         if let Ok(inner) = UciMove::from_str(uci) {
             Ok(PyMove { inner })
         } else {

@@ -1,7 +1,7 @@
 use crate::piece::PyPiece;
 use crate::square_set::SquareSet;
 use crate::util::{IntoSquareSet, PyColor, PyRole, PySquare};
-use pyo3::exceptions::{PyIndexError, PyNotImplementedError, PyValueError};
+use pyo3::exceptions::{PyIndexError, PyValueError};
 use pyo3::prelude::*;
 use pyo3::types::PyType;
 use shakmaty::{Bitboard, Board, Color, File, Piece, Rank, Role, Square};
@@ -373,10 +373,7 @@ impl BaseBoard {
     }
 
     #[classmethod]
-    fn from_chess960_pos(
-        _cls: &Bound<'_, PyType>,
-        scharnagl: u32,
-    ) -> PyResult<Self> {
+    fn from_chess960_pos(_cls: &Bound<'_, PyType>, scharnagl: u32) -> PyResult<Self> {
         let mut b = Self::empty();
         b.set_chess960_pos(scharnagl)?;
         Ok(b)
@@ -578,10 +575,17 @@ impl BaseBoard {
     }
 
     pub fn apply_transform(&mut self, f: &Bound<'_, PyAny>) -> PyResult<()> {
-        let _ = f;
-        Err(PyNotImplementedError::new_err(
-            "BaseBoard.apply_transform() requires calling Python, unsupported in rust backend",
-        ))
+        for bb in self.by_role.iter_mut() {
+            let res = f.call1((bb.0,))?;
+            *bb = Bitboard(res.extract()?);
+        }
+        for bb in self.by_color.iter_mut() {
+            let res = f.call1((bb.0,))?;
+            *bb = Bitboard(res.extract()?);
+        }
+        let res = f.call1((self.promoted.0,))?;
+        self.promoted = Bitboard(res.extract()?);
+        Ok(())
     }
 
     pub fn chess960_pos(&self) -> Option<u32> {
@@ -595,10 +599,9 @@ impl BaseBoard {
     }
 
     fn transform(&self, f: &Bound<'_, PyAny>) -> PyResult<Self> {
-        let _ = f;
-        Err(PyNotImplementedError::new_err(
-            "BaseBoard.transform() requires calling Python, unsupported in rust backend",
-        ))
+        let mut board = self.clone();
+        board.apply_transform(f)?;
+        Ok(board)
     }
 
     fn mirror(&self) -> Self {
