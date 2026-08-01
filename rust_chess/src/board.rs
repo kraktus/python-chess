@@ -169,29 +169,29 @@ pub struct Board {
 
 #[pymethods]
 impl Board {
-    #[getter]
-    fn __class__<'py>(slf: &Bound<'py, Self>) -> PyResult<Bound<'py, PyAny>> {
-        let chess = slf.py().import("chess")?;
-        chess.getattr("Board")
-    }
+    // #[getter]
+    // fn __class__<'py>(slf: &Bound<'py, Self>) -> PyResult<Bound<'py, PyAny>> {
+    //     let chess = slf.py().import("chess")?;
+    //     chess.getattr("Board")
+    // }
 
-    #[classmethod]
-    fn __subclasscheck__(_cls: &Bound<'_, PyType>, subclass: &Bound<'_, PyType>) -> PyResult<bool> {
-        let name = subclass.name()?;
-        if name.to_string_lossy().contains("Board") {
-            return Ok(true);
-        }
-        Ok(false)
-    }
+    // #[classmethod]
+    // fn __subclasscheck__(_cls: &Bound<'_, PyType>, subclass: &Bound<'_, PyType>) -> PyResult<bool> {
+    //     let name = subclass.name()?;
+    //     if name.to_string_lossy().contains("Board") {
+    //         return Ok(true);
+    //     }
+    //     Ok(false)
+    // }
 
-    #[classmethod]
-    fn __instancecheck__(_cls: &Bound<'_, PyType>, instance: &Bound<'_, PyAny>) -> PyResult<bool> {
-        let name = instance.get_type().name()?;
-        if name.to_string_lossy().contains("Board") {
-            return Ok(true);
-        }
-        Ok(false)
-    }
+    // #[classmethod]
+    // fn __instancecheck__(_cls: &Bound<'_, PyType>, instance: &Bound<'_, PyAny>) -> PyResult<bool> {
+    //     let name = instance.get_type().name()?;
+    //     if name.to_string_lossy().contains("Board") {
+    //         return Ok(true);
+    //     }
+    //     Ok(false)
+    // }
 
     #[classattr]
     fn aliases() -> Vec<&'static str> {
@@ -499,6 +499,15 @@ impl Board {
         } else {
             fen.to_string()
         })
+    }
+
+    fn __repr__(slf: &Bound<'_, Self>,) -> String {
+        let board = slf.borrow();
+        let fen = Self::fen(slf, false, "legal", None)
+            .unwrap_or_else(|e| format!("{e:?}"));
+        format!(
+            "Board('{fen}')",
+        )
     }
 
     #[pyo3(signature = (*, shredder=false, en_passant="legal", promoted=None, **operations))]
