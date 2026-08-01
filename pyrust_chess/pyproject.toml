@@ -3,7 +3,7 @@ requires = ["maturin>=1.14,<2.0"]
 build-backend = "maturin"
 
 [project]
-name = "rust_chess"
+name = "pyrust_chess"
 requires-python = ">=3.11"
 classifiers = [
     "Programming Language :: Rust",

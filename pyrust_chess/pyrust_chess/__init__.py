@@ -1,4 +1,4 @@
-from .rust_chess import *
+from .pyrust_chess import *
 
 
 def _patch_from_module(dst_module, src_module, names):

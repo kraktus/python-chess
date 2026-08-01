@@ -1,10 +1,10 @@
-# Plan to Port SquareSet to Rust (rust_chess)
+# Plan to Port SquareSet to Rust (pyrust_chess)
 
 ## Goal
-Port all methods of the `SquareSet` class from `chess/__init__.py` to a Rust extension module `rust_chess`, using `shakmaty::Bitboard` internally for optimal performance. The external Python API, behavior, and duck-typing must remain 100% compatible with the current `python-chess` implementation. For now keep the `chess/__init__.py` unmodified, everything will be ported at once at the end of the port process.
+Port all methods of the `SquareSet` class from `chess/__init__.py` to a Rust extension module `pyrust_chess`, using `shakmaty::Bitboard` internally for optimal performance. The external Python API, behavior, and duck-typing must remain 100% compatible with the current `python-chess` implementation. For now keep the `chess/__init__.py` unmodified, everything will be ported at once at the end of the port process.
 
 ## 1. Class Definition & Initialization
-- Define `SquareSet` in `rust_chess/src/lib.rs` with `#[pyclass]`.
+- Define `SquareSet` in `pyrust_chess/src/lib.rs` with `#[pyclass]`.
 - Store the internal state as `pub bb: shakmaty::Bitboard`.
 - Implement `__new__` (or `__init__`) accepting an optional `squares` argument which can be an integer mask, another `SquareSet`, or an iterable of squares.
 - Implement the `mask` property manually with a `#[getter]` and `#[setter]` that extracts the `u64` from `bb.0` for backwards compatibility (since `Bitboard` itself is not a `pyclass`).

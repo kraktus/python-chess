@@ -17,7 +17,7 @@ const CHESS960_STARTING_POS: [Board; 960] = {
     boards
 };
 
-#[pyclass(module = "rust_chess", name = "OccupiedCo")]
+#[pyclass(module = "pyrust_chess", name = "OccupiedCo")]
 pub struct OccupiedCo {
     board: Py<BaseBoard>,
 }
@@ -56,7 +56,7 @@ impl OccupiedCo {
 #[pyclass(
     subclass,
     dict,
-    module = "rust_chess",
+    module = "pyrust_chess",
     name = "BaseBoard",
     from_py_object
 )]

@@ -1,6 +1,6 @@
 use pyo3::prelude::*;
 
-#[pyclass(module = "rust_chess", from_py_object, eq, name = "Termination")]
+#[pyclass(module = "pyrust_chess", from_py_object, eq, name = "Termination")]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 #[allow(non_camel_case_types)]
 pub enum PyTermination {
@@ -48,7 +48,7 @@ impl PyTermination {
     }
 }
 
-#[pyclass(module = "rust_chess", from_py_object, name = "Outcome")]
+#[pyclass(module = "pyrust_chess", from_py_object, name = "Outcome")]
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct PyOutcome {
     #[pyo3(get, set)]

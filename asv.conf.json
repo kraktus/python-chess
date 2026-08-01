@@ -7,7 +7,7 @@
     // TODO switch to UV after .6.6?
     "matrix": {
         "env_nobuild": {
-            "RUST_CHESS": ["0", "1"]
+            "pyrust_chess": ["0", "1"]
         }
     },
 
@@ -15,7 +15,7 @@
     "install_command":
         ["in-dir={env_dir} python -m pip install {wheel_file}",
             "python -m pip install maturin",
-            "VIRTUAL_ENV={env_dir} python -m maturin develop --manifest-path rust_chess/Cargo.toml --release"],
+            "VIRTUAL_ENV={env_dir} python -m maturin develop --manifest-path pyrust_chess/Cargo.toml --release"],
     "uninstall_command":
         ["return-code=any python -m pip uninstall -y {project}"],
     "build_command":

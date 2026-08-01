@@ -1,9 +1,9 @@
 import chess
 
-import rust_chess
-rust_chess.patch_supported(
+import pyrust_chess
+pyrust_chess.patch_supported(
     dst_module=chess,
-    src_module=rust_chess,
+    src_module=pyrust_chess,
 )
 
 board = chess.BaseBoard(chess.STARTING_BOARD_FEN)

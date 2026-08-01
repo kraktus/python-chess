@@ -19,12 +19,12 @@ use pyo3::prelude::*;
 
 use square_set::{CarryRipplerIter, SquareSet, SquareSetIter, SquareSetRevIter};
 
-pyo3::create_exception!(rust_chess, InvalidMoveError, PyValueError);
-pyo3::create_exception!(rust_chess, IllegalMoveError, PyValueError);
-pyo3::create_exception!(rust_chess, AmbiguousMoveError, PyValueError);
+pyo3::create_exception!(pyrust_chess, InvalidMoveError, PyValueError);
+pyo3::create_exception!(pyrust_chess, IllegalMoveError, PyValueError);
+pyo3::create_exception!(pyrust_chess, AmbiguousMoveError, PyValueError);
 
 #[pymodule]
-fn rust_chess(m: &Bound<'_, PyModule>) -> PyResult<()> {
+fn pyrust_chess(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<SquareSet>()?;
     m.add_class::<SquareSetIter>()?;
     m.add_class::<SquareSetRevIter>()?;

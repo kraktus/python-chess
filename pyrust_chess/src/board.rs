@@ -20,7 +20,7 @@ use crate::{AmbiguousMoveError, IllegalMoveError, InvalidMoveError};
 use pyo3::prelude::*;
 use pyo3::types::{PyDict, PyTuple, PyType};
 
-#[pyclass(module = "rust_chess", name = "LegalMoveGeneratorIter")]
+#[pyclass(module = "pyrust_chess", name = "LegalMoveGeneratorIter")]
 pub struct LegalMoveGeneratorIter {
     moves: std::vec::IntoIter<PyMove>,
 }
@@ -36,7 +36,7 @@ impl LegalMoveGeneratorIter {
     }
 }
 
-#[pyclass(module = "rust_chess", name = "LegalMoveGenerator")]
+#[pyclass(module = "pyrust_chess", name = "LegalMoveGenerator")]
 pub struct LegalMoveGenerator {
     board: Py<Board>,
 }
@@ -155,7 +155,7 @@ impl From<(&Board, &BaseBoard)> for StateBoard {
     }
 }
 
-#[pyclass(module = "rust_chess", extends=BaseBoard, subclass, dict)]
+#[pyclass(module = "pyrust_chess", extends=BaseBoard, subclass, dict)]
 pub struct Board {
     pub turn: Color,
     pub castling_rights: Bitboard,
@@ -1954,7 +1954,7 @@ impl Board {
         )
     }
 }
-#[pyclass(module = "rust_chess", name = "PseudoLegalMoveGeneratorIter")]
+#[pyclass(module = "pyrust_chess", name = "PseudoLegalMoveGeneratorIter")]
 pub struct PseudoLegalMoveGeneratorIter {
     moves: std::vec::IntoIter<PyMove>,
 }
@@ -1970,7 +1970,7 @@ impl PseudoLegalMoveGeneratorIter {
     }
 }
 
-#[pyclass(module = "rust_chess", name = "PseudoLegalMoveGenerator")]
+#[pyclass(module = "pyrust_chess", name = "PseudoLegalMoveGenerator")]
 pub struct PseudoLegalMoveGenerator {
     board: Py<Board>,
 }

@@ -21,15 +21,15 @@ import chess.svg
 import chess.syzygy
 import chess.variant
 
-USE_RUST_CHESS = os.environ.get("RUST_CHESS") == "1"
-if USE_RUST_CHESS:
-    import rust_chess
-    rust_chess.patch_supported(
+USE_pyrust_chess = os.environ.get("pyrust_chess") == "1"
+if USE_pyrust_chess:
+    import pyrust_chess
+    pyrust_chess.patch_supported(
         dst_module=chess,
-        src_module=rust_chess,
+        src_module=pyrust_chess,
     )
-    from rust_chess import BaseBoard, Board
-    # chess.Board = rust_chess.Board
+    from pyrust_chess import BaseBoard, Board
+    # chess.Board = pyrust_chess.Board
     # from chess import Board
 else:
     from chess import BaseBoard, Board
@@ -228,7 +228,7 @@ class BoardTestCase(unittest.TestCase):
         self.assertEqual(board.fen(), chess.STARTING_FEN)
         self.assertEqual(board.turn, chess.WHITE)
 
-    # @unittest.skipIf(USE_RUST_CHESS, "No fen on positions with illegal material (no king)")
+    # @unittest.skipIf(USE_pyrust_chess, "No fen on positions with illegal material (no king)")
     def test_empty(self):
         board = Board.empty()
         self.assertEqual(board.fen(), "8/8/8/8/8/8/8/8 w - - 0 1")
@@ -297,7 +297,7 @@ class BoardTestCase(unittest.TestCase):
         self.assertEqual(board.fen(), fen)
 
 
-    @unittest.skipIf(USE_RUST_CHESS, "Not able to compute pseudo-legal moves in illegal positions (wo king)")
+    @unittest.skipIf(USE_pyrust_chess, "Not able to compute pseudo-legal moves in illegal positions (wo king)")
     def test_illegal_fen_w_illegal_en_passant(self):
         # Illegal en passant square on illegal board.
         fen = "1r6/8/8/pP6/8/8/8/1K6 w - a6 0 1"
@@ -414,7 +414,7 @@ class BoardTestCase(unittest.TestCase):
         with self.assertRaises(chess.IllegalMoveError):
             board.parse_san("Kh1")
 
-    @unittest.skipIf(USE_RUST_CHESS, "generate_castling_moves is internal API")
+    @unittest.skipIf(USE_pyrust_chess, "generate_castling_moves is internal API")
     def test_ninesixty_castling(self):
         fen = "3r1k1r/4pp2/8/8/8/8/8/4RKR1 w Gd - 1 1"
         board = Board(fen, chess960=True)
@@ -618,7 +618,7 @@ class BoardTestCase(unittest.TestCase):
         board.push_san("d1=Q+")
         self.assertEqual(board.fen(), "8/8/8/3R1P2/8/2k2K2/8/r2q4 w - - 0 83")
 
-    @unittest.skipIf(USE_RUST_CHESS, "Nd5 is not ambigous in shakmaty, but illegal because not parsed as a capture")
+    @unittest.skipIf(USE_pyrust_chess, "Nd5 is not ambigous in shakmaty, but illegal because not parsed as a capture")
     def test_ambiguous_move(self):
         board = Board("8/8/1n6/3R1P2/1n6/2k2K2/3p4/r6r b - - 0 82")
         with self.assertRaises(chess.AmbiguousMoveError):
@@ -940,7 +940,7 @@ class BoardTestCase(unittest.TestCase):
         self.assertEqual(board.piece_at(chess.G1), chess.Piece(chess.KING, chess.WHITE))
         self.assertEqual(board.piece_at(chess.C1), chess.Piece(chess.ROOK, chess.WHITE))
 
-    @unittest.skipIf(USE_RUST_CHESS, "rust_chess throws on push when move is not legal")
+    @unittest.skipIf(USE_pyrust_chess, "pyrust_chess throws on push when move is not legal")
     def test_move_generation_bug(self):
         # Specific problematic position.
         fen = "4kb1r/3b1ppp/8/1r2pNB1/6P1/pP2QP2/P6P/4R1K1 w k - 0 27"
@@ -1063,7 +1063,7 @@ class BoardTestCase(unittest.TestCase):
         board = Board("8/8/5k2/p1q5/PP1rp1P1/3P1N2/2RK1r2/5nN1 w - - 0 3")
         self.assertEqual(board.status(), chess.STATUS_VALID)
 
-    @unittest.skipIf(USE_RUST_CHESS, "one king is not legal position")
+    @unittest.skipIf(USE_pyrust_chess, "one king is not legal position")
     def test_one_king_movegen(self):
         board = Board.empty()
         board.set_piece_at(chess.A1, chess.Piece(chess.KING, chess.WHITE))
@@ -1650,7 +1650,7 @@ class BoardTestCase(unittest.TestCase):
         self.assertIn(move, board.generate_legal_moves())
         self.assertIn(move, board.generate_legal_ep())
 
-    @unittest.skipIf(USE_RUST_CHESS, "generate_pseudo_legal_captures is internal API")
+    @unittest.skipIf(USE_pyrust_chess, "generate_pseudo_legal_captures is internal API")
     def test_capture_generation(self):
         board = Board("3q1rk1/ppp1p1pp/4b3/3pPp2/3P4/1K1n4/PPQ2PPP/3b1BNR w - f6 0 1")
 
@@ -2749,7 +2749,7 @@ class PgnTestCase(unittest.TestCase):
         self.assertEqual(list(reversed(game.mainline_moves())), list(reversed(moves)))
         self.assertEqual(str(game.mainline_moves()), "1. d3 Nf6 2. e4")
 
-    @unittest.skipUnless(USE_RUST_CHESS, "LAN support is not suppored for PGN parsing")
+    @unittest.skipUnless(USE_pyrust_chess, "LAN support is not suppored for PGN parsing")
     def test_lan(self):
         pgn = io.StringIO("1. e2-e4")
         game = chess.pgn.read_game(pgn)
@@ -4397,7 +4397,7 @@ class GaviotaTestCase(unittest.TestCase):
 
 class SvgTestCase(unittest.TestCase):
 
-    @unittest.skipIf(USE_RUST_CHESS, "_repr_svg_ is internal API, don't consider it")
+    @unittest.skipIf(USE_pyrust_chess, "_repr_svg_ is internal API, don't consider it")
     def test_svg_board(self):
         svg = BaseBoard("4k3/8/8/8/8/8/8/4KB2")._repr_svg_()
         self.assertIn("white bishop", svg)

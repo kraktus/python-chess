@@ -4,7 +4,7 @@ use pyo3::types::PyType;
 use shakmaty::{Color, Piece, Role};
 use std::convert::TryFrom;
 
-#[pyclass(module = "rust_chess", from_py_object, eq, name = "Piece")]
+#[pyclass(module = "pyrust_chess", from_py_object, eq, name = "Piece")]
 #[derive(Clone, Copy, PartialEq, Eq, Hash)]
 pub struct PyPiece(pub Piece);
 

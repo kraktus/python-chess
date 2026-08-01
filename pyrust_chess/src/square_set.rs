@@ -6,7 +6,7 @@ use shakmaty::Bitboard;
 
 use crate::util::{IntoSquareSet, PySquare, extract_mask};
 
-#[pyclass(module = "rust_chess", from_py_object)]
+#[pyclass(module = "pyrust_chess", from_py_object)]
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub struct SquareSet {
     pub bb: Bitboard,
@@ -298,7 +298,7 @@ impl SquareSet {
     }
 }
 
-#[pyclass(module = "rust_chess")]
+#[pyclass(module = "pyrust_chess")]
 pub struct SquareSetIter {
     pub mask: u64,
 }
@@ -320,7 +320,7 @@ impl SquareSetIter {
     }
 }
 
-#[pyclass(module = "rust_chess")]
+#[pyclass(module = "pyrust_chess")]
 pub struct SquareSetRevIter {
     pub mask: u64,
 }
@@ -342,7 +342,7 @@ impl SquareSetRevIter {
     }
 }
 
-#[pyclass(module = "rust_chess")]
+#[pyclass(module = "pyrust_chess")]
 pub struct CarryRipplerIter {
     mask: u64,
     subset: u64,

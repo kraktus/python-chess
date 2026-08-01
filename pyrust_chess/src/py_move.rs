@@ -11,7 +11,7 @@ use shakmaty::{CastlingMode, Chess, Move, Role, Square};
 use crate::IllegalMoveError;
 use crate::util::{PyRole, PySquare};
 
-#[pyclass(module = "rust_chess", from_py_object, eq, name = "Move")]
+#[pyclass(module = "pyrust_chess", from_py_object, eq, name = "Move")]
 #[derive(Clone, PartialEq, Eq, Hash, Debug)]
 pub struct PyMove {
     pub inner: UciMove,

@@ -1,5 +1,15 @@
 #!/usr/bin/env bash
 set -e
 
-# assume we're in venv
-maturin develop -m rust_chess/Cargo.toml && python test.py && RUST_CHESS="1" python test.py
+# Activate virtualenv if not already active
+if [ -z "$VIRTUAL_ENV" ]; then
+  if [ -d ".venv" ]; then
+    source .venv/bin/activate
+  elif [ -d "env" ]; then
+    source env/bin/activate
+  elif [ -d "venv" ]; then
+    source venv/bin/activate
+  fi
+fi
+
+(cd pyrust_chess && maturin develop) && python test.py && pyrust_chess="1" python test.py
