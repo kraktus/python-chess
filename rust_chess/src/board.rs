@@ -15,7 +15,7 @@ use std::str::FromStr;
 use crate::base_board::BaseBoard;
 use crate::outcome::{PyOutcome, PyTermination};
 use crate::py_move::PyMove;
-use crate::util::{IntOrBool, PyColor, PyRole, PySquare};
+use crate::util::{IntOrBool, IntoSquareSet, PyColor, PyRole, PySquare};
 use crate::{AmbiguousMoveError, IllegalMoveError, InvalidMoveError};
 use pyo3::prelude::*;
 use pyo3::types::{PyDict, PyTuple, PyType};
@@ -68,7 +68,7 @@ impl LegalMoveGenerator {
 
     fn __iter__(&self, py: Python<'_>) -> PyResult<LegalMoveGeneratorIter> {
         let board = self.board.bind(py);
-        let moves = Board::generate_legal_moves(board, Bitboard::FULL.0, Bitboard::FULL.0)?;
+        let moves = Board::generate_legal_moves(board, IntoSquareSet(Bitboard::FULL), IntoSquareSet(Bitboard::FULL))?;
         Ok(LegalMoveGeneratorIter {
             moves: moves.into_iter(),
         })
@@ -581,56 +581,56 @@ impl Board {
         Ok(Bound::new(py, generator)?.into_any())
     }
 
-    #[pyo3(signature = (from_mask=Bitboard::FULL.0, to_mask=Bitboard::FULL.0))]
+    #[pyo3(signature = (from_mask=IntoSquareSet(Bitboard::FULL), to_mask=IntoSquareSet(Bitboard::FULL)))]
     fn generate_pseudo_legal_moves(
         slf: &Bound<'_, Self>,
-        from_mask: u64,
-        to_mask: u64,
+        from_mask: IntoSquareSet,
+        to_mask: IntoSquareSet,
     ) -> PyResult<Vec<PyMove>> {
         Self::gen_pseudo_moves_and_filter(slf, from_mask, to_mask, |_| true)
     }
 
-    #[pyo3(signature = (from_mask=Bitboard::FULL.0, to_mask=Bitboard::FULL.0))]
+    #[pyo3(signature = (from_mask=IntoSquareSet(Bitboard::FULL), to_mask=IntoSquareSet(Bitboard::FULL)))]
     fn generate_legal_moves(
         slf: &Bound<'_, Self>,
-        from_mask: u64,
-        to_mask: u64,
+        from_mask: IntoSquareSet,
+        to_mask: IntoSquareSet,
     ) -> PyResult<Vec<PyMove>> {
         Self::gen_legal_moves_and_filter(slf, from_mask, to_mask, |_| true)
     }
 
-    #[pyo3(signature = (from_mask=Bitboard::FULL.0, to_mask=Bitboard::FULL.0))]
+    #[pyo3(signature = (from_mask=IntoSquareSet(Bitboard::FULL), to_mask=IntoSquareSet(Bitboard::FULL)))]
     fn generate_castling_moves(
         slf: &Bound<'_, Self>,
-        from_mask: u64,
-        to_mask: u64,
+        from_mask: IntoSquareSet,
+        to_mask: IntoSquareSet,
     ) -> PyResult<Vec<PyMove>> {
         Self::gen_legal_moves_and_filter(slf, from_mask, to_mask, |m| m.is_castle())
     }
 
-    #[pyo3(signature = (from_mask=Bitboard::FULL.0, to_mask=Bitboard::FULL.0))]
+    #[pyo3(signature = (from_mask=IntoSquareSet(Bitboard::FULL), to_mask=IntoSquareSet(Bitboard::FULL)))]
     fn generate_pseudo_legal_ep(
         slf: &Bound<'_, Self>,
-        from_mask: u64,
-        to_mask: u64,
+        from_mask: IntoSquareSet,
+        to_mask: IntoSquareSet,
     ) -> PyResult<Vec<PyMove>> {
         Self::gen_pseudo_moves_and_filter(slf, from_mask, to_mask, |m| m.is_en_passant())
     }
 
-    #[pyo3(signature = (from_mask=Bitboard::FULL.0, to_mask=Bitboard::FULL.0))]
+    #[pyo3(signature = (from_mask=IntoSquareSet(Bitboard::FULL), to_mask=IntoSquareSet(Bitboard::FULL)))]
     fn generate_legal_captures(
         slf: &Bound<'_, Self>,
-        from_mask: u64,
-        to_mask: u64,
+        from_mask: IntoSquareSet,
+        to_mask: IntoSquareSet,
     ) -> PyResult<Vec<PyMove>> {
         Self::gen_legal_moves_and_filter(slf, from_mask, to_mask, |m| m.is_capture())
     }
 
-    #[pyo3(signature = (from_mask=Bitboard::FULL.0, to_mask=Bitboard::FULL.0))]
+    #[pyo3(signature = (from_mask=IntoSquareSet(Bitboard::FULL), to_mask=IntoSquareSet(Bitboard::FULL)))]
     fn generate_legal_ep(
         slf: &Bound<'_, Self>,
-        from_mask: u64,
-        to_mask: u64,
+        from_mask: IntoSquareSet,
+        to_mask: IntoSquareSet,
     ) -> PyResult<Vec<PyMove>> {
         Self::gen_legal_moves_and_filter(slf, from_mask, to_mask, |m| m.is_en_passant())
     }
@@ -639,7 +639,7 @@ impl Board {
         if slf.borrow().ep_square.is_none() {
             return Ok(false);
         }
-        let ep_moves = Self::generate_pseudo_legal_ep(slf, Bitboard::FULL.0, Bitboard::FULL.0)?;
+        let ep_moves = Self::generate_pseudo_legal_ep(slf, IntoSquareSet(Bitboard::FULL), IntoSquareSet(Bitboard::FULL))?;
         Ok(!ep_moves.is_empty())
     }
 
@@ -647,7 +647,7 @@ impl Board {
         if slf.borrow().ep_square.is_none() {
             return Ok(false);
         }
-        let ep_moves = Self::generate_legal_ep(slf, Bitboard::FULL.0, Bitboard::FULL.0)?;
+        let ep_moves = Self::generate_legal_ep(slf, IntoSquareSet(Bitboard::FULL), IntoSquareSet(Bitboard::FULL))?;
         Ok(!ep_moves.is_empty())
     }
 
@@ -1383,7 +1383,7 @@ impl Board {
 
     #[pyo3(signature = (move_obj))]
     fn is_pseudo_legal(slf: &Bound<'_, Self>, move_obj: PyMove) -> PyResult<bool> {
-        let moves = Self::generate_pseudo_legal_moves(slf, Bitboard::FULL.0, Bitboard::FULL.0)?;
+        let moves = Self::generate_pseudo_legal_moves(slf, IntoSquareSet(Bitboard::FULL), IntoSquareSet(Bitboard::FULL))?;
         Ok(moves.contains(&move_obj))
     }
 
@@ -1885,8 +1885,8 @@ impl Board {
     fn generate_x_moves_legal_or_pseudo_impl<F, G>(
         slf: &Bound<'_, Self>,
         pseudo_or_legal: G,
-        from_mask: u64,
-        to_mask: u64,
+        from_mask: IntoSquareSet,
+        to_mask: IntoSquareSet,
         mut filter: F,
     ) -> PyResult<Vec<PyMove>>
     where
@@ -1894,8 +1894,8 @@ impl Board {
         G: Fn(&Chess) -> MoveList,
     {
         let chess = Self::try_shakmaty(slf)?;
-        let from = Bitboard(from_mask);
-        let to = Bitboard(to_mask);
+        let from = from_mask.0;
+        let to = to_mask.0;
         let mut moves = pseudo_or_legal(&chess);
         moves.retain(|m| {
             m.from().is_none_or(|sq| from.contains(sq)) && to.contains(m.to()) && filter(m)
@@ -1910,8 +1910,8 @@ impl Board {
     // Private helper for move generation
     fn gen_pseudo_moves_and_filter<F>(
         slf: &Bound<'_, Self>,
-        from_mask: u64,
-        to_mask: u64,
+        from_mask: IntoSquareSet,
+        to_mask: IntoSquareSet,
         filter: F,
     ) -> PyResult<Vec<PyMove>>
     where
@@ -1929,8 +1929,8 @@ impl Board {
     // Private helper for move generation
     fn gen_legal_moves_and_filter<F>(
         slf: &Bound<'_, Self>,
-        from_mask: u64,
-        to_mask: u64,
+        from_mask: IntoSquareSet,
+        to_mask: IntoSquareSet,
         filter: F,
     ) -> PyResult<Vec<PyMove>>
     where
@@ -1975,7 +1975,7 @@ impl PseudoLegalMoveGenerator {
 
     fn __bool__(&self, py: Python<'_>) -> PyResult<bool> {
         let board = self.board.bind(py);
-        let moves = Board::generate_pseudo_legal_moves(board, Bitboard::FULL.0, Bitboard::FULL.0)?;
+        let moves = Board::generate_pseudo_legal_moves(board, IntoSquareSet(Bitboard::FULL), IntoSquareSet(Bitboard::FULL))?;
         Ok(!moves.is_empty())
     }
 
@@ -1985,13 +1985,13 @@ impl PseudoLegalMoveGenerator {
 
     fn count(&self, py: Python<'_>) -> PyResult<usize> {
         let board = self.board.bind(py);
-        let moves = Board::generate_pseudo_legal_moves(board, Bitboard::FULL.0, Bitboard::FULL.0)?;
+        let moves = Board::generate_pseudo_legal_moves(board, IntoSquareSet(Bitboard::FULL), IntoSquareSet(Bitboard::FULL))?;
         Ok(moves.len())
     }
 
     fn __iter__(&self, py: Python<'_>) -> PyResult<PseudoLegalMoveGeneratorIter> {
         let board = self.board.bind(py);
-        let moves = Board::generate_pseudo_legal_moves(board, Bitboard::FULL.0, Bitboard::FULL.0)?;
+        let moves = Board::generate_pseudo_legal_moves(board, IntoSquareSet(Bitboard::FULL), IntoSquareSet(Bitboard::FULL))?;
         Ok(PseudoLegalMoveGeneratorIter {
             moves: moves.into_iter(),
         })
