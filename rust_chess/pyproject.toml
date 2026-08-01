@@ -1,10 +1,10 @@
 [build-system]
-requires = ["maturin>=1.13,<2.0"]
+requires = ["maturin>=1.14,<2.0"]
 build-backend = "maturin"
 
 [project]
 name = "rust_chess"
-requires-python = ">=3.8"
+requires-python = ">=3.11"
 classifiers = [
     "Programming Language :: Rust",
     "Programming Language :: Python :: Implementation :: CPython",
@@ -14,4 +14,9 @@ dynamic = ["version"]
 
 dependencies = [
     "python-chess>=1",
+]
+
+[dependency-groups]
+dev = [
+    "maturin>=1.14.1",
 ]

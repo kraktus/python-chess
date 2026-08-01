@@ -185,6 +185,7 @@ dependencies = [
 [[package]]
 name = "shakmaty"
 version = "0.30.0"
+source = "git+https://github.com/kraktus/shakmaty/?branch=force_shredder#c2f1c84a81fb3d5f90124efe8757200bbd2fc326"
 dependencies = [
  "arrayvec",
  "bitflags",

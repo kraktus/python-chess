@@ -9,7 +9,7 @@ crate-type = ["cdylib"]
 
 [dependencies]
 pyo3 = "0.28.2"
-shakmaty = {path = "../shakmaty/shakmaty"}
+shakmaty = {git = "https://github.com/kraktus/shakmaty/", branch = "force_shredder"}
 bitflags = "2"
 
 [[bin]]
