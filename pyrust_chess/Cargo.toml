@@ -2,6 +2,7 @@
 name = "pyrust_chess"
 version = "0.1.1"
 edition = "2024"
+license = "AGPL-3.0+"
 
 [lib]
 name = "pyrust_chess"

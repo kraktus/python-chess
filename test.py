@@ -24,13 +24,8 @@ import chess.variant
 USE_pyrust_chess = os.environ.get("pyrust_chess") == "1"
 if USE_pyrust_chess:
     import pyrust_chess
-    pyrust_chess.patch_supported(
-        dst_module=chess,
-        src_module=pyrust_chess,
-    )
+    pyrust_chess.patch_chess()
     from pyrust_chess import BaseBoard, Board
-    # chess.Board = pyrust_chess.Board
-    # from chess import Board
 else:
     from chess import BaseBoard, Board
 

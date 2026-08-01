@@ -12,4 +12,4 @@ if [ -z "$VIRTUAL_ENV" ]; then
   fi
 fi
 
-(cd pyrust_chess && maturin develop) && python test.py && pyrust_chess="1" python test.py
+maturin develop --manifest-path=pyrust_chess/Cargo.toml --group=pyrust_chess/pyproject.toml:dev && python test.py && pyrust_chess="1" python test.py

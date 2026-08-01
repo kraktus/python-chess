@@ -12,7 +12,7 @@ def _patch_from_module(dst_module, src_module, names):
             print(f"Couldn't monkey-patch [{name}], err: {e}")
 
 
-def patch_status(src_module, dst_module):
+def _patch_status(src_module, dst_module):
     """
     Replace the STATUS_* module-level constants on dst_module with the ones
     defined on the pyrust_chess.Status class.
@@ -23,11 +23,43 @@ def patch_status(src_module, dst_module):
 
 
 # cannot reference itself as module
-def patch_supported(src_module, dst_module):
+def _patch_supported(src_module, dst_module):
     _patch_from_module(
         dst_module=dst_module,
         src_module=src_module,
         # DO NOT MONKEY-PATCH Board and BaseBoard
-        names=["SquareSet", "Piece", "Move", "InvalidMoveError", "AmbiguousMoveError", "IllegalMoveError", "Termination", "Outcome"],
+        names=["SquareSet", "Piece", "Move", "Termination", "Outcome", "Status", "InvalidMoveError", "AmbiguousMoveError", "IllegalMoveError"],
     )
-    patch_status(src_module=src_module, dst_module=dst_module)
+    _patch_status(src_module=src_module, dst_module=dst_module)
+
+def patch_chess():
+    """
+    Monkey-patch the chess module classes with the pyrust_chess implementations.
+
+    The following classes and constants will be replaced in the chess module:
+    - SquareSet
+    - Piece
+    - Move
+    - Termination
+    - Outcome
+    - Status
+    
+    As well as the errors:
+    - InvalidMoveError
+    - AmbiguousMoveError
+    - IllegalMoveError
+    """
+    try:
+        import chess
+    except ImportError:
+        # warn
+        import warnings
+        warnings.warn("Could not import chess module, skipping monkey-patching. Consider removing `pyrust_chess.patch_chess` if you not import the `chess`/`python-chess` module.")
+
+    _patch_supported(src_module=pyrust_chess, dst_module=chess)
+
+
+
+
+
+
