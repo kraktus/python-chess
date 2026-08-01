@@ -283,9 +283,7 @@ impl BaseBoard {
         square: PySquare,
         occupied: Option<IntoSquareSet>,
     ) -> PyResult<bool> {
-        Ok(self
-            .attackers_mask(color, square, occupied.map(|x| x.0))?
-            .any())
+        Ok(self.attackers_mask(color, square, occupied)? != 0)
     }
 
     #[pyo3(signature = (color, square, occupied=None))]
@@ -296,8 +294,25 @@ impl BaseBoard {
         occupied: Option<IntoSquareSet>,
     ) -> PyResult<SquareSet> {
         Ok(SquareSet {
-            bb: self.attackers_mask(color, square, occupied.map(|x| x.0))?,
+            bb: Bitboard(self.attackers_mask(color, square, occupied)?),
         })
+    }
+
+    #[pyo3(signature = (color, square, occupied=None))]
+    fn attackers_mask(
+        &self,
+        color: PyColor,
+        square: PySquare,
+        occupied: Option<IntoSquareSet>,
+    ) -> PyResult<u64> {
+        Ok(self
+            .board()?
+            .attacks_to(
+                square.0,
+                color.0,
+                occupied.map_or_else(|| self.occupied(), |o| o.0),
+            )
+            .0)
     }
 
     fn pin(&self, color: PyColor, square: PySquare) -> SquareSet {
@@ -409,7 +424,7 @@ impl BaseBoard {
     }
 
     fn __str__(&self) -> String {
-        let mut builder = String::with_capacity(150);
+        let mut builder = String::with_capacity(9 * 7 + 8);
         for rank in (0..8).rev() {
             for file in 0..8 {
                 let square = shakmaty::Square::from_coords(
@@ -605,19 +620,6 @@ impl BaseBoard {
     #[must_use]
     pub fn occupied(&self) -> Bitboard {
         self.by_color.white | self.by_color.black
-    }
-
-    pub fn attackers_mask(
-        &self,
-        color: PyColor,
-        square: PySquare,
-        occupied: Option<Bitboard>,
-    ) -> PyResult<Bitboard> {
-        Ok(self.board()?.attacks_to(
-            square.0,
-            color.0,
-            occupied.unwrap_or_else(|| self.occupied()),
-        ))
     }
 }
 
