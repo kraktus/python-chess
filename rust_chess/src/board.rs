@@ -155,7 +155,7 @@ impl From<(&Board, &BaseBoard)> for StateBoard {
     }
 }
 
-#[pyclass(extends=BaseBoard, subclass, dict)]
+#[pyclass(module = "rust_chess", extends=BaseBoard, subclass, dict)]
 pub struct Board {
     pub turn: Color,
     pub castling_rights: Bitboard,
@@ -169,6 +169,30 @@ pub struct Board {
 
 #[pymethods]
 impl Board {
+    #[getter]
+    fn __class__<'py>(slf: &Bound<'py, Self>) -> PyResult<Bound<'py, PyAny>> {
+        let chess = slf.py().import("chess")?;
+        chess.getattr("Board")
+    }
+
+    #[classmethod]
+    fn __subclasscheck__(_cls: &Bound<'_, PyType>, subclass: &Bound<'_, PyType>) -> PyResult<bool> {
+        let name = subclass.name()?;
+        if name.to_string_lossy().contains("Board") {
+            return Ok(true);
+        }
+        Ok(false)
+    }
+
+    #[classmethod]
+    fn __instancecheck__(_cls: &Bound<'_, PyType>, instance: &Bound<'_, PyAny>) -> PyResult<bool> {
+        let name = instance.get_type().name()?;
+        if name.to_string_lossy().contains("Board") {
+            return Ok(true);
+        }
+        Ok(false)
+    }
+
     #[classattr]
     fn aliases() -> Vec<&'static str> {
         vec![
@@ -1384,6 +1408,97 @@ impl Board {
         let py_board = slf.call_method0("copy")?;
         py_board.call_method0("apply_mirror")?;
         Ok(py_board.into_any().unbind())
+    }
+
+    fn _transposition_key(slf: &Bound<'_, Self>) -> PyResult<Py<PyAny>> {
+        let py = slf.py();
+        let board = slf.borrow();
+        let turn = board.turn.is_white();
+        let base = board.into_super();
+
+        let pawns = base.by_role.pawn.0;
+        let knights = base.by_role.knight.0;
+        let bishops = base.by_role.bishop.0;
+        let rooks = base.by_role.rook.0;
+        let queens = base.by_role.queen.0;
+        let kings = base.by_role.king.0;
+        let promoted = base.promoted.0;
+        let white_occ = base.by_color.white.0;
+        let black_occ = base.by_color.black.0;
+
+        drop(base);
+
+        let clean_cr = Self::clean_castling_rights(slf)?.castling_rights().0;
+        let ep = if Self::has_legal_en_passant(slf)? {
+            slf.borrow().ep_square.map(|sq| sq as u8)
+        } else {
+            None
+        };
+
+        let tuple = (
+            pawns,
+            knights,
+            bishops,
+            rooks,
+            queens,
+            kings,
+            promoted,
+            white_occ,
+            black_occ,
+            turn,
+            clean_cr,
+            ep,
+        );
+
+        Ok(tuple.into_pyobject(py)?.into_any().unbind())
+    }
+
+    fn __eq__(slf: &Bound<'_, Self>, other: &Bound<'_, PyAny>) -> PyResult<Py<PyAny>> {
+        let py = slf.py();
+        let py_bool = |val: bool| pyo3::types::PyBool::new(py, val).to_owned().into_any().unbind();
+
+        let h1 = slf.hasattr("_transposition_key")?;
+        let h2 = other.hasattr("_transposition_key")?;
+
+        if h1 && h2 {
+            let hm1 = slf.getattr("halfmove_clock").and_then(|v| v.extract::<u32>()).ok();
+            let hm2 = other.getattr("halfmove_clock").and_then(|v| v.extract::<u32>()).ok();
+            let fm1 = slf.getattr("fullmove_number").and_then(|v| v.extract::<u32>()).ok();
+            let fm2 = other.getattr("fullmove_number").and_then(|v| v.extract::<u32>()).ok();
+            if hm1 != hm2 || fm1 != fm2 {
+                return Ok(py_bool(false));
+            }
+
+            let uci1 = slf.getattr("uci_variant").and_then(|v| v.extract::<Option<String>>()).ok().flatten();
+            let uci2 = other.getattr("uci_variant").and_then(|v| v.extract::<Option<String>>()).ok().flatten();
+            if uci1 != uci2 {
+                return Ok(py_bool(false));
+            }
+
+            let key1 = slf.call_method0("_transposition_key")?;
+            let key2 = other.call_method0("_transposition_key")?;
+            let is_eq: bool = key1.call_method1("__eq__", (&key2,))?.extract()?;
+            return Ok(py_bool(is_eq));
+        }
+
+        if let Ok(other_board) = other.extract::<Bound<'_, Board>>() {
+            if slf.borrow().halfmove_clock != other_board.borrow().halfmove_clock {
+                return Ok(py_bool(false));
+            }
+            if slf.borrow().fullmove_number != other_board.borrow().fullmove_number {
+                return Ok(py_bool(false));
+            }
+
+            let key1 = slf.call_method0("_transposition_key")?;
+            let key2 = other.call_method0("_transposition_key")?;
+            let is_eq: bool = key1.call_method1("__eq__", (key2,))?.extract()?;
+            Ok(py_bool(is_eq))
+        } else if let Ok(other_base) = other.extract::<PyRef<'_, BaseBoard>>() {
+            let self_base = slf.borrow().into_super();
+            Ok(py_bool(&*self_base == &*other_base))
+        } else {
+            Ok(py.NotImplemented())
+        }
     }
 
     #[pyo3(signature = (*, claim_draw=false))]
