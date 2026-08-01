@@ -17,5 +17,5 @@ def patch_supported(src_module, dst_module):
         dst_module=dst_module,
         src_module=src_module,
         # DO NOT MONKEY-PATCH Board and BaseBoard
-        names=["SquareSet", "Piece", "Move", "InvalidMoveError", "AmbiguousMoveError", "IllegalMoveError"],
+        names=["SquareSet", "Piece", "Move", "InvalidMoveError", "AmbiguousMoveError", "IllegalMoveError", "Termination", "Outcome"],
     )

@@ -13,6 +13,7 @@ use std::num::NonZeroU32;
 use std::str::FromStr;
 
 use crate::base_board::BaseBoard;
+use crate::outcome::{PyOutcome, PyTermination};
 use crate::py_move::PyMove;
 use crate::util::{IntOrBool, PyColor, PyRole, PySquare};
 use crate::{AmbiguousMoveError, IllegalMoveError, InvalidMoveError};
@@ -1383,6 +1384,53 @@ impl Board {
         let py_board = slf.call_method0("copy")?;
         py_board.call_method0("apply_mirror")?;
         Ok(py_board.into_any().unbind())
+    }
+
+    #[pyo3(signature = (*, claim_draw=false))]
+    fn outcome(slf: &Bound<'_, Self>, claim_draw: bool) -> PyResult<Option<PyOutcome>> {
+        if slf.call_method0("is_variant_loss")?.extract::<bool>()? {
+            let winner = !slf.borrow().turn;
+            return Ok(Some(PyOutcome::new(PyTermination::VARIANT_LOSS, Some(winner.is_white()))));
+        }
+        if slf.call_method0("is_variant_win")?.extract::<bool>()? {
+            let winner = slf.borrow().turn;
+            return Ok(Some(PyOutcome::new(PyTermination::VARIANT_WIN, Some(winner.is_white()))));
+        }
+        if slf.call_method0("is_variant_draw")?.extract::<bool>()? {
+            return Ok(Some(PyOutcome::new(PyTermination::VARIANT_DRAW, None)));
+        }
+
+        if slf.call_method0("is_checkmate")?.extract::<bool>()? {
+            let winner = !slf.borrow().turn;
+            return Ok(Some(PyOutcome::new(PyTermination::CHECKMATE, Some(winner.is_white()))));
+        }
+
+        if slf.call_method0("is_insufficient_material")?.extract::<bool>()? {
+            return Ok(Some(PyOutcome::new(PyTermination::INSUFFICIENT_MATERIAL, None)));
+        }
+
+        if slf.call_method0("is_stalemate")?.extract::<bool>()? {
+            return Ok(Some(PyOutcome::new(PyTermination::STALEMATE, None)));
+        }
+
+        if slf.call_method0("is_seventyfive_moves")?.extract::<bool>()? {
+            return Ok(Some(PyOutcome::new(PyTermination::SEVENTYFIVE_MOVES, None)));
+        }
+
+        if slf.call_method0("is_fivefold_repetition")?.extract::<bool>()? {
+            return Ok(Some(PyOutcome::new(PyTermination::FIVEFOLD_REPETITION, None)));
+        }
+
+        if claim_draw {
+            if slf.call_method0("can_claim_fifty_moves")?.extract::<bool>()? {
+                return Ok(Some(PyOutcome::new(PyTermination::FIFTY_MOVES, None)));
+            }
+            if slf.call_method0("can_claim_threefold_repetition")?.extract::<bool>()? {
+                return Ok(Some(PyOutcome::new(PyTermination::THREEFOLD_REPETITION, None)));
+            }
+        }
+
+        Ok(None)
     }
 
     #[pyo3(signature = (*, claim_draw=None))]

@@ -4,12 +4,14 @@ pub mod base_board;
 pub mod board;
 pub mod board_status;
 pub mod epd_ops;
+pub mod outcome;
 pub mod piece;
 pub mod py_move;
 pub mod square_set;
 pub mod util;
 
 use base_board::{BaseBoard, OccupiedCo};
+use outcome::{PyOutcome, PyTermination};
 use piece::PyPiece;
 use py_move::PyMove;
 use pyo3::exceptions::PyValueError;
@@ -32,6 +34,8 @@ fn rust_chess(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<BaseBoard>()?;
     m.add_class::<OccupiedCo>()?;
     m.add_class::<board::Board>()?;
+    m.add_class::<PyTermination>()?;
+    m.add_class::<PyOutcome>()?;
     m.add_class::<board::LegalMoveGenerator>()?;
     m.add_class::<board::PseudoLegalMoveGenerator>()?;
     m.add("IllegalMoveError", m.py().get_type::<IllegalMoveError>())?;
