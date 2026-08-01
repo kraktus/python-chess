@@ -62,7 +62,10 @@ impl PyOutcome {
     #[new]
     #[pyo3(signature = (termination, winner))]
     pub fn new(termination: PyTermination, winner: Option<bool>) -> Self {
-        Self { termination, winner }
+        Self {
+            termination,
+            winner,
+        }
     }
 
     pub fn result(&self) -> &'static str {

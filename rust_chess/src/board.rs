@@ -472,14 +472,25 @@ impl Board {
         en_passant: &str,
         promoted: Option<bool>,
     ) -> PyResult<String> {
-        let board = slf.borrow();
-        let chess = Self::try_shakmaty_with_promoted(slf, promoted.unwrap_or_default())?;
-        let setup = chess.clone().to_setup(match en_passant {
+        let en_passant_mode = match en_passant {
             "legal" => shakmaty::EnPassantMode::Legal,
             "xfen" => shakmaty::EnPassantMode::PseudoLegal,
             // fen mode
             _ => shakmaty::EnPassantMode::Always,
-        });
+        };
+        let promoted_or_default = promoted.unwrap_or_default();
+        let setup = if matches!(
+            en_passant_mode,
+            shakmaty::EnPassantMode::Legal | shakmaty::EnPassantMode::PseudoLegal
+        ) {
+            // if the position is illegal, we default back to display the en-passant sq if set
+            // because legality does not make sense.
+            Self::try_shakmaty_with_promoted(slf, promoted_or_default)
+                .map(|chess| chess.to_setup(en_passant_mode))
+                .or_else(|_| Self::try_setup_with_promoted(slf, promoted_or_default))?
+        } else {
+            Self::try_setup_with_promoted(slf, promoted_or_default)?
+        };
 
         let fen = Fen::try_from_setup(setup)
             .map_err(|e| PyValueError::new_err(format!("unable to gen FEN: {e:?}")))?;
@@ -506,7 +517,7 @@ impl Board {
         let ep_part = parts.next().unwrap_or_default();
 
         let mut epd = format!("{board_part} {turn_part} {castling_part} {ep_part}");
-        let operations = crate::epd_ops::py_to_epd_operations(slf, operations.as_ref())?;
+        let operations = crate::epd_ops::py_to_epd_operations(operations.as_ref())?;
         let ops = crate::epd_ops::format_epd_operations(slf, &operations)?;
         if !ops.is_empty() {
             epd.push(' ');
@@ -1436,18 +1447,8 @@ impl Board {
         };
 
         let tuple = (
-            pawns,
-            knights,
-            bishops,
-            rooks,
-            queens,
-            kings,
-            promoted,
-            white_occ,
-            black_occ,
-            turn,
-            clean_cr,
-            ep,
+            pawns, knights, bishops, rooks, queens, kings, promoted, white_occ, black_occ, turn,
+            clean_cr, ep,
         );
 
         Ok(tuple.into_pyobject(py)?.into_any().unbind())
@@ -1455,22 +1456,47 @@ impl Board {
 
     fn __eq__(slf: &Bound<'_, Self>, other: &Bound<'_, PyAny>) -> PyResult<Py<PyAny>> {
         let py = slf.py();
-        let py_bool = |val: bool| pyo3::types::PyBool::new(py, val).to_owned().into_any().unbind();
+        let py_bool = |val: bool| {
+            pyo3::types::PyBool::new(py, val)
+                .to_owned()
+                .into_any()
+                .unbind()
+        };
 
         let h1 = slf.hasattr("_transposition_key")?;
         let h2 = other.hasattr("_transposition_key")?;
 
         if h1 && h2 {
-            let hm1 = slf.getattr("halfmove_clock").and_then(|v| v.extract::<u32>()).ok();
-            let hm2 = other.getattr("halfmove_clock").and_then(|v| v.extract::<u32>()).ok();
-            let fm1 = slf.getattr("fullmove_number").and_then(|v| v.extract::<u32>()).ok();
-            let fm2 = other.getattr("fullmove_number").and_then(|v| v.extract::<u32>()).ok();
+            let hm1 = slf
+                .getattr("halfmove_clock")
+                .and_then(|v| v.extract::<u32>())
+                .ok();
+            let hm2 = other
+                .getattr("halfmove_clock")
+                .and_then(|v| v.extract::<u32>())
+                .ok();
+            let fm1 = slf
+                .getattr("fullmove_number")
+                .and_then(|v| v.extract::<u32>())
+                .ok();
+            let fm2 = other
+                .getattr("fullmove_number")
+                .and_then(|v| v.extract::<u32>())
+                .ok();
             if hm1 != hm2 || fm1 != fm2 {
                 return Ok(py_bool(false));
             }
 
-            let uci1 = slf.getattr("uci_variant").and_then(|v| v.extract::<Option<String>>()).ok().flatten();
-            let uci2 = other.getattr("uci_variant").and_then(|v| v.extract::<Option<String>>()).ok().flatten();
+            let uci1 = slf
+                .getattr("uci_variant")
+                .and_then(|v| v.extract::<Option<String>>())
+                .ok()
+                .flatten();
+            let uci2 = other
+                .getattr("uci_variant")
+                .and_then(|v| v.extract::<Option<String>>())
+                .ok()
+                .flatten();
             if uci1 != uci2 {
                 return Ok(py_bool(false));
             }
@@ -1505,11 +1531,17 @@ impl Board {
     fn outcome(slf: &Bound<'_, Self>, claim_draw: bool) -> PyResult<Option<PyOutcome>> {
         if slf.call_method0("is_variant_loss")?.extract::<bool>()? {
             let winner = !slf.borrow().turn;
-            return Ok(Some(PyOutcome::new(PyTermination::VARIANT_LOSS, Some(winner.is_white()))));
+            return Ok(Some(PyOutcome::new(
+                PyTermination::VARIANT_LOSS,
+                Some(winner.is_white()),
+            )));
         }
         if slf.call_method0("is_variant_win")?.extract::<bool>()? {
             let winner = slf.borrow().turn;
-            return Ok(Some(PyOutcome::new(PyTermination::VARIANT_WIN, Some(winner.is_white()))));
+            return Ok(Some(PyOutcome::new(
+                PyTermination::VARIANT_WIN,
+                Some(winner.is_white()),
+            )));
         }
         if slf.call_method0("is_variant_draw")?.extract::<bool>()? {
             return Ok(Some(PyOutcome::new(PyTermination::VARIANT_DRAW, None)));
@@ -1517,31 +1549,58 @@ impl Board {
 
         if slf.call_method0("is_checkmate")?.extract::<bool>()? {
             let winner = !slf.borrow().turn;
-            return Ok(Some(PyOutcome::new(PyTermination::CHECKMATE, Some(winner.is_white()))));
+            return Ok(Some(PyOutcome::new(
+                PyTermination::CHECKMATE,
+                Some(winner.is_white()),
+            )));
         }
 
-        if slf.call_method0("is_insufficient_material")?.extract::<bool>()? {
-            return Ok(Some(PyOutcome::new(PyTermination::INSUFFICIENT_MATERIAL, None)));
+        if slf
+            .call_method0("is_insufficient_material")?
+            .extract::<bool>()?
+        {
+            return Ok(Some(PyOutcome::new(
+                PyTermination::INSUFFICIENT_MATERIAL,
+                None,
+            )));
         }
 
         if slf.call_method0("is_stalemate")?.extract::<bool>()? {
             return Ok(Some(PyOutcome::new(PyTermination::STALEMATE, None)));
         }
 
-        if slf.call_method0("is_seventyfive_moves")?.extract::<bool>()? {
+        if slf
+            .call_method0("is_seventyfive_moves")?
+            .extract::<bool>()?
+        {
             return Ok(Some(PyOutcome::new(PyTermination::SEVENTYFIVE_MOVES, None)));
         }
 
-        if slf.call_method0("is_fivefold_repetition")?.extract::<bool>()? {
-            return Ok(Some(PyOutcome::new(PyTermination::FIVEFOLD_REPETITION, None)));
+        if slf
+            .call_method0("is_fivefold_repetition")?
+            .extract::<bool>()?
+        {
+            return Ok(Some(PyOutcome::new(
+                PyTermination::FIVEFOLD_REPETITION,
+                None,
+            )));
         }
 
         if claim_draw {
-            if slf.call_method0("can_claim_fifty_moves")?.extract::<bool>()? {
+            if slf
+                .call_method0("can_claim_fifty_moves")?
+                .extract::<bool>()?
+            {
                 return Ok(Some(PyOutcome::new(PyTermination::FIFTY_MOVES, None)));
             }
-            if slf.call_method0("can_claim_threefold_repetition")?.extract::<bool>()? {
-                return Ok(Some(PyOutcome::new(PyTermination::THREEFOLD_REPETITION, None)));
+            if slf
+                .call_method0("can_claim_threefold_repetition")?
+                .extract::<bool>()?
+            {
+                return Ok(Some(PyOutcome::new(
+                    PyTermination::THREEFOLD_REPETITION,
+                    None,
+                )));
             }
         }
 

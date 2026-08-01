@@ -401,7 +401,6 @@ pub fn format_epd_operations(
 }
 
 pub fn py_to_epd_operations(
-    board: &Bound<'_, Board>,
     operations: Option<&Bound<'_, PyDict>>,
 ) -> PyResult<EpdOperations> {
     let Some(operations) = operations else {

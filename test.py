@@ -296,6 +296,9 @@ class BoardTestCase(unittest.TestCase):
         board = Board(fen)
         self.assertEqual(board.fen(), fen)
 
+
+    @unittest.skipIf(USE_RUST_CHESS, "Not able to compute pseudo-legal moves in illegal positions (wo king)")
+    def test_illegal_fen_w_illegal_en_passant(self):
         # Illegal en passant square on illegal board.
         fen = "1r6/8/8/pP6/8/8/8/1K6 w - a6 0 1"
         board = Board(fen)

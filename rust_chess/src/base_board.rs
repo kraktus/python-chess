@@ -401,22 +401,47 @@ impl BaseBoard {
     }
     fn __eq__(slf: &Bound<'_, Self>, other: &Bound<'_, PyAny>) -> PyResult<Py<PyAny>> {
         let py = slf.py();
-        let py_bool = |val: bool| pyo3::types::PyBool::new(py, val).to_owned().into_any().unbind();
+        let py_bool = |val: bool| {
+            pyo3::types::PyBool::new(py, val)
+                .to_owned()
+                .into_any()
+                .unbind()
+        };
 
         let h1 = slf.hasattr("_transposition_key")?;
         let h2 = other.hasattr("_transposition_key")?;
 
         if h1 && h2 {
-            let hm1 = slf.getattr("halfmove_clock").and_then(|v| v.extract::<u32>()).ok();
-            let hm2 = other.getattr("halfmove_clock").and_then(|v| v.extract::<u32>()).ok();
-            let fm1 = slf.getattr("fullmove_number").and_then(|v| v.extract::<u32>()).ok();
-            let fm2 = other.getattr("fullmove_number").and_then(|v| v.extract::<u32>()).ok();
+            let hm1 = slf
+                .getattr("halfmove_clock")
+                .and_then(|v| v.extract::<u32>())
+                .ok();
+            let hm2 = other
+                .getattr("halfmove_clock")
+                .and_then(|v| v.extract::<u32>())
+                .ok();
+            let fm1 = slf
+                .getattr("fullmove_number")
+                .and_then(|v| v.extract::<u32>())
+                .ok();
+            let fm2 = other
+                .getattr("fullmove_number")
+                .and_then(|v| v.extract::<u32>())
+                .ok();
             if hm1 != hm2 || fm1 != fm2 {
                 return Ok(py_bool(false));
             }
 
-            let uci1 = slf.getattr("uci_variant").and_then(|v| v.extract::<Option<String>>()).ok().flatten();
-            let uci2 = other.getattr("uci_variant").and_then(|v| v.extract::<Option<String>>()).ok().flatten();
+            let uci1 = slf
+                .getattr("uci_variant")
+                .and_then(|v| v.extract::<Option<String>>())
+                .ok()
+                .flatten();
+            let uci2 = other
+                .getattr("uci_variant")
+                .and_then(|v| v.extract::<Option<String>>())
+                .ok()
+                .flatten();
             if uci1 != uci2 {
                 return Ok(py_bool(false));
             }
