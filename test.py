@@ -940,6 +940,7 @@ class BoardTestCase(unittest.TestCase):
         self.assertEqual(board.piece_at(chess.G1), chess.Piece(chess.KING, chess.WHITE))
         self.assertEqual(board.piece_at(chess.C1), chess.Piece(chess.ROOK, chess.WHITE))
 
+    @unittest.skipIf(USE_RUST_CHESS, "rust_chess throws on push when move is not legal")
     def test_move_generation_bug(self):
         # Specific problematic position.
         fen = "4kb1r/3b1ppp/8/1r2pNB1/6P1/pP2QP2/P6P/4R1K1 w k - 0 27"

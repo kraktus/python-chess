@@ -12,9 +12,13 @@ pub fn extract_mask(value: &Bound<'_, PyAny>) -> PyResult<Bitboard> {
 
     if let Ok(val) = value.call_method0("__int__")
         && let Ok(masked) = val.call_method1("__and__", (Bitboard::FULL.0,))
-        && let Ok(mask) = masked.extract::<u64>()
     {
-        return Ok(Bitboard(mask));
+        if let Ok(mask) = masked.extract::<u64>() {
+            return Ok(Bitboard(mask));
+        }
+        if let Ok(mask) = masked.extract::<i64>() {
+            return Ok(Bitboard(mask as u64));
+        }
     }
 
     let mut mask = Bitboard::EMPTY;

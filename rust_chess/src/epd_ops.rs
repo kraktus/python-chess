@@ -400,9 +400,7 @@ pub fn format_epd_operations(
     Ok(out)
 }
 
-pub fn py_to_epd_operations(
-    operations: Option<&Bound<'_, PyDict>>,
-) -> PyResult<EpdOperations> {
+pub fn py_to_epd_operations(operations: Option<&Bound<'_, PyDict>>) -> PyResult<EpdOperations> {
     let Some(operations) = operations else {
         return Ok(HashMap::new());
     };
