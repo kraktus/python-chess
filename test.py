@@ -228,7 +228,7 @@ class BoardTestCase(unittest.TestCase):
         self.assertEqual(board.fen(), chess.STARTING_FEN)
         self.assertEqual(board.turn, chess.WHITE)
 
-    @unittest.skipIf(USE_RUST_CHESS, "No fen on positions with illegal material (no king)")
+    # @unittest.skipIf(USE_RUST_CHESS, "No fen on positions with illegal material (no king)")
     def test_empty(self):
         board = Board.empty()
         self.assertEqual(board.fen(), "8/8/8/8/8/8/8/8 w - - 0 1")
