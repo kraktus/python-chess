@@ -66,6 +66,7 @@ class MoveSuite:
     def setup(self):
         self.uci_strings = ["e2e4", "a7a8q", "0000", "N@b3"]
         self.moves = [chess.Move.from_uci(uci) for uci in self.uci_strings]
+        self.invalid_uci_strings = ["e2e9", "e", "a2a2", "Z@e4"]
 
     def time_from_uci_normal(self):
         chess.Move.from_uci("e2e4")
@@ -77,7 +78,7 @@ class MoveSuite:
         chess.Move.from_uci("0000")
 
     def time_from_uci_invalid(self):
-        for uci in ["e2e9", "e", "a2a2", "Z@e4"]:
+        for uci in self.invalid_uci_strings:
             try:
                 chess.Move.from_uci(uci)
             except ValueError:
@@ -108,6 +109,7 @@ class MoveSuite:
 class BaseBoardSuite:
     def setup(self):
         self.board = BaseBoard(chess.STARTING_BOARD_FEN)
+        self.empty_base_board = BaseBoard(None)
         self.squares = list(chess.SQUARES)
         self.piece_map = self.board.piece_map()
         self.board_copy = self.board.copy()
@@ -168,7 +170,7 @@ class BaseBoardSuite:
         for sq in self.squares:
             self.board.pin_mask(chess.WHITE, sq)
         # Empty board pin_mask
-        BaseBoard(None).pin_mask(chess.WHITE, chess.A1)
+        self.empty_base_board.pin_mask(chess.WHITE, chess.A1)
 
     def time_pin(self):
         self.board.pin(chess.WHITE, chess.E2)
@@ -307,6 +309,72 @@ class BoardSuite:
         self.pseudo_legal_moves = list(self.board.pseudo_legal_moves)
         self.epd_string = self.board.epd()
 
+        # Boards pre-built in setup so benchmark timings only measure the
+        # operation, not the board construction.
+        self.san_and_push_board = Board()
+        self.push_san_board = Board()
+        self.push_uci_board = Board()
+        self.push_xboard_board = Board()
+
+        self.claim_fifty_board = Board("6k1/8/8/8/8/8/8/1K6 w - - 99 1")
+        b = Board()
+        for san in ["e4", "e5", "Nf3", "Nc6", "Ng1", "Nb8", "Nf3", "Nc6"]:
+            b.push_san(san)
+        self.claim_threefold_board = b
+
+        b = Board()
+        for san in ["Nf3", "Nf6", "Ng1", "Ng8", "Nf3", "Nf6"]:
+            b.push_san(san)
+        self.repetition_cache_board = b
+
+        self.promoted_board = Board()
+        self.promoted_board.set_piece_at(
+            chess.E4, chess.Piece(chess.QUEEN, chess.WHITE), promoted=True
+        )
+
+        self.root_board = Board()
+
+        self.ep_blocked_board = Board("6k1/8/8/3pP3/8/8/1K6/8 w - d6 0 1")
+        self.ep_blocked_board.set_piece_at(
+            chess.D6, chess.Piece(chess.KNIGHT, chess.WHITE)
+        )
+
+        self.chess960_pos_board = Board()
+        self.chess960_pos_board.push_san("e4")
+        self.chess960_pos_board2 = Board(
+            "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+        )
+        self.chess960_pos_board2.set_piece_at(chess.E2, None)
+
+        self.null_drop_promote_board = Board("6k1/P7/8/8/8/8/8/1K6 w - - 0 1")
+        self.null_drop_promote_board2 = Board("6k1/P7/8/8/8/8/8/1K6 w - - 0 1")
+
+        self.castling_rights_board = Board(
+            "r3k2r/pppppppp/8/8/8/8/PPPPPPPP/R3K2R w KQkq - 0 1"
+        )
+        self.castling_rights_960_board = Board(
+            "r1k4r/pppppppp/8/8/8/8/PPPPPPPP/R1K4R w KQkq - 0 1", chess960=True
+        )
+        self.castling_white_board = Board(
+            "r3k2r/8/8/8/8/8/8/R3K2R w KQkq - 0 1"
+        )
+        self.castling_black_board = Board(
+            "r3k2r/8/8/8/8/8/8/R3K2R b KQkq - 0 1"
+        )
+        self.castling_san_board = Board(
+            "r3k2r/8/8/8/8/8/8/R3K2R w KQkq - 0 1"
+        )
+        self.disambig_board = Board("4k3/8/8/8/N3N3/8/8/4K3 w - - 0 1")
+        self.find_move_promotion_board = Board("8/P3k3/8/8/8/8/8/1K6 w - - 0 1")
+
+        self.peek_board = Board()
+        self.peek_board.push(chess.Move.from_uci("e2e4"))
+
+        self.board_complex = Board(
+            "r3k2r/8/8/8/8/8/8/R3K2R w KQkq - 0 1", chess960=True
+        )
+        self.empty_base_board = BaseBoard()
+
     def time_reset(self):
         self.board.reset()
 
@@ -408,25 +476,21 @@ class BoardSuite:
             self.board.lan(move)
 
     def time_san_and_push(self):
-        b = Board()
         for _ in range(5):
-            move = list(b.legal_moves)[0]
-            b.san_and_push(move)
+            move = list(self.san_and_push_board.legal_moves)[0]
+            self.san_and_push_board.san_and_push(move)
 
     def time_push_san(self):
-        b = Board()
-        b.push_san("e4")
+        self.push_san_board.push_san("e4")
 
     def time_push_uci(self):
-        b = Board()
-        b.push_uci("e2e4")
+        self.push_uci_board.push_uci("e2e4")
 
     def time_parse_xboard(self):
         self.board.parse_xboard("e4")
 
     def time_push_xboard(self):
-        b = Board()
-        b.push_xboard("e4")
+        self.push_xboard_board.push_xboard("e4")
 
     def time_xboard(self):
         for move in self.legal_moves:
@@ -439,35 +503,18 @@ class BoardSuite:
         self.board.is_variant_draw()
 
     def time_can_claim_draw_full(self):
-        # Setup a position to claim 50 moves
-        b = Board("8/8/8/8/8/8/8/8 w - - 99 1")
-        b.can_claim_fifty_moves()
-        b.can_claim_draw()
-        # Setup a position to claim threefold repetition
-        b = Board()
-        b.push_san("e4")
-        b.push_san("e5")
-        b.push_san("Nf3")
-        b.push_san("Nc6")
-        b.push_san("Ng1")
-        b.push_san("Nb8")
-        b.push_san("Nf3")
-        b.push_san("Nc6")
-        b.can_claim_threefold_repetition()
+        self.claim_fifty_board.can_claim_fifty_moves()
+        self.claim_fifty_board.can_claim_draw()
+        self.claim_threefold_board.can_claim_threefold_repetition()
 
     def time_is_repetition_cache(self):
-        b = Board()
-        for san in ["Nf3", "Nf6", "Ng1", "Ng8", "Nf3", "Nf6"]:
-            b.push_san(san)
-        b.is_repetition(3)
+        self.repetition_cache_board.is_repetition(3)
 
     def time_board_fen_promoted(self):
-        b = Board()
-        b.set_piece_at(chess.E4, chess.Piece(chess.QUEEN, chess.WHITE), promoted=True)
-        b.board_fen(promoted=True)
-        b.board_fen(promoted=False)
+        self.promoted_board.board_fen(promoted=True)
+        self.promoted_board.board_fen(promoted=False)
         try:
-            b.set_board_fen("Q~7/8/8/8/8/8/8/8")
+            self.promoted_board.set_board_fen("Q~7/8/8/8/8/8/8/8")
         except ValueError:
             pass
 
@@ -475,7 +522,7 @@ class BoardSuite:
         return self.board == 1
 
     def time_root_no_stack(self):
-        Board().root()
+        self.root_board.root()
 
     def time_remove_empty(self):
         self.board.remove_piece_at(chess.A3)
@@ -487,19 +534,11 @@ class BoardSuite:
         list(self.board_with_promotion.generate_pseudo_legal_moves())
 
     def time_generate_ep_blocked(self):
-        b = Board("8/1k6/8/3pP3/8/8/1K6/8 w - d6 0 1")
-        b.set_piece_at(
-            chess.D6, chess.Piece(chess.KNIGHT, chess.WHITE)
-        )  # Block the ep square
-        list(b.generate_pseudo_legal_moves())
+        list(self.ep_blocked_board.generate_pseudo_legal_moves())
 
     def time_chess960_pos_none(self):
-        b = Board()
-        b.push_san("e4")
-        b.chess960_pos()
-        b = Board("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1")
-        b.set_piece_at(chess.E2, None)
-        b.chess960_pos()
+        self.chess960_pos_board.chess960_pos()
+        self.chess960_pos_board2.chess960_pos()
 
     def time_gives_checkmate(self):
         m = self.checkmate_board.legal_moves
@@ -508,32 +547,25 @@ class BoardSuite:
 
     def time_invalid_char_fen(self):
         try:
-            BaseBoard().set_board_fen("Z7/8/8/8/8/8/8/8")
+            self.empty_base_board.set_board_fen("Z7/8/8/8/8/8/8/8")
         except ValueError:
             pass
 
     def time_push_null_drop_promote(self):
-        b = Board("6k1/P7/8/8/8/8/8/1K6 w - - 0 1")
-        b.push(chess.Move.null())
-        b.push(chess.Move.from_uci("P@a5"))
-        b = Board("6k1/P7/8/8/8/8/8/1K6 w - - 0 1")
-        b.push(chess.Move.from_uci("a7a8q"))
+        self.null_drop_promote_board.push(chess.Move.null())
+        self.null_drop_promote_board2.push(chess.Move.from_uci("a7a8q"))
 
     def time_push_castling_rights(self):
-        b = Board(fen="r3k2r/pppppppp/8/8/8/8/PPPPPPPP/R3K2R w KQkq - 0 1")
-        b.push(chess.Move.from_uci("e1h1"))
-        b.push(chess.Move.from_uci("e8a8"))
+        self.castling_rights_board.push(chess.Move.from_uci("e1h1"))
+        self.castling_rights_board.push(chess.Move.from_uci("e8a8"))
 
     def time_push_castling_rights_960(self):
-        b = Board(fen="r1k4r/pppppppp/8/8/8/8/PPPPPPPP/R1K4R w KQkq - 0 1",chess960=True)
-        b.push(chess.Move.from_uci("c1h1"))
-        b.push(chess.Move.from_uci("c8a8"))
+        self.castling_rights_960_board.push(chess.Move.from_uci("c1h1"))
+        self.castling_rights_960_board.push(chess.Move.from_uci("c8a8"))
 
     def time_push_castling(self):
-        b = Board("r3k2r/8/8/8/8/8/8/R3K2R w KQkq - 0 1")
-        b.push_san("O-O")
-        b = Board("r3k2r/8/8/8/8/8/8/R3K2R b KQkq - 0 1")
-        b.push_san("O-O-O")
+        self.castling_white_board.push_san("O-O")
+        self.castling_black_board.push_san("O-O-O")
 
     def time_set_fen_errors(self):
         for f in [
@@ -565,20 +597,18 @@ class BoardSuite:
         )
 
     def time_parse_san_castling(self):
-        b = Board("r3k2r/8/8/8/8/8/8/R3K2R w KQkq - 0 1")
-        b.parse_san("O-O")
-        b.parse_san("O-O-O")
+        self.castling_san_board.parse_san("O-O")
+        self.castling_san_board.parse_san("O-O-O")
         try:
-            b.parse_san("O-O-O-O")
+            self.castling_san_board.parse_san("O-O-O-O")
         except ValueError:
             pass
 
     def time_parse_san_disambiguation(self):
-        b = Board("4k3/8/8/8/N3N3/8/8/4K3 w - - 0 1")
-        b.parse_san("Nac3")
-        b.parse_san("Nec3")
+        self.disambig_board.parse_san("Nac3")
+        self.disambig_board.parse_san("Nec3")
         try:
-            b.parse_san("Nc3")
+            self.disambig_board.parse_san("Nc3")
         except ValueError:
             pass
 
@@ -609,12 +639,10 @@ class BoardSuite:
         self.board.find_move(chess.E2, chess.E4)
 
     def time_find_move_promotion(self):
-        board = Board("8/P3k3/8/8/8/8/8/1K6 w - - 0 1")
-        board.find_move(chess.A7, chess.A8)
+        self.find_move_promotion_board.find_move(chess.A7, chess.A8)
 
     def time_peek(self):
-        self.board.push(chess.Move.from_uci("e2e4"))
-        self.board.peek()
+        self.peek_board.peek()
 
     def time_castling_shredder_fen(self):
         self.board.castling_shredder_fen()
@@ -623,10 +651,7 @@ class BoardSuite:
     def time_castling_xfen(self):
         self.board.castling_xfen()
         self.board_chess960.castling_xfen()
-        board_complex = Board(
-            "r3k2r/8/8/8/8/8/8/R3K2R w KQkq - 0 1", chess960=True
-        )
-        board_complex.castling_xfen()
+        self.board_complex.castling_xfen()
 
     def time_is_en_passant(self):
         for move in self.midgame_board.pseudo_legal_moves:
