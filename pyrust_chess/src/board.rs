@@ -368,7 +368,7 @@ impl Board {
                     .filter(|sq| setup.board.rooks().contains(*sq))
                     .unwrap_or_else(|| Square::from_coords(File::A, color.backrank())),
                 file => Square::from_coords(
-                    File::from_char(char::from(file)).ok_or_else(|| {
+                    File::from_char(file).ok_or_else(|| {
                         PyValueError::new_err(format!(
                             "invalid castling fen: invalid file '{file}'"
                         ))
@@ -502,7 +502,7 @@ impl Board {
     fn __repr__(slf: &Bound<'_, Self>) -> String {
         let board = slf.borrow();
         let fen = Self::fen(slf, false, "legal", None).unwrap_or_else(|e| format!("{e:?}"));
-        format!("Board('{fen}')",)
+        format!("Board('{fen}')")
     }
 
     #[pyo3(signature = (*, shredder=false, en_passant="legal", promoted=None, **operations))]
@@ -817,16 +817,16 @@ impl Board {
             && let Some(piece) = chess.board().piece_at(from_sq)
             && !smove.is_castle()
         {
-            let role = if smove.role() != Role::Pawn {
-                piece.char().to_string()
+            let role = if smove.role() == Role::Pawn {
+                String::new()
             } else {
-                "".to_string()
+                piece.char().to_string()
             };
 
             let promotion = if let Some(promote_to) = smove.promotion() {
                 format!("={}", promote_to.char())
             } else {
-                "".to_string()
+                String::new()
             };
 
             let delimiter = if smove.is_capture() { "x" } else { "-" };
@@ -891,8 +891,7 @@ impl Board {
         let m_opt = Self::parse_san(&chess, san)?;
         // println!("san: {san}, move: {m:?}");
         Ok(m_opt
-            .map(|m| PyMove::from_move(m, slf.borrow().chess960))
-            .unwrap_or(PyMove::NULL))
+            .map_or(PyMove::NULL, |m| PyMove::from_move(m, slf.borrow().chess960)))
     }
 
     fn push_san(slf: &Bound<'_, Self>, san: &str) -> PyResult<PyMove> {
@@ -900,8 +899,7 @@ impl Board {
         let m_opt = Self::parse_san(&chess, san)?;
         Self::push(slf, chess, m_opt)?;
         Ok(m_opt
-            .map(|m| PyMove::from_move(m, slf.borrow().chess960))
-            .unwrap_or(PyMove::NULL))
+            .map_or(PyMove::NULL, |m| PyMove::from_move(m, slf.borrow().chess960)))
     }
 
     fn parse_xboard(slf: &Bound<'_, Self>, xboard: &str) -> PyResult<PyMove> {
@@ -1000,21 +998,21 @@ impl Board {
         let chess = Self::try_shakmaty(slf)?;
         move_obj
             .to_move_unless_null(&chess)
-            .map(|m_opt| m_opt.map(|m| m.is_en_passant()).unwrap_or_default())
+            .map(|m_opt| m_opt.is_some_and(shakmaty::Move::is_en_passant))
     }
 
     fn is_castling(slf: &Bound<'_, Self>, move_obj: PyMove) -> PyResult<bool> {
         let chess = Self::try_shakmaty(slf)?;
         move_obj
             .to_move_unless_null(&chess)
-            .map(|m_opt| m_opt.map(|m| m.is_castle()).unwrap_or_default())
+            .map(|m_opt| m_opt.is_some_and(shakmaty::Move::is_castle))
     }
 
     fn is_irreversible(slf: &Bound<'_, Self>, move_obj: PyMove) -> PyResult<bool> {
         let chess = Self::try_shakmaty(slf)?;
         move_obj
             .to_move_unless_null(&chess)
-            .map(|m_opt| m_opt.map(|m| chess.is_irreversible(m)).unwrap_or_default())
+            .map(|m_opt| m_opt.is_some_and(|m| chess.is_irreversible(m)))
     }
 
     #[pyo3(signature = (from_square, to_square, promotion=None))]
@@ -1172,7 +1170,7 @@ impl Board {
             return Ok(true);
         }
         if chess.halfmoves() == 99 {
-            for m in moves.iter() {
+            for m in &moves {
                 if !m.is_zeroing() {
                     let mut after = chess.clone();
                     after.play_unchecked(*m);
@@ -1198,7 +1196,7 @@ impl Board {
             HashMap::with_capacity(board._stack.len() * 2);
         for stack in board._stack.iter().rev() {
             *transpositions
-                .entry(stack.transposition_key().clone())
+                .entry(stack.transposition_key())
                 .or_insert(0) += 1;
         }
 
@@ -1343,8 +1341,7 @@ impl Board {
     fn py_parse_uci(slf: &Bound<'_, Self>, uci: &str) -> PyResult<PyMove> {
         let chess = Self::try_shakmaty(slf)?;
         Ok(Self::parse_uci(&chess, uci)?
-            .map(|m| PyMove::from_move(m, slf.borrow().chess960))
-            .unwrap_or(PyMove::NULL))
+            .map_or(PyMove::NULL, |m| PyMove::from_move(m, slf.borrow().chess960)))
     }
 
     fn push_uci(slf: &Bound<'_, Self>, uci: &str) -> PyResult<PyMove> {
@@ -1353,8 +1350,7 @@ impl Board {
         Self::push(slf, chess, m_opt)?;
 
         Ok(m_opt
-            .map(|m| PyMove::from_move(m, slf.borrow().chess960))
-            .unwrap_or(PyMove::NULL))
+            .map_or(PyMove::NULL, |m| PyMove::from_move(m, slf.borrow().chess960)))
     }
 
     #[pyo3(name = "pop")]
@@ -1537,7 +1533,7 @@ impl Board {
             Ok(py_bool(is_eq))
         } else if let Ok(other_base) = other.extract::<PyRef<'_, BaseBoard>>() {
             let self_base = slf.borrow().into_super();
-            Ok(py_bool(&*self_base == &*other_base))
+            Ok(py_bool(*self_base == *other_base))
         } else {
             Ok(py.NotImplemented())
         }
@@ -1697,14 +1693,13 @@ impl Board {
 
         // python-chess parser is very lenient and accepts uci as san, so we try to parse as uci first to avoid that
         if let Ok(uci_move) = UciMove::from_str(san) {
-            if !matches!(uci_move, UciMove::Null) {
-                // check if legal
-                return Ok(Some(uci_move.to_move(chess).map_err(|_| {
-                    IllegalMoveError::new_err(format!("illegal san as valid uci: {san:?}"))
-                })?));
-            } else {
+            if matches!(uci_move, UciMove::Null) {
                 return Ok(None);
             }
+            // check if legal
+            return Ok(Some(uci_move.to_move(chess).map_err(|_| {
+                IllegalMoveError::new_err(format!("illegal san as valid uci: {san:?}"))
+            })?));
         }
         let parsed = San::from_str(san)
             .map_err(|_| InvalidMoveError::new_err(format!("invalid san: {san:?}")))?;
@@ -1762,8 +1757,7 @@ impl Board {
         let is_chess960 = rust_board.chess960;
         rust_board.move_stack.push(
             m_opt
-                .map(|m| PyMove::from_move(m, is_chess960))
-                .unwrap_or(PyMove::NULL),
+                .map_or(PyMove::NULL, |m| PyMove::from_move(m, is_chess960)),
         );
         rust_board._stack.push(board_state);
 

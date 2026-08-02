@@ -74,46 +74,57 @@ impl Status {
     #[classattr]
     const STATUS_IMPOSSIBLE_CHECK: Self = Self::IMPOSSIBLE_CHECK;
 
+    #[must_use] 
     pub fn __eq__(&self, other: &Self) -> bool {
         self == other
     }
 
+    #[must_use] 
     pub fn __and__(&self, other: &Self) -> Self {
         self.intersection(*other)
     }
 
+    #[must_use] 
     pub fn __rand__(&self, other: &Self) -> Self {
         self.intersection(*other)
     }
 
+    #[must_use] 
     pub fn __or__(&self, other: &Self) -> Self {
         self.union(*other)
     }
 
+    #[must_use] 
     pub fn __ror__(&self, other: &Self) -> Self {
         self.union(*other)
     }
 
+    #[must_use] 
     pub fn __xor__(&self, other: &Self) -> Self {
         Self::from_bits_retain(self.bits() ^ other.bits())
     }
 
+    #[must_use] 
     pub fn __rxor__(&self, other: &Self) -> Self {
         Self::from_bits_retain(self.bits() ^ other.bits())
     }
 
+    #[must_use] 
     pub fn __invert__(&self) -> Self {
         Self::from_bits_retain(!self.bits())
     }
 
+    #[must_use] 
     pub fn __bool__(&self) -> bool {
         !self.is_empty()
     }
 
+    #[must_use] 
     pub fn __int__(&self) -> u32 {
         self.bits()
     }
 
+    #[must_use] 
     pub fn __repr__(&self) -> String {
         let bits = self.bits();
         let mut names: Vec<String> = Vec::new();
@@ -136,6 +147,7 @@ impl Status {
         format!("<Status.{body}: {bits}>")
     }
 
+    #[must_use] 
     pub fn __str__(&self) -> String {
         format!("{}", self.bits())
     }
@@ -178,12 +190,9 @@ pub fn status(setup: Setup, mode: CastlingMode) -> Status {
         errors |= Status::BAD_CASTLING_RIGHTS;
     }
 
-    let ep = match EnPassant::from_setup(&setup) {
-        Ok(e) => e,
-        Err(()) => {
-            errors |= Status::INVALID_EP_SQUARE;
-            None
-        }
+    let ep = if let Ok(e) = EnPassant::from_setup(&setup) { e } else {
+        errors |= Status::INVALID_EP_SQUARE;
+        None
     };
 
     let checked_setup = Setup {
@@ -261,7 +270,7 @@ fn validate(pos: &Setup, ep_square: Option<EnPassant>) -> Status {
                 errors |= Status::NO_WHITE_KING;
             } else {
                 errors |= Status::NO_BLACK_KING;
-            };
+            }
         } else if kings.more_than_one() {
             errors |= Status::TOO_MANY_KINGS;
         }

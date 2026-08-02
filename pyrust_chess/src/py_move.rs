@@ -18,6 +18,7 @@ pub struct PyMove {
 }
 
 impl PyMove {
+    #[must_use] 
     pub fn from_move(value: Move, chess960: bool) -> Self {
         Self {
             inner: value.to_uci(if chess960 {
@@ -187,6 +188,7 @@ impl PyMove {
         }
     }
 
+    #[must_use] 
     pub fn uci(&self) -> String {
         self.inner.to_string()
     }

@@ -313,7 +313,7 @@ pub fn format_epd_operations(
     let mut out = String::new();
     let mut first = true;
     let mut items: Vec<_> = operations.iter().collect();
-    items.sort_by(|(a, _), (b, _)| a.cmp(b));
+    items.sort_by_key(|(a, _)| *a);
 
     for (opcode, operand) in items {
         validate_epd_opcode(opcode)?;
@@ -448,7 +448,7 @@ pub fn epd_operations_to_pydict(
 ) -> PyResult<Py<PyDict>> {
     let dict = PyDict::new(py);
     let mut items: Vec<_> = operations.iter().collect();
-    items.sort_by(|(a, _), (b, _)| a.cmp(b));
+    items.sort_by_key(|(a, _)| *a);
 
     for (opcode, operand) in items {
         match operand {

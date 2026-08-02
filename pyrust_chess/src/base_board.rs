@@ -7,7 +7,7 @@ use pyo3::types::PyType;
 use shakmaty::{Bitboard, Board, Color, File, Piece, Rank, Role, Square};
 use std::str::FromStr;
 
-const CHESS960_STARTING_POS: [Board; 960] = {
+static CHESS960_STARTING_POS: [Board; 960] = {
     let mut boards = [const { Board::empty() }; 960];
     let mut i = 0;
     while i < 960 {
@@ -531,11 +531,11 @@ impl BaseBoard {
     }
 
     pub fn apply_transform(&mut self, f: &Bound<'_, PyAny>) -> PyResult<()> {
-        for bb in self.by_role.iter_mut() {
+        for bb in &mut self.by_role {
             let res = f.call1((bb.0,))?;
             *bb = Bitboard(res.extract()?);
         }
-        for bb in self.by_color.iter_mut() {
+        for bb in &mut self.by_color {
             let res = f.call1((bb.0,))?;
             *bb = Bitboard(res.extract()?);
         }
@@ -544,6 +544,7 @@ impl BaseBoard {
         Ok(())
     }
 
+    #[must_use] 
     pub fn chess960_pos(&self) -> Option<u32> {
         let board = self.board().ok()?;
         for (i, b) in CHESS960_STARTING_POS.iter().enumerate() {
@@ -604,6 +605,7 @@ impl BaseBoard {
     }
 
     #[pyo3(name = "pin_mask")]
+    #[must_use] 
     pub fn py_pin_mask(&self, color: PyColor, square: PySquare) -> u64 {
         self.pin_mask(color.0, square.0).0
     }
@@ -646,6 +648,7 @@ impl BaseBoard {
         }
     }
 
+    #[must_use] 
     pub fn rooks(&self) -> Bitboard {
         self.by_role.rook
     }

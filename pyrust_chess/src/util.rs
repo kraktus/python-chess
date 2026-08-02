@@ -12,11 +12,9 @@ pub fn extract_mask(value: &Bound<'_, PyAny>) -> PyResult<Bitboard> {
 
     if let Ok(val) = value.call_method0("__int__")
         && let Ok(masked) = val.call_method1("__and__", (Bitboard::FULL.0,))
-    {
-        if let Ok(mask) = masked.extract::<u64>() {
+        && let Ok(mask) = masked.extract::<u64>() {
             return Ok(Bitboard(mask));
         }
-    }
 
     let mut mask = Bitboard::EMPTY;
     if let Ok(iter) = value.try_iter() {
@@ -64,6 +62,7 @@ pub enum IntOrBool {
 }
 
 impl IntOrBool {
+    #[must_use] 
     pub fn stack_len(self, if_true: usize) -> usize {
         match self {
             Self::Int(i) => i,
