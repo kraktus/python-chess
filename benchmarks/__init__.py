@@ -299,13 +299,6 @@ class BoardSuite:
         self.push_pop_board = Board()
         self.push_pop_moves = list(self.push_pop_board.legal_moves)[:5]
 
-        self.variation_moves = []
-        b = Board()
-        for _ in range(5):
-            move = list(b.legal_moves)[0]
-            self.variation_moves.append(move)
-            b.push(move)
-
         self.pseudo_legal_moves = list(self.board.pseudo_legal_moves)
         self.epd_string = self.board.epd()
 
@@ -317,15 +310,15 @@ class BoardSuite:
         self.push_xboard_board = Board()
 
         self.claim_fifty_board = Board("6k1/8/8/8/8/8/8/1K6 w - - 99 1")
-        b = Board()
-        for san in ["e4", "e5", "Nf3", "Nc6", "Ng1", "Nb8", "Nf3", "Nc6"]:
-            b.push_san(san)
-        self.claim_threefold_board = b
+        # e4 e5 Nf3 Nc6 Ng1 Nb8 Nf3 Nc6
+        self.claim_threefold_board = Board(
+            "r1bqkbnr/pppp1ppp/2n5/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R w KQkq - 6 5"
+        )
 
-        b = Board()
-        for san in ["Nf3", "Nf6", "Ng1", "Ng8", "Nf3", "Nf6"]:
-            b.push_san(san)
-        self.repetition_cache_board = b
+        # Nf3 Nf6 Ng1 Ng8 Nf3 Nf6
+        self.repetition_cache_board = Board(
+            "rnbqkb1r/pppppppp/5n2/8/8/5N2/PPPPPPPP/RNBQKB1R w KQkq - 6 4"
+        )
 
         self.promoted_board = Board()
         self.promoted_board.set_piece_at(
@@ -334,17 +327,17 @@ class BoardSuite:
 
         self.root_board = Board()
 
-        self.ep_blocked_board = Board("6k1/8/8/3pP3/8/8/1K6/8 w - d6 0 1")
-        self.ep_blocked_board.set_piece_at(
-            chess.D6, chess.Piece(chess.KNIGHT, chess.WHITE)
-        )
+        # ep d6, blocked by a knight on d6
+        self.ep_blocked_board = Board("6k1/8/3N4/3pP3/8/8/1K6/8 w - d6 0 1")
 
-        self.chess960_pos_board = Board()
-        self.chess960_pos_board.push_san("e4")
-        self.chess960_pos_board2 = Board(
-            "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+        # e4
+        self.chess960_pos_board = Board(
+            "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1"
         )
-        self.chess960_pos_board2.set_piece_at(chess.E2, None)
+        # starting position with the E2 pawn removed
+        self.chess960_pos_board2 = Board(
+            "rnbqkbnr/pppppppp/8/8/8/8/PPPP1PPP/RNBQKBNR w KQkq - 0 1"
+        )
 
         self.null_drop_promote_board = Board("6k1/P7/8/8/8/8/8/1K6 w - - 0 1")
         self.null_drop_promote_board2 = Board("6k1/P7/8/8/8/8/8/1K6 w - - 0 1")
@@ -367,6 +360,7 @@ class BoardSuite:
         self.disambig_board = Board("4k3/8/8/8/N3N3/8/8/4K3 w - - 0 1")
         self.find_move_promotion_board = Board("8/P3k3/8/8/8/8/8/1K6 w - - 0 1")
 
+        # can't be a plain FEN: peek() needs a non-empty move stack
         self.peek_board = Board()
         self.peek_board.push(chess.Move.from_uci("e2e4"))
 
