@@ -725,16 +725,31 @@ impl Board {
     }
 
     fn is_check(slf: &Bound<'_, Self>) -> PyResult<bool> {
-        Ok(Self::checkers_mask(slf)? != 0)
+        Ok(Self::try_shakmaty(slf)?.is_check())
     }
 
     fn gives_check(slf: &Bound<'_, Self>, move_obj: PyMove) -> PyResult<bool> {
         let chess = Self::try_shakmaty(slf)?;
-        let m_opt = move_obj.to_move_unless_null(&chess)?;
-        Self::push(slf, chess, m_opt)?;
-        let result = Self::checkers_mask(slf)? != 0;
-        Self::py_pop(slf, slf.py())?;
-        Ok(result)
+        if let Some(m) = move_obj.to_move_unless_null(&chess)? {
+            Ok(chess
+                .play(m)
+                .map_err(|e| IllegalMoveError::new_err(format!("illegal move: {e}")))?
+                .is_check())
+        } else {
+            Ok(false)
+        }
+    }
+
+    fn gives_checkmate(slf: &Bound<'_, Self>, move_obj: PyMove) -> PyResult<bool> {
+        let chess = Self::try_shakmaty(slf)?;
+        if let Some(m) = move_obj.to_move_unless_null(&chess)? {
+            Ok(chess
+                .play(m)
+                .map_err(|e| IllegalMoveError::new_err(format!("illegal move: {e}")))?
+                .is_checkmate())
+        } else {
+            Ok(false)
+        }
     }
 
     fn is_into_check(slf: &Bound<'_, Self>, move_obj: PyMove) -> PyResult<bool> {

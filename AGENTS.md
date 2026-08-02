@@ -23,9 +23,9 @@
 
 
 - When porting API to rust, always use the highest-level of abstraction of shakmaty internal, do not fallback to constants. You can check the whole shakmaty API by viewing `shakmaty_api.txt`
-- USE Bitboards as much as possible. NEVER ENCODE BITBOARD Constants as raw u64, always look for an appropriely named constant in shakmaty::Bitboard.
-- Also use shakmaty constant every time it is possible, like for default board fen, full bitboard, etc.
+- Use the highest level of shakmaty API possible. That means first see if you can use `Chess`, then `Setup`, then `Board`, then `Bitboard`. Use shakmaty constant every time it is possible, like for default board fen, full bitboard, etc. NEVER ENCODE BITBOARD Constants as raw u64, always look for an appropriely named constant in shakmaty::Bitboard.
 - Never implement private python API (starting with an underscore)
+- In case of doubt, prefer rejecting invalivad state rather than not using `shakmaty` appropriate API.
 
 - Use types in pyrust_chess/src/utils.py for converting args of python method to higher-level types:
 
@@ -41,10 +41,7 @@ Exemple:
 USE_pyrust_chess = os.environ.get("pyrust_chess") == "1"
 if USE_pyrust_chess:
     import pyrust_chess
-    pyrust_chess.patch_supported(
-        dst_module=chess,
-        src_module=pyrust_chess,
-    )
+    pyrust_chess.patch_chess()
     from pyrust_chess import BaseBoard
     from chess import Board
 else:
