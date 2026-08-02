@@ -470,21 +470,25 @@ class BoardSuite:
             self.board.lan(move)
 
     def time_san_and_push(self):
+        b = self.san_and_push_board.copy()
         for _ in range(5):
-            move = list(self.san_and_push_board.legal_moves)[0]
-            self.san_and_push_board.san_and_push(move)
+            move = list(b.legal_moves)[0]
+            b.san_and_push(move)
 
     def time_push_san(self):
-        self.push_san_board.push_san("e4")
+        b = self.push_san_board.copy()
+        b.push_san("e4")
 
     def time_push_uci(self):
-        self.push_uci_board.push_uci("e2e4")
+        b = self.push_uci_board.copy()
+        b.push_uci("e2e4")
 
     def time_parse_xboard(self):
         self.board.parse_xboard("e4")
 
     def time_push_xboard(self):
-        self.push_xboard_board.push_xboard("e4")
+        b = self.push_xboard_board.copy()
+        b.push_xboard("e4")
 
     def time_xboard(self):
         for move in self.legal_moves:
@@ -546,20 +550,26 @@ class BoardSuite:
             pass
 
     def time_push_null_drop_promote(self):
-        self.null_drop_promote_board.push(chess.Move.null())
-        self.null_drop_promote_board2.push(chess.Move.from_uci("a7a8q"))
+        b = self.null_drop_promote_board.copy()
+        b.push(chess.Move.null())
+        b = self.null_drop_promote_board2.copy()
+        b.push(chess.Move.from_uci("a7a8q"))
 
     def time_push_castling_rights(self):
-        self.castling_rights_board.push(chess.Move.from_uci("e1h1"))
-        self.castling_rights_board.push(chess.Move.from_uci("e8a8"))
+        b = self.castling_rights_board.copy()
+        b.push(chess.Move.from_uci("e1h1"))
+        b.push(chess.Move.from_uci("e8a8"))
 
     def time_push_castling_rights_960(self):
-        self.castling_rights_960_board.push(chess.Move.from_uci("c1h1"))
-        self.castling_rights_960_board.push(chess.Move.from_uci("c8a8"))
+        b = self.castling_rights_960_board.copy()
+        b.push(chess.Move.from_uci("c1h1"))
+        b.push(chess.Move.from_uci("c8a8"))
 
     def time_push_castling(self):
-        self.castling_white_board.push_san("O-O")
-        self.castling_black_board.push_san("O-O-O")
+        b = self.castling_white_board.copy()
+        b.push_san("O-O")
+        b = self.castling_black_board.copy()
+        b.push_san("O-O-O")
 
     def time_set_fen_errors(self):
         for f in [
