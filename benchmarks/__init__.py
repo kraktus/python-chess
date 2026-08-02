@@ -481,7 +481,6 @@ class BoardSuite:
 
     def time_set_piece_at(self):
         self.board.set_piece_at(chess.A3, chess.Piece(chess.PAWN, chess.WHITE))
-        self.board._set_piece_at(chess.A3, 99, chess.WHITE)  # Invalid piece type
 
     def time_generate_promotions(self):
         b = Board("8/P7/8/8/8/8/8/8 w - - 0 1")
@@ -516,18 +515,21 @@ class BoardSuite:
             pass
 
     def time_push_null_drop_promote(self):
-        b = Board("8/P7/8/8/8/8/8/8 w - - 0 1")
+        b = Board("6k1/P7/8/8/8/8/8/1K6 w - - 0 1")
         b.push(chess.Move.null())
         b.push(chess.Move.from_uci("P@a5"))
-        b = Board("8/P7/8/8/8/8/8/8 w - - 0 1")
+        b = Board("6k1/P7/8/8/8/8/8/1K6 w - - 0 1")
         b.push(chess.Move.from_uci("a7a8q"))
 
     def time_push_castling_rights(self):
-        b = Board()
-        b.push(chess.Move.from_uci("e2e4"))
-        b.push(chess.Move.from_uci("h8h7"))
-        b.push(chess.Move.from_uci("a1a2"))
-        b.push(chess.Move.from_uci("e8e7"))
+        b = Board(fen="r3k2r/pppppppp/8/8/8/8/PPPPPPPP/R3K2R w KQkq - 0 1")
+        b.push(chess.Move.from_uci("e1h1"))
+        b.push(chess.Move.from_uci("e8a8"))
+
+    def time_push_castling_rights_960(self):
+        b = Board(fen="r1k4r/pppppppp/8/8/8/8/PPPPPPPP/R1K4R w KQkq - 0 1",chess960=True)
+        b.push(chess.Move.from_uci("c1h1"))
+        b.push(chess.Move.from_uci("c8a8"))
 
     def time_push_castling(self):
         b = Board("r3k2r/8/8/8/8/8/8/R3K2R w KQkq - 0 1")

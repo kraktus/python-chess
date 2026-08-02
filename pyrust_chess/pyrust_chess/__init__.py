@@ -48,6 +48,8 @@ def patch_chess():
     - InvalidMoveError
     - AmbiguousMoveError
     - IllegalMoveError
+
+    `Baseboard` and `Board` are not monkey-patched, because their internals are used for variants.
     """
     try:
         import chess
