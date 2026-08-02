@@ -544,7 +544,7 @@ impl BaseBoard {
         Ok(())
     }
 
-    #[must_use] 
+    #[must_use]
     pub fn chess960_pos(&self) -> Option<u32> {
         let board = self.board().ok()?;
         for (i, b) in CHESS960_STARTING_POS.iter().enumerate() {
@@ -605,7 +605,7 @@ impl BaseBoard {
     }
 
     #[pyo3(name = "pin_mask")]
-    #[must_use] 
+    #[must_use]
     pub fn py_pin_mask(&self, color: PyColor, square: PySquare) -> u64 {
         self.pin_mask(color.0, square.0).0
     }
@@ -648,7 +648,7 @@ impl BaseBoard {
         }
     }
 
-    #[must_use] 
+    #[must_use]
     pub fn rooks(&self) -> Bitboard {
         self.by_role.rook
     }

@@ -19,7 +19,7 @@ pub enum PyTermination {
 #[pymethods]
 impl PyTermination {
     #[getter]
-    #[must_use] 
+    #[must_use]
     pub fn name(&self) -> &'static str {
         match self {
             Self::CHECKMATE => "CHECKMATE",
@@ -36,7 +36,7 @@ impl PyTermination {
     }
 
     #[getter]
-    #[must_use] 
+    #[must_use]
     pub fn value(&self) -> u8 {
         *self as u8
     }
@@ -63,7 +63,7 @@ pub struct PyOutcome {
 impl PyOutcome {
     #[new]
     #[pyo3(signature = (termination, winner))]
-    #[must_use] 
+    #[must_use]
     pub fn new(termination: PyTermination, winner: Option<bool>) -> Self {
         Self {
             termination,
@@ -71,7 +71,7 @@ impl PyOutcome {
         }
     }
 
-    #[must_use] 
+    #[must_use]
     pub fn result(&self) -> &'static str {
         match self.winner {
             None => "1/2-1/2",

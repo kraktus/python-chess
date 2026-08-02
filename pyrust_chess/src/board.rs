@@ -5,7 +5,7 @@ use shakmaty::san::{San, SanError, SanPlus};
 use shakmaty::uci::UciMove;
 use shakmaty::{
     Bitboard, Castles, CastlingMode, CastlingSide, Chess, Color, File, FromSetup, Move, MoveList,
-    Position, PseudoLegal, Role, Setup, Square,
+    Position, PseudoLegal, Rank, Role, Setup, Square,
 };
 
 use std::collections::HashMap;
@@ -540,29 +540,41 @@ impl Board {
     }
 
     fn castling_shredder_fen(slf: &Bound<'_, Self>) -> PyResult<String> {
-        let mut setup = Self::try_setup(slf)?;
-        setup.castling_rights = Self::clean_castling_rights(slf)?.castling_rights();
-        let fen = Fen::try_from_setup(setup)
-            .map_err(|e| PyValueError::new_err(format!("unable to gen FEN: {e:?}")))?;
-        Ok(fen
-            .to_string_with_shredder()
-            .split_whitespace()
-            .nth(2)
-            .unwrap_or("-")
-            .to_string())
+        let castling_bb = Self::clean_castling_rights(slf)?.castling_rights();
+        let mut shredder = String::with_capacity(4);
+        for sq in castling_bb & Rank::First {
+            shredder.push(sq.file().upper_char())
+        }
+        for sq in castling_bb & Rank::Eighth {
+            shredder.push(sq.file().char())
+        }
+        if shredder.len() == 0 {
+            Ok("-".to_string())
+        } else {
+            Ok(shredder)
+        }
     }
 
     fn castling_xfen(slf: &Bound<'_, Self>) -> PyResult<String> {
-        let mut setup = Self::try_setup(slf)?;
-        setup.castling_rights = Self::clean_castling_rights(slf)?.castling_rights();
-        let fen = Fen::try_from_setup(setup)
-            .map_err(|e| PyValueError::new_err(format!("unable to gen FEN: {e:?}")))?;
-        Ok(fen
-            .to_string()
-            .split_whitespace()
-            .nth(2)
-            .unwrap_or("-")
-            .to_string())
+        let castling_rights = Self::clean_castling_rights(slf)?;
+        let mut res = String::with_capacity(4);
+        if castling_rights.has(Color::White, CastlingSide::KingSide) {
+            res.push('K')
+        }
+        if castling_rights.has(Color::White, CastlingSide::QueenSide) {
+            res.push('Q')
+        }
+        if castling_rights.has(Color::Black, CastlingSide::KingSide) {
+            res.push('k')
+        }
+        if castling_rights.has(Color::Black, CastlingSide::QueenSide) {
+            res.push('q')
+        }
+        if res.len() == 0 {
+            Ok("-".to_string())
+        } else {
+            Ok(res)
+        }
     }
 
     #[pyo3(signature = (*, stack=IntOrBool::Bool(true)))]
@@ -975,16 +987,18 @@ impl Board {
         let chess = Self::try_shakmaty(slf)?;
         let m_opt = Self::parse_san(&chess, san)?;
         // println!("san: {san}, move: {m:?}");
-        Ok(m_opt
-            .map_or(PyMove::NULL, |m| PyMove::from_move(m, slf.borrow().chess960)))
+        Ok(m_opt.map_or(PyMove::NULL, |m| {
+            PyMove::from_move(m, slf.borrow().chess960)
+        }))
     }
 
     fn push_san(slf: &Bound<'_, Self>, san: &str) -> PyResult<PyMove> {
         let chess = Self::try_shakmaty(slf)?;
         let m_opt = Self::parse_san(&chess, san)?;
         Self::push(slf, chess, m_opt)?;
-        Ok(m_opt
-            .map_or(PyMove::NULL, |m| PyMove::from_move(m, slf.borrow().chess960)))
+        Ok(m_opt.map_or(PyMove::NULL, |m| {
+            PyMove::from_move(m, slf.borrow().chess960)
+        }))
     }
 
     fn parse_xboard(slf: &Bound<'_, Self>, xboard: &str) -> PyResult<PyMove> {
@@ -1301,9 +1315,7 @@ impl Board {
         let mut transpositions: HashMap<TranspositionKey, usize> =
             HashMap::with_capacity(board._stack.len() * 2);
         for stack in board._stack.iter().rev() {
-            *transpositions
-                .entry(stack.transposition_key())
-                .or_insert(0) += 1;
+            *transpositions.entry(stack.transposition_key()).or_insert(0) += 1;
         }
 
         if *transpositions.get(&current_key).unwrap_or(&0) >= 3 {
@@ -1446,8 +1458,9 @@ impl Board {
     #[pyo3(name = "parse_uci")]
     fn py_parse_uci(slf: &Bound<'_, Self>, uci: &str) -> PyResult<PyMove> {
         let chess = Self::try_shakmaty(slf)?;
-        Ok(Self::parse_uci(&chess, uci)?
-            .map_or(PyMove::NULL, |m| PyMove::from_move(m, slf.borrow().chess960)))
+        Ok(Self::parse_uci(&chess, uci)?.map_or(PyMove::NULL, |m| {
+            PyMove::from_move(m, slf.borrow().chess960)
+        }))
     }
 
     fn push_uci(slf: &Bound<'_, Self>, uci: &str) -> PyResult<PyMove> {
@@ -1455,8 +1468,9 @@ impl Board {
         let m_opt = Self::parse_uci(&chess, uci)?;
         Self::push(slf, chess, m_opt)?;
 
-        Ok(m_opt
-            .map_or(PyMove::NULL, |m| PyMove::from_move(m, slf.borrow().chess960)))
+        Ok(m_opt.map_or(PyMove::NULL, |m| {
+            PyMove::from_move(m, slf.borrow().chess960)
+        }))
     }
 
     #[pyo3(name = "pop")]
@@ -1861,10 +1875,9 @@ impl Board {
 
         let mut rust_board = slf.borrow_mut();
         let is_chess960 = rust_board.chess960;
-        rust_board.move_stack.push(
-            m_opt
-                .map_or(PyMove::NULL, |m| PyMove::from_move(m, is_chess960)),
-        );
+        rust_board
+            .move_stack
+            .push(m_opt.map_or(PyMove::NULL, |m| PyMove::from_move(m, is_chess960)));
         rust_board._stack.push(board_state);
 
         Ok(())
