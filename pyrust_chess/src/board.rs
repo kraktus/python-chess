@@ -539,6 +539,32 @@ impl Board {
         Self::fen(slf, true, en_passant, promoted)
     }
 
+    fn castling_shredder_fen(slf: &Bound<'_, Self>) -> PyResult<String> {
+        let mut setup = Self::try_setup(slf)?;
+        setup.castling_rights = Self::clean_castling_rights(slf)?.castling_rights();
+        let fen = Fen::try_from_setup(setup)
+            .map_err(|e| PyValueError::new_err(format!("unable to gen FEN: {e:?}")))?;
+        Ok(fen
+            .to_string_with_shredder()
+            .split_whitespace()
+            .nth(2)
+            .unwrap_or("-")
+            .to_string())
+    }
+
+    fn castling_xfen(slf: &Bound<'_, Self>) -> PyResult<String> {
+        let mut setup = Self::try_setup(slf)?;
+        setup.castling_rights = Self::clean_castling_rights(slf)?.castling_rights();
+        let fen = Fen::try_from_setup(setup)
+            .map_err(|e| PyValueError::new_err(format!("unable to gen FEN: {e:?}")))?;
+        Ok(fen
+            .to_string()
+            .split_whitespace()
+            .nth(2)
+            .unwrap_or("-")
+            .to_string())
+    }
+
     #[pyo3(signature = (*, stack=IntOrBool::Bool(true)))]
     fn copy<'py>(
         slf: &Bound<'py, Self>,
@@ -639,6 +665,19 @@ impl Board {
         Self::gen_legal_moves_and_filter(slf, from_mask, to_mask, |m| m.is_en_passant())
     }
 
+    #[pyo3(signature = (from_mask=IntoSquareSet(Bitboard::FULL), to_mask=IntoSquareSet(Bitboard::FULL)))]
+    fn generate_pseudo_legal_captures(
+        slf: &Bound<'_, Self>,
+        from_mask: IntoSquareSet,
+        to_mask: IntoSquareSet,
+    ) -> PyResult<Vec<PyMove>> {
+        let enemy = *slf.as_super().borrow().by_color.get(!slf.borrow().turn);
+        let mut moves =
+            Self::generate_pseudo_legal_moves(slf, from_mask, IntoSquareSet(to_mask.0 & enemy))?;
+        moves.extend(Self::generate_pseudo_legal_ep(slf, from_mask, to_mask)?);
+        Ok(moves)
+    }
+
     fn has_pseudo_legal_en_passant(slf: &Bound<'_, Self>) -> PyResult<bool> {
         if slf.borrow().ep_square.is_none() {
             return Ok(false);
@@ -663,8 +702,46 @@ impl Board {
         Ok(!ep_moves.is_empty())
     }
 
+    fn checkers_mask(slf: &Bound<'_, Self>) -> PyResult<u64> {
+        let turn = slf.borrow().turn;
+        let base = slf.as_super().borrow();
+        if let Some(king) = base.king(turn) {
+            base.attackers_mask(PyColor(!turn), PySquare(king), None)
+        } else {
+            Ok(0)
+        }
+    }
+
     fn is_check(slf: &Bound<'_, Self>) -> PyResult<bool> {
-        Ok(Self::try_shakmaty(slf)?.is_check())
+        Ok(Self::checkers_mask(slf)? != 0)
+    }
+
+    fn gives_check(slf: &Bound<'_, Self>, move_obj: PyMove) -> PyResult<bool> {
+        let chess = Self::try_shakmaty(slf)?;
+        let m_opt = move_obj.to_move_unless_null(&chess)?;
+        Self::push(slf, chess, m_opt)?;
+        let result = Self::checkers_mask(slf)? != 0;
+        Self::py_pop(slf, slf.py())?;
+        Ok(result)
+    }
+
+    fn is_into_check(slf: &Bound<'_, Self>, move_obj: PyMove) -> PyResult<bool> {
+        let chess = Self::try_shakmaty(slf)?;
+        let m_opt = move_obj.to_move_unless_null(&chess)?;
+        Self::push(slf, chess, m_opt)?;
+        let result = Self::was_into_check(slf)?;
+        Self::py_pop(slf, slf.py())?;
+        Ok(result)
+    }
+
+    fn was_into_check(slf: &Bound<'_, Self>) -> PyResult<bool> {
+        let turn = slf.borrow().turn;
+        let base = slf.as_super().borrow();
+        if let Some(king) = base.king(!turn) {
+            base.is_attacked_by(PyColor(turn), PySquare(king), None)
+        } else {
+            Ok(false)
+        }
     }
 
     fn is_variant_end(_slf: &Bound<'_, Self>) -> bool {
@@ -798,6 +875,14 @@ impl Board {
             .to_move(&chess)
             .map_err(|_| PyValueError::new_err("illegal move"))?;
         Ok(SanPlus::from_move(chess, smove).to_string())
+    }
+
+    fn san_and_push(slf: &Bound<'_, Self>, move_obj: PyMove) -> PyResult<String> {
+        let san = Self::san(slf, move_obj.clone())?;
+        let chess = Self::try_shakmaty(slf)?;
+        let m_opt = move_obj.to_move_unless_null(&chess)?;
+        Self::push(slf, chess, m_opt)?;
+        Ok(san)
     }
 
     fn lan(slf: &Bound<'_, Self>, move_obj: PyMove) -> PyResult<String> {
@@ -1006,6 +1091,27 @@ impl Board {
         move_obj
             .to_move_unless_null(&chess)
             .map(|m_opt| m_opt.is_some_and(shakmaty::Move::is_castle))
+    }
+
+    fn is_kingside_castling(slf: &Bound<'_, Self>, move_obj: PyMove) -> PyResult<bool> {
+        let chess = Self::try_shakmaty(slf)?;
+        Ok(move_obj
+            .to_move_unless_null(&chess)?
+            .is_some_and(|m| m.castling_side() == Some(CastlingSide::KingSide)))
+    }
+
+    fn is_queenside_castling(slf: &Bound<'_, Self>, move_obj: PyMove) -> PyResult<bool> {
+        let chess = Self::try_shakmaty(slf)?;
+        Ok(move_obj
+            .to_move_unless_null(&chess)?
+            .is_some_and(|m| m.castling_side() == Some(CastlingSide::QueenSide)))
+    }
+
+    fn is_zeroing(slf: &Bound<'_, Self>, move_obj: PyMove) -> PyResult<bool> {
+        let chess = Self::try_shakmaty(slf)?;
+        Ok(move_obj
+            .to_move_unless_null(&chess)?
+            .is_some_and(shakmaty::Move::is_zeroing))
     }
 
     fn is_irreversible(slf: &Bound<'_, Self>, move_obj: PyMove) -> PyResult<bool> {

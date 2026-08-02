@@ -31,6 +31,7 @@ pub fn extract_mask(value: &Bound<'_, PyAny>) -> PyResult<Bitboard> {
     ))
 }
 
+#[derive(Clone, Copy)]
 pub struct IntoSquareSet(pub Bitboard);
 
 impl FromPyObject<'_, '_> for IntoSquareSet {

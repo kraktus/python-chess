@@ -277,7 +277,7 @@ impl BaseBoard {
         }
     }
     #[pyo3(signature = (color, square, occupied=None))]
-    fn is_attacked_by(
+    pub fn is_attacked_by(
         &self,
         color: PyColor,
         square: PySquare,
@@ -299,7 +299,7 @@ impl BaseBoard {
     }
 
     #[pyo3(signature = (color, square, occupied=None))]
-    fn attackers_mask(
+    pub fn attackers_mask(
         &self,
         color: PyColor,
         square: PySquare,
