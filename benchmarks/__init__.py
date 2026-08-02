@@ -285,6 +285,7 @@ class BoardSuite:
             "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1"
         )
         self.midgame_board = Board(self.midgame_fen)
+        self.board_with_promotion = Board(fen='3rr1k1/pp2bppp/2p5/7b/B7/2B2P2/PP1pKP1P/2R3R1 b - - 6 19')
         self.checkmate_fen = (
             "rnb1kbnr/pppp1ppp/4p3/8/6Pq/5P2/PPPPP2P/RNBQKBNR w KQkq - 1 3"
         )
@@ -483,13 +484,10 @@ class BoardSuite:
         self.board.set_piece_at(chess.A3, chess.Piece(chess.PAWN, chess.WHITE))
 
     def time_generate_promotions(self):
-        b = Board("8/P7/8/8/8/8/8/8 w - - 0 1")
-        list(b.generate_pseudo_legal_moves())
-        b = Board("8/8/8/8/8/8/p7/8 b - - 0 1")
-        list(b.generate_pseudo_legal_moves())
+        list(self.board_with_promotion.generate_pseudo_legal_moves())
 
     def time_generate_ep_blocked(self):
-        b = Board("8/8/8/3pP3/8/8/8/8 w - d6 0 1")
+        b = Board("8/1k6/8/3pP3/8/8/1K6/8 w - d6 0 1")
         b.set_piece_at(
             chess.D6, chess.Piece(chess.KNIGHT, chess.WHITE)
         )  # Block the ep square
@@ -611,7 +609,7 @@ class BoardSuite:
         self.board.find_move(chess.E2, chess.E4)
 
     def time_find_move_promotion(self):
-        board = Board("8/P7/8/8/8/8/8/8 w - - 0 1")
+        board = Board("8/P3k3/8/8/8/8/8/1K6 w - - 0 1")
         board.find_move(chess.A7, chess.A8)
 
     def time_peek(self):

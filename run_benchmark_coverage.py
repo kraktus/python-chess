@@ -2,6 +2,7 @@ import inspect
 import time
 import sys
 import os
+import traceback
 
 sys.path.insert(0, os.path.abspath("."))
 import benchmarks
@@ -9,6 +10,7 @@ import benchmarks
 
 def run_benchmarks():
     # Iterate over all members of the benchmarks module
+    errors = 0
     for name, obj in inspect.getmembers(benchmarks, inspect.isclass):
         if obj.__module__ == "benchmarks" or name.endswith("Suite"):
             print(f"Running suite: {name}")
@@ -35,10 +37,15 @@ def run_benchmarks():
                 try:
                     method()
                 except Exception as e:
+                    errors += 1
                     print(f"  Error in {method_name}: {e}")
+                    traceback.print_exc()
+                    print()
                 end_time = time.time()
 
                 print(f"  {method_name}: {end_time - start_time:.6f}s")
+
+    print(f"Tests all run, with {errors} errors")
 
 
 if __name__ == "__main__":
