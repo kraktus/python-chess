@@ -278,6 +278,9 @@ class BaseBoardSuite:
 class BoardSuite:
     def setup(self):
         self.board = Board(chess.STARTING_FEN)
+        self.board_chess960 = Board(
+            "r3k2r/8/8/8/8/8/8/R3K2R w KQkq - 0 1", chess960=True
+        )
         self.midgame_fen = (
             "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1"
         )
@@ -571,9 +574,9 @@ class BoardSuite:
             pass
 
     def time_parse_san_disambiguation(self):
-        b = Board("4k3/8/8/8/8/8/N1N5/4K3 w - - 0 1")
+        b = Board("4k3/8/8/8/N3N3/8/8/4K3 w - - 0 1")
         b.parse_san("Nac3")
-        b.parse_san("Ncc3")
+        b.parse_san("Nec3")
         try:
             b.parse_san("Nc3")
         except ValueError:
